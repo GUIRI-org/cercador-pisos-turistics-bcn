@@ -1,0 +1,47 @@
+x-common-env: &common-env
+  - path: .env # default
+    required: true
+  - path: .env-local # optional override
+    required: false
+
+name: ${GLOBAL_INSTALLATION_APP}
+
+networks:
+  guiripisos-network:
+    name: ${DOCKER_BASE_NAME}-network
+
+services:
+  db:
+    env_file: *common-env
+    networks:
+      - guiripisos-network
+    platform: ${DOCKER_PLATFORM}
+    container_name: ${DB_CONTAINER_NAME}
+    image: postgis/postgis:17-3.4
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${GLOBAL_DB_USER} -d ${GLOBAL_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      - POSTGRES_USER=${GLOBAL_DB_USER}
+      - POSTGRES_PASSWORD=${GLOBAL_DB_PASSWORD}
+      - POSTGRES_DB=${GLOBAL_DB_NAME}
+      - POSTGRES_PORT=${GLOBAL_DB_PORT}
+    ports:
+      - ${GLOBAL_DB_PORT}:${GLOBAL_DB_PORT}
+    volumes:
+      - db-vol:/var/lib/postgresql/data
+      - ../database/01-restore-dump.sh:/docker-entrypoint-initdb.d/01-restore-dump.sh:ro
+      - ../database/${GLOBAL_DB_NAME}.sql.gz:/backup/${GLOBAL_DB_NAME}.sql.gz:ro
+      - ./postgresql/custom-postgresql.conf:/etc/postgresql/postgresql.conf # Mount custom config
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf -c port=${GLOBAL_DB_PORT}
+    shm_size: "256mb"
+
+volumes:
+  db-vol:
+    name: ${DOCKER_BASE_NAME}-db-vol

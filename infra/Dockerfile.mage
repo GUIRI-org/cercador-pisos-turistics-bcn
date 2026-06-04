@@ -1,0 +1,38 @@
+FROM mageai/mageai:0.9.79
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ARG PROJECT_NAME='mage-guiripisos'
+ARG USER_CODE_PATH=/home/src/${PROJECT_NAME}
+ARG USER_LOCAL='guiri' 
+
+# Clone libraries
+## Install git 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git && \
+    apt-get autoremove -yqq --purge && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Add non-root user for Mage service
+RUN adduser --disabled-password --gecos '' ${USER_LOCAL} && adduser ${USER_LOCAL} ${USER_LOCAL}
+
+# Grant the user permissions to the Mage related directories
+RUN mkdir /home/src/mage_data; chown -R ${USER_LOCAL} /home/src/mage_data
+RUN mkdir ${USER_CODE_PATH}; chown -R ${USER_LOCAL} ${USER_CODE_PATH}
+
+# Note: this overwrites the requirements.txt file in your new project on first run. 
+# You can delete this line for the second run :) 
+COPY magic/requirements.txt ${USER_CODE_PATH}/requirements.txt 
+
+RUN pip3 install --no-cache-dir -r ${USER_CODE_PATH}/requirements.txt
+
+# Set the Siris user
+USER guiri
+
+ENV PYTHONPATH="${USER_CODE_PATH}:${PYTHONPATH}:/home/${USER_LOCAL}/.local/lib/python3.10/site-packages"
+
+# Important: set back to the root folder
+WORKDIR /home/src
+
+CMD ["/bin/sh", "-c", "/app/run_app.sh"]

@@ -1,0 +1,87 @@
+# 🏢 Database
+
+This folder contains the first version of the database model.
+
+**Table of contents**
+
+- [What data sources are included](#what-data-sources-are-included)
+- [Database Schema (DDL)](#database-schema-ddl)
+- [How to download the database](#how-to-download-the-database)
+- [Connecting to the database instance](#connecting-to-the-database-instance)
+- [How the database dump has been generated](#how-the-database-dump-has-been-generated)
+- [How the load the database dump manually](#how-the-load-the-database-dump-manually)
+- [How to refresh data - Materialized Views](#how-to-refresh-data---materialized-views)
+
+## What data sources are included
+
+{TODO}
+
+## Database Schema (DDL)
+
+{TODO}
+
+Refer to [DDL.md](DDL.md) when you need detailed information about the database structure, table relationships, or when making schema modifications.
+
+## How to download the database
+
+To download the database dump included in this repository (`database/db.sql.gz`), you'll need to [install Git LFS on your computer](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage).
+
+Git Large File Storage is a different tool than Git and needs to be downloaded and installed separately.
+
+## Connecting to the database instance
+
+1. Download the database credentials from Google Drive. The downloaded text file will have this contain this:
+
+    ````bash
+    # The values of the credentials have been masked for security reasons.
+    POSTGRES_HOST=**********
+    POSTGRES_USER=**********
+    POSTGRES_DB=**********
+    POSTGRES_PASSWORD=**********
+    PG_HOST_PORT=**********
+    ````
+
+2. Then, you are ready to connect to the PostgreSQL database.
+
+## How the database dump has been generated
+
+**Note**: You need `pg_dump` and `gzip` installed on your computer to follow this procedure.
+
+**Step 1: Connect to the database server**
+
+Follow the instructions in the [Infrastructure setup instructions](../infra/README.md) to connect to a database server instance, either locally or on a cloud environment.
+
+**Step 2: Generate a new SQL file dump**
+
+Run these commands to generate a new dump file:
+
+**Important**:
+
+- Make sure the new database dump works fine before updating the file in this repository.
+- Make sure you have `pg_dump` v17.0 installed to follow this procedure.
+
+```bash
+# Navigate to the infra/ folder
+cd infra
+# Load environment variables
+source .env
+# Run the `pg_dump` command to generate a new dump
+PGPASSWORD=$GLOBAL_DB_PASSWORD pg_dump --verbose --host localhost --port $GLOBAL_DB_PORT --username $GLOBAL_DB_USER --format=p -x $GLOBAL_DB_NAME | gzip > ../database/$GLOBAL_DB_NAME.sql.gz
+```
+
+## How the load the database dump manually
+
+You can load the database dump directly from the command line.
+
+```bash
+# Load the environment variables and load the database dump
+source .env
+gunzip -c ../database/$GLOBAL_DB_NAME.sql.gz | PGPASSWORD=$GLOBAL_DB_PASSWORD psql -h localhost -p $GLOBAL_DB_PORT -U $GLOBAL_DB_USER -d $GLOBAL_DB_NAME
+```
+
+Use the `f` flag to load an uncompressed file directly:
+
+```bash
+source .env
+PGPASSWORD=$GLOBAL_DB_PASSWORD psql -h localhost -p $GLOBAL_DB_PORT -U $GLOBAL_DB_USER -f database/$GLOBAL_DB_NAME.sql
+```

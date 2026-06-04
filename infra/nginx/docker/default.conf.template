@@ -1,0 +1,8 @@
+# Include common configurations
+include /etc/nginx/conf.d/00-common.conf;
+
+# Include core configuration
+include /etc/nginx/conf.d/01-core.conf;
+
+# Include frontend configuration if the file exists
+include /etc/nginx/conf.d/02-frontend.conf*;

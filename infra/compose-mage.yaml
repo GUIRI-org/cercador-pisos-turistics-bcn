@@ -1,0 +1,47 @@
+x-common-env: &common-env
+  - path: .env # default
+    required: true
+  - path: .env-local # optional override
+    required: false
+
+name: ${GLOBAL_INSTALLATION_APP}
+
+networks:
+  guiripisos-network:
+    name: ${DOCKER_BASE_NAME}-network
+
+services:
+  s3-magic:
+    env_file: *common-env
+    networks:
+      - guiripisos-network
+    command: mage start ${PROJECT_NAME}
+    container_name: ${MAGE_CONTAINER_NAME}
+    build:
+      context: .
+      dockerfile: Dockerfile.mage
+      args:
+        - USER_CODE_PATH=/home/src/${PROJECT_NAME}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      ENV: ${MAGE_ENV}
+      USER_CODE_PATH: /home/src/${PROJECT_NAME}
+      POSTGRES_DB: ${MAGE_DB_NAME}
+      POSTGRES_USER: ${MAGE_DB_USER}
+      POSTGRES_PASSWORD: ${MAGE_DB_PASSWORD}
+      POSTGRES_HOST: ${MAGE_DB_HOST}
+      PG_HOST_PORT: ${MAGE_DB_PORT}
+    ports:
+      - 127.0.0.1:${MAGE_PORT}:6789
+    # We want the mage service to be started every time the server starts running, regardles of its state when the server shutted off.
+    restart: always
+    volumes:
+      - ../magic/:/home/src/
+      - ../data:/home/src/data
+    depends_on:
+      - db
+
+volumes:
+  s3-magic-vol:
+    name: ${DOCKER_BASE_NAME}-s3-magic-vol
