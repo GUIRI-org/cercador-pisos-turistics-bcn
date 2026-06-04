@@ -9,3 +9,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+* chore: add an API collection for the dataset `opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic`.
