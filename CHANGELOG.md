@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- feat: add Observable Framework frontend with geoBCN street address search form (Tipo Vía, Carrer autocomplete, Número, Piso, Escalera, Puerta)
+- Observable Framework frontend with geoBCN street address search form (Tipo Vía, Carrer autocomplete, Número, Piso, Escalera, Puerta)
+- API collection for the dataset `opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic`
+- New API collection examples (Adreces, Cerca territori, Illa) with environment configurations
+- Mage documentation (guidelines and README)
 
-* chore: add an API collection for the dataset `opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic`.
+### Removed
+- Old API collection example queries (replaced with new standardized examples)

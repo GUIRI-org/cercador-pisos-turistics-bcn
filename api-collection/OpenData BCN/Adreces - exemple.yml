@@ -1,0 +1,15 @@
+info:
+  name: Adreces - exemple
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: https://{{baseURL}}/geoBCN/serveis/territori/adreces/33180200003000030
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

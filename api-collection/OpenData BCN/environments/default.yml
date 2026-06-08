@@ -1,0 +1,4 @@
+name: default
+variables:
+  - name: baseURL
+    value: geoportal.barcelona.cat
