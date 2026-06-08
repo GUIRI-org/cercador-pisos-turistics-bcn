@@ -1,1 +1,2 @@
 database/*.sql.gz filter=lfs diff=lfs merge=lfs -text
+data/interim/hut_comunicacio_opendata.csv filter=lfs diff=lfs merge=lfs -text

@@ -92,6 +92,6 @@ infra/frontend_build/**/*
 !infra/frontend_build/index.html.sample
 !infra/frontend_build/guiripisos.png
 
-data/raw
+data/raw/
 
 # data/processed/topic-modeling

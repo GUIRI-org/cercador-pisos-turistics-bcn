@@ -6,6 +6,7 @@ This folder contains the first version of the database model.
 
 - [What data sources are included](#what-data-sources-are-included)
 - [Database Schema (DDL)](#database-schema-ddl)
+- [How to load CSV data](#how-to-load-csv-data)
 - [How to download the database](#how-to-download-the-database)
 - [Connecting to the database instance](#connecting-to-the-database-instance)
 - [How the database dump has been generated](#how-the-database-dump-has-been-generated)
@@ -85,3 +86,41 @@ Use the `f` flag to load an uncompressed file directly:
 source .env
 PGPASSWORD=$GLOBAL_DB_PASSWORD psql -h localhost -p $GLOBAL_DB_PORT -U $GLOBAL_DB_USER -f database/$GLOBAL_DB_NAME.sql
 ```
+
+
+
+## How to load CSV data from the Open Data BCN dataaset
+
+Load the tourist housing CSV data into the `barcelona.habitatges_us_turistic` table.
+
+Obtained from https://opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic.
+
+
+
+```bash
+cd infra
+source .env
+
+PGPASSWORD=$GLOBAL_DB_PASSWORD psql \
+  -h localhost \
+  -p $GLOBAL_DB_PORT \
+  -U $GLOBAL_DB_USER \
+  -d $GLOBAL_DB_NAME \
+  -f ../database/load-habitatges-csv.sql
+```
+
+Or from a Docker container:
+
+```bash
+cd infra
+source .env
+
+docker exec $DB_CONTAINER_NAME psql \
+  -h localhost \
+  -p 5432 \
+  -U $GLOBAL_DB_USER \
+  -d $GLOBAL_DB_NAME \
+  -f /data/raw/habitatges-us-turistic/load-habitatges-csv.sql
+```
+
+The script reads from `data/raw/habitatges-us-turistic/hut_comunicacio_opendata.csv` and imports it with geographic points computed from coordinates.
