@@ -1,5 +1,7 @@
 # Cercador de pisos turístics Barcelona
 
+<link rel="stylesheet" href="./styles.css">
+
 Cerca una adreça de Barcelona per identificar habitatges amb llicència turística.
 
 ## Cerca per adreça
@@ -9,61 +11,13 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
 ```js
 {
   const BASE = "https://geoportal.barcelona.cat/geoBCN/serveis/territori";
-
-  // ── Shared styles ───────────────────────────────────────────────────────────
-  const style = document.createElement("style");
-  style.textContent = `
-    .geo-label { font-size: 13px; color: #374151; margin-bottom: 4px; display: block; font-weight: 500; }
-    .geo-req   { color: #ef4444; }
-    .geo-control {
-      width: 100%; padding: 8px 12px; font-size: 14px;
-      border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;
-      background: #fff; color: #111827; height: 38px; appearance: none;
-    }
-    .geo-control:focus {
-      outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15);
-    }
-    .geo-control:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
-    .geo-select-wrap { position: relative; }
-    .geo-select-wrap::after {
-      content: ""; pointer-events: none; position: absolute;
-      right: 12px; top: 50%; transform: translateY(-50%);
-      border: 5px solid transparent; border-top: 6px solid #6b7280;
-    }
-    .geo-select-wrap select { padding-right: 32px; cursor: pointer; }
-    .geo-row1 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-    .geo-row2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-    @media (max-width: 540px) {
-      .geo-row1 { grid-template-columns: 1fr; }
-      .geo-row2 { grid-template-columns: 1fr 1fr; }
-    }
-    .geo-autocomplete-list {
-      position: absolute; top: calc(100% + 2px); left: 0; right: 0;
-      background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.1);
-      list-style: none; margin: 0; padding: 4px 0;
-      max-height: 210px; overflow-y: auto; z-index: 60; display: none;
-    }
-    .geo-autocomplete-list li {
-      padding: 9px 12px; font-size: 14px; cursor: pointer; color: #111827;
-    }
-    .geo-autocomplete-list li:hover { background: #eff6ff; }
-    .geo-autocomplete-list li.geo-empty { color: #9ca3af; cursor: default; }
-    .geo-autocomplete-list li.geo-empty:hover { background: transparent; }
-    .geo-result {
-      border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 16px;
-      background: #f0fdf4; font-size: 14px; display: none;
-    }
-    .geo-result strong { font-size: 15px; color: #15803d; }
-    .geo-result-meta { color: #6b7280; margin-top: 5px; font-size: 13px; }
-    .geo-link-guia { font-size: 13px; color: #6b7280; margin-top: 16px; }
-    .geo-link-guia a { color: #3b82f6; }
-  `;
-  document.head.appendChild(style);
+  const HUT_RESOURCE_ID = "b32fa7f6-d464-403b-8a02-0292a64883bf";
+  const HUT_ENDPOINT = "https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search";
+  const HUT_PAGE_SIZE = 1000;
 
   // ── Root wrapper ────────────────────────────────────────────────────────────
   const root = document.createElement("div");
-  root.style.cssText = "max-width: 680px; font-family: sans-serif;";
+  root.className = "geo-root";
 
   // ── Helper: labelled field ───────────────────────────────────────────────────
   const field = (labelText, required, content) => {
@@ -93,20 +47,13 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
   tipusLbl.htmlFor = "tipusViaInp";
 
   // — Carrer autocomplete —
-  const carrerPos = document.createElement("div"); carrerPos.style.position = "relative";
+  const carrerPos = document.createElement("div"); carrerPos.className = "geo-relative";
   const carrerInp = document.createElement("input");
   Object.assign(carrerInp, { type: "text", id: "carrerInp", className: "geo-control", placeholder: "Escriu el nom del carrer…" });
   const carrerList = document.createElement("ul"); carrerList.className = "geo-autocomplete-list";
   carrerPos.appendChild(carrerInp); carrerPos.appendChild(carrerList);
   const { wrap: carrerField, lbl: carrerLbl } = field("Calle:", true, carrerPos);
   carrerLbl.htmlFor = "carrerInp";
-
-  row1.appendChild(tipusField);
-  row1.appendChild(carrerField);
-  root.appendChild(row1);
-
-  // ── ROW 2 ───────────────────────────────────────────────────────────────────
-  const row2 = document.createElement("div"); row2.className = "geo-row2";
 
   // — Número (datalist-backed input) —
   const dlId = "geo-num-dl-" + Math.random().toString(36).slice(2);
@@ -119,27 +66,20 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
   const { wrap: numField, lbl: numLbl } = field("Número:", true, numContainer);
   numLbl.htmlFor = "numInp";
 
-  // — Piso / Escalera / Puerta —
-  const makeText = (id, lbl) => {
-    const inp = document.createElement("input");
-    Object.assign(inp, { type: "text", id, className: "geo-control" });
-    const { wrap } = field(lbl + ":", false, inp);
-    const label = wrap.querySelector("label"); label.htmlFor = id;
-    return { wrap, inp };
-  };
-  const { wrap: pisoField,     inp: pisoInp     } = makeText("pisoInp",     "Piso");
-  const { wrap: escaleraField, inp: escaleraInp } = makeText("escaleraInp", "Escalera");
-  const { wrap: puertaField,   inp: puertaInp   } = makeText("puertaInp",   "Puerta");
-
-  row2.appendChild(numField);
-  row2.appendChild(pisoField);
-  row2.appendChild(escaleraField);
-  row2.appendChild(puertaField);
-  root.appendChild(row2);
+  row1.appendChild(tipusField);
+  row1.appendChild(carrerField);
+  row1.appendChild(numField);
+  root.appendChild(row1);
 
   // ── Result card ─────────────────────────────────────────────────────────────
   const resultDiv = document.createElement("div"); resultDiv.className = "geo-result";
   root.appendChild(resultDiv);
+
+  // ── Viviendas de uso turístico results ──────────────────────────────────────
+  const hutResultsDiv = document.createElement("div"); hutResultsDiv.className = "geo-hut-results";
+  root.appendChild(hutResultsDiv);
+  const hutStreetResultsDiv = document.createElement("div"); hutStreetResultsDiv.className = "geo-hut-results geo-hut-results-secondary";
+  root.appendChild(hutStreetResultsDiv);
 
   // ── Link Guia BCN ────────────────────────────────────────────────────────────
   const linkP = document.createElement("p"); linkP.className = "geo-link-guia";
@@ -150,6 +90,8 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
   // ── State ───────────────────────────────────────────────────────────────────
   let selectedVia  = null;   // via object from /territori response
   let storedAdreces = [];    // adreces from last search call
+  let hutTimer;
+  let hutRequestId = 0;
 
   // ── Load Tipus Vies ─────────────────────────────────────────────────────────
   try {
@@ -175,6 +117,14 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
     selectedVia = null; storedAdreces = [];
     numInp.value = ""; numInp.disabled = true; numDl.innerHTML = "";
     resultDiv.style.display = "none";
+    clearHutResults();
+  };
+
+  const clearHutResults = () => {
+    hutResultsDiv.style.display = "none";
+    hutResultsDiv.innerHTML = "";
+    hutStreetResultsDiv.style.display = "none";
+    hutStreetResultsDiv.innerHTML = "";
   };
 
   let carrerTimer;
@@ -242,24 +192,136 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
 
   // ── Build result card ────────────────────────────────────────────────────────
   const updateResult = () => {
-    if (!selectedVia || !numInp.value.trim()) { resultDiv.style.display = "none"; return; }
-    const extra = [
-      pisoInp.value.trim()     ? `Pis ${pisoInp.value.trim()}`      : "",
-      escaleraInp.value.trim() ? `Esc. ${escaleraInp.value.trim()}`  : "",
-      puertaInp.value.trim()   ? `Porta ${puertaInp.value.trim()}`   : "",
-    ].filter(Boolean).join(", ");
+    if (!selectedVia || !numInp.value.trim()) {
+      resultDiv.style.display = "none";
+      clearHutResults();
+      return;
+    }
 
     resultDiv.style.display = "block";
     resultDiv.innerHTML = `
       <strong>${carrerInp.value}, ${numInp.value.trim()}</strong>
-      ${extra ? `<div class="geo-result-meta">${extra}</div>` : ""}
       <div class="geo-result-meta">
         ${selectedVia.tipusVia?.nom || ""} &nbsp;·&nbsp; Codi via: ${selectedVia.codi}
         &nbsp;·&nbsp; Barcelona
       </div>`;
+
+    const hutQuery = `${carrerInp.value} ${numInp.value.trim()}`.trim();
+    const hutStreetQuery = carrerInp.value.trim();
+    searchHutResults(hutQuery, hutStreetQuery);
   };
 
-  [numInp, pisoInp, escaleraInp, puertaInp].forEach(el =>
+  const escapeHtml = (value) => String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+
+  const renderHutResults = (container, title, query, records) => {
+    if (!records.length) {
+      container.innerHTML = `
+        <h4 class="geo-hut-title">${title}</h4>
+        <p class="geo-hut-status">No s'han trobat resultats per "${escapeHtml(query)}".</p>`;
+      return;
+    }
+
+    const items = records.map(record => {
+      const address = [
+        record.TIPUS_CARRER,
+        record.CARRER,
+        record.NUM1,
+        record.LLETRA1
+      ].filter(Boolean).join(" ");
+      const district = [record.NOM_DISTRICTE, record.NOM_BARRI].filter(Boolean).join(" · ");
+
+      return `<li class="geo-hut-item">
+        <div class="geo-hut-item-title">${escapeHtml(address || "Adreça no disponible")}</div>
+        <div class="geo-hut-item-meta">
+          Registre: ${escapeHtml(record.NUMERO_REGISTRE_GENERALITAT || "-")}
+          &nbsp;·&nbsp; Places: ${escapeHtml(record.NUMERO_PLACES || "-")}
+          &nbsp;·&nbsp; Expedient: ${escapeHtml(record.N_EXPEDIENT || "-")}
+        </div>
+        ${district ? `<div class="geo-hut-item-meta">${escapeHtml(district)}</div>` : ""}
+      </li>`;
+    }).join("");
+
+    container.innerHTML = `
+      <h4 class="geo-hut-title">${title} (${records.length})</h4>
+      <ul class="geo-hut-list">${items}</ul>`;
+  };
+
+  const fetchAllHutRecords = async (query, requestId) => {
+    let offset = 0;
+    let total = Infinity;
+    const allRecords = [];
+
+    while (offset < total) {
+      if (requestId !== hutRequestId) return null;
+
+      const url = `${HUT_ENDPOINT}?resource_id=${HUT_RESOURCE_ID}&limit=${HUT_PAGE_SIZE}&offset=${offset}&q=${encodeURIComponent(query)}`;
+      const json = await fetch(url).then(r => r.json());
+      if (!json?.success) throw new Error("HUT API error");
+
+      const result = json?.result || {};
+      const records = result.records || [];
+      total = Number(result.total ?? records.length);
+      allRecords.push(...records);
+
+      if (!records.length || allRecords.length >= total) break;
+      offset += records.length;
+    }
+
+    return allRecords;
+  };
+
+  const searchHutResults = (query, streetQuery) => {
+    clearTimeout(hutTimer);
+    if (!query || !streetQuery) {
+      clearHutResults();
+      return;
+    }
+
+    hutTimer = setTimeout(async () => {
+      const requestId = ++hutRequestId;
+      hutResultsDiv.style.display = "block";
+      hutStreetResultsDiv.style.display = "block";
+      hutResultsDiv.innerHTML = "<div class=\"geo-hut-status\">Cercant habitatges turístics (tots els resultats)...</div>";
+      hutStreetResultsDiv.innerHTML = "<div class=\"geo-hut-status\">Cercant habitatges turístics per carrer (tots els resultats)...</div>";
+
+      try {
+        const [exactRecords, streetRecords] = await Promise.all([
+          fetchAllHutRecords(query, requestId),
+          fetchAllHutRecords(streetQuery, requestId)
+        ]);
+        if (requestId !== hutRequestId) return;
+        if (!exactRecords || !streetRecords) return;
+
+        renderHutResults(
+          hutResultsDiv,
+          "Viviendas de uso turístico (adreça amb número)",
+          query,
+          exactRecords
+        );
+        renderHutResults(
+          hutStreetResultsDiv,
+          "Viviendas de uso turístico (tipus i carrer, sense número)",
+          streetQuery,
+          streetRecords
+        );
+      } catch {
+        if (requestId !== hutRequestId) return;
+        hutResultsDiv.innerHTML = `
+          <h4 class="geo-hut-title">Viviendas de uso turístico (adreça amb número)</h4>
+          <p class="geo-hut-status">No s'ha pogut consultar el servei en aquest moment.</p>`;
+        hutStreetResultsDiv.innerHTML = `
+          <h4 class="geo-hut-title">Viviendas de uso turístico (tipus i carrer, sense número)</h4>
+          <p class="geo-hut-status">No s'ha pogut consultar el servei en aquest moment.</p>`;
+      }
+    }, 350);
+  };
+
+  [numInp].forEach(el =>
     el.addEventListener(el.tagName === "SELECT" ? "change" : "input", updateResult)
   );
 
