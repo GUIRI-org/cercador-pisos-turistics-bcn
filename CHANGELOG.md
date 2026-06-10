@@ -12,7 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CSV data loader script (`load-habitatges-csv.sql`) for importing habitatges_us_turistic dataset
 - Database dump auto-restore on container startup for pre-populated data
 - Bruno HTTP API collection for OpenData BCN APIs (Cerca territori, Adreces, Illa)
-- Observable Framework frontend with geoBCN street address search form (Tipo Vía, Carrer autocomplete, Número, Piso, Escalera, Puerta)
+- Observable Framework frontend with geoBCN street address search form (Tipo Vía, Carrer autocomplete, Número)
+- Chained tourist housing search in frontend: exact address query (street + number) plus street-only query (type + street)
+- Full pagination retrieval for tourist housing endpoint results to display all matches
+- Externalized frontend styles into `src/styles.css` with Bootstrap CSS import
 - Mage documentation (guidelines and README)
 - Infrastructure setup with PostgreSQL, Nginx, and Mage containers
 
