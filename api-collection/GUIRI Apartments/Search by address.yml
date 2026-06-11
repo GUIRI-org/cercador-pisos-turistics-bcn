@@ -1,0 +1,82 @@
+info:
+  name: Search by address
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{baseURL}}/api/v1/apartments/search?carrer=Rambla&num1=15"
+  params:
+    - name: carrer
+      value: Rambla
+      type: query
+    - name: num1
+      value: "15"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+
+docs: |-
+  # Search Apartments by Address
+
+  Search for tourist apartments by street name and number.
+
+  ## Address Parameters
+  - `tipus_carrer`: Street type (Carrer, Plaça, Passatge, etc.)
+  - `carrer`: Street name (partial match, case-insensitive)
+  - `num1`: Primary street number (exact match)
+
+  ## Example Searches
+
+  ### By street name only
+  ```
+  /apartments/search?carrer=Balmes
+  ```
+
+  ### By street name and number
+  ```
+  /apartments/search?carrer=Rambla&num1=45
+  ```
+
+  ### By complete address
+  ```
+  /apartments/search?tipus_carrer=Carrer&carrer=Balmes&num1=123
+  ```
+
+  ### Combine with location
+  ```
+  /apartments/search?carrer=Balmes&nom_districte=Eixample
+  ```
+
+  ## Search Behavior
+  - `carrer` uses **partial matching** (case-insensitive)
+  - `num1` requires **exact match**
+  - `tipus_carrer` requires **exact match**
+  - All parameters are **optional** and **combinable**
+
+  ## Response Structure
+  ```json
+  {
+    "data": [
+      {
+        "n_expedient": "01/2023/11111",
+        "tipus_carrer": "Rambla",
+        "carrer": "Rambla",
+        "num1": 45,
+        "lletra1": null,
+        "portal": "2",
+        "pis": "3",
+        "porta": "1",
+        ...
+      }
+    ],
+    "meta": {
+      "total": 3
+    }
+  }
+  ```

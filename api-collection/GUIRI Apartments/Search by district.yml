@@ -1,0 +1,60 @@
+info:
+  name: Search by district
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{baseURL}}/api/v1/apartments/search?nom_districte=Eixample"
+  auth: inherit
+  params:
+    - name: nom_districte
+      value: Eixample
+      enabled: true
+
+docs: |-
+  # Search Apartments by District
+  
+  Search for tourist apartments within a specific district using `nom_districte` parameter.
+  
+  ## Example Districts
+  - Ciutat Vella
+  - Eixample
+  - Sants-Montjuïc
+  - Les Corts
+  - Sarrià-Sant Gervasi
+  - Gràcia
+  - Horta-Guinardó
+  - Nou Barris
+  - Sant Andreu
+  - Sant Martí
+  
+  ## Search Behavior
+  - **Case-insensitive**: "eixample" matches "Eixample"
+  - **Partial matching**: "Eixamp" will find "Eixample"
+  - **Combinable**: Can be combined with other filters (e.g., `&carrer=Balmes`)
+  
+  ## Response Structure
+  ```json
+  {
+    "data": [
+      {
+        "n_expedient": "01/2023/12345",
+        "codi_districte": 2,
+        "nom_districte": "Eixample",
+        "nom_barri": "la Dreta de l'Eixample",
+        "carrer": "Balmes",
+        ...
+      }
+    ],
+    "meta": {
+      "total": 1234
+    }
+  }
+  ```
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

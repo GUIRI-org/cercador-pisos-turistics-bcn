@@ -1,0 +1,69 @@
+info:
+  name: Neighborhoods list
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: "{{baseURL}}/api/v1/apartments/neighborhoods"
+  auth: inherit
+
+docs: |-
+  # Get All Neighborhoods with Apartment Counts
+  
+  Returns a list of all neighborhoods (barris) in Barcelona with the number of
+  tourist apartments in each neighborhood. Each neighborhood includes its parent
+  district code for hierarchical filtering.
+  
+  ## Response Structure
+  ```json
+  {
+    "data": [
+      {
+        "codi_barri": 1,
+        "nom_barri": "el Raval",
+        "codi_districte": 1,
+        "apartments": 856
+      },
+      {
+        "codi_barri": 2,
+        "nom_barri": "el Barri Gòtic",
+        "codi_districte": 1,
+        "apartments": 645
+      },
+      ...
+    ],
+    "meta": {
+      "total": 73
+    }
+  }
+  ```
+  
+  ## Data Organization
+  - **Ordered by**: District code, then neighborhood code
+  - **Total neighborhoods**: ~73 barris across Barcelona
+  - **Includes**: Parent district code (`codi_districte`) for hierarchical filtering
+  - **Apartment count**: Number of tourist apartments in each neighborhood
+  
+  ## Use Cases
+  - Populate neighborhood filter dropdowns
+  - Create hierarchical district → neighborhood selectors
+  - Show neighborhood-level statistics
+  - Build detailed geographic maps
+  - Compare apartment density across neighborhoods
+  
+  ## Example: Filter neighborhoods by district
+  To get neighborhoods for a specific district, filter the results client-side
+  by `codi_districte` or use the search endpoint:
+  ```
+  /apartments/search?codi_districte=1
+  ```
+  
+  ## Cache
+  This endpoint is cached for 7 days as the data changes only 1-2 times per year.
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,65 @@
+info:
+  name: Search by neighborhood
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: "{{baseURL}}/api/v1/apartments/search?nom_barri=Gòtic"
+  auth: inherit
+  params:
+    - name: nom_barri
+      value: Gòtic
+      enabled: true
+
+docs: |-
+  # Search Apartments by Neighborhood
+  
+  Search for tourist apartments within a specific neighborhood using `nom_barri` parameter.
+  
+  ## Example Neighborhoods
+  - el Barri Gòtic (Ciutat Vella)
+  - el Raval (Ciutat Vella)
+  - la Barceloneta (Ciutat Vella)
+  - la Dreta de l'Eixample (Eixample)
+  - l'Antiga Esquerra de l'Eixample (Eixample)
+  - el Poble-sec (Sants-Montjuïc)
+  - Gràcia (Gràcia)
+  - el Poblenou (Sant Martí)
+  
+  ## Search Behavior
+  - **Case-insensitive**: "gòtic" matches "Gòtic"
+  - **Partial matching**: "Gòt" will find "el Barri Gòtic"
+  - **Combinable**: Can be combined with other filters
+  
+  ## Example: Combine with address
+  ```
+  /apartments/search?nom_barri=Gòtic&carrer=Ferran
+  ```
+  
+  ## Response Structure
+  ```json
+  {
+    "data": [
+      {
+        "n_expedient": "01/2023/67890",
+        "codi_barri": 1,
+        "nom_barri": "el Barri Gòtic",
+        "nom_districte": "Ciutat Vella",
+        "tipus_carrer": "Carrer",
+        "carrer": "Ferran",
+        "num1": 15,
+        ...
+      }
+    ],
+    "meta": {
+      "total": 234
+    }
+  }
+  ```
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

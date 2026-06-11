@@ -1,0 +1,66 @@
+info:
+  name: Districts list
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: "{{baseURL}}/api/v1/apartments/districts"
+  auth: inherit
+
+docs: |-
+  # Get All Districts with Apartment Counts
+  
+  Returns a list of all 10 districts in Barcelona with the number of tourist
+  apartments in each district. Useful for building filters, dropdowns, or
+  displaying district-level statistics.
+  
+  ## Response Structure
+  ```json
+  {
+    "data": [
+      {
+        "codi_districte": 1,
+        "nom_districte": "Ciutat Vella",
+        "apartments": 3245
+      },
+      {
+        "codi_districte": 2,
+        "nom_districte": "Eixample",
+        "apartments": 4567
+      },
+      ...
+    ],
+    "meta": {
+      "total": 10
+    }
+  }
+  ```
+  
+  ## Barcelona Districts
+  Barcelona has 10 districts (districtes):
+  1. Ciutat Vella
+  2. Eixample
+  3. Sants-Montjuïc
+  4. Les Corts
+  5. Sarrià-Sant Gervasi
+  6. Gràcia
+  7. Horta-Guinardó
+  8. Nou Barris
+  9. Sant Andreu
+  10. Sant Martí
+  
+  ## Use Cases
+  - Populate district filter dropdowns
+  - Show district-level statistics
+  - Create district comparison charts
+  - Build geographic navigation menus
+  
+  ## Cache
+  This endpoint is cached for 7 days as the data changes only 1-2 times per year.
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

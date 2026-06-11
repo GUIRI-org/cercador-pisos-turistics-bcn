@@ -41,11 +41,13 @@ make infra-deploy
 
 This launches:
 - PostgreSQL database with pre-populated tourist housing data
+- FastAPI REST API for data access
 - Mage data pipeline UI
 - Nginx reverse proxy
 
 2. Access services:
 - Frontend: http://guiripisos.local:8888
+- API: http://api.guiripisos.local:8888/api/v1/docs
 - Mage: http://mage.guiripisos.local:8888
 - Database: `localhost:8054` (psql credentials in `infra/.env`)
 
@@ -63,6 +65,7 @@ Then visit http://localhost:3000
 
 - [Database](#database)
 - [Data pipelines](#data-pipelines)
+- [API](#api)
 - [Frontend](#frontend)
 
 
@@ -82,6 +85,47 @@ Access the UI at http://mage.guiripisos.local:8888 when infrastructure is runnin
 
 See [magic/README.md](magic/README.md) for details.
 
+### API
+
+FastAPI REST service providing programmatic access to the tourist housing database.
+
+**Endpoints:**
+
+- `GET /api/v1/apartments/map` — All apartments (no pagination) for map visualization
+- `GET /api/v1/apartments/search` — Search apartments by address or location criteria
+- `GET /api/v1/apartments/districts` — List all districts with apartment counts
+- `GET /api/v1/apartments/neighborhoods` — List all neighborhoods with apartment counts
+- `GET /api/v1/health` — Service health check
+
+**Response Format:**
+
+```json
+{
+  "data": [...],
+  "meta": {
+    "total": 12345
+  }
+}
+```
+
+**Search Parameters:**
+
+- Address: `tipus_carrer`, `carrer`, `num1`
+- Location: `codi_districte`, `nom_districte`, `codi_barri`, `nom_barri`
+- Registration: `numero_registre_generalitat`
+
+All search filters are optional and support combining. Text fields use case-insensitive partial matching.
+
+**Local Development:**
+
+```bash
+cd api
+pip install -r requirements.txt
+uvicorn src.main:app --reload --port 8001
+```
+
+API documentation available at http://localhost:8001/api/v1/docs
+
 ### Frontend
 
 Observable Framework application with interactive data exploration and geoBCN address search.
@@ -97,7 +141,12 @@ See [frontend/observable-framework-app/README.md](frontend/observable-framework-
 
 ## API Collection
 
-Request examples for common operations are stored in `api-collection/OpenData BCN/` using Bruno HTTP format.
+The `api-collection/` directory contains HTTP request examples:
+
+- **OpenData BCN**: Examples for Barcelona Open Data API integration (address lookup, territory search)
+- **GUIRI Apartments**: Examples for the local REST API endpoints
+
+Collection format: [Bruno](https://www.usebruno.com/) — a git-friendly HTTP client
 
 
 ## Documentation

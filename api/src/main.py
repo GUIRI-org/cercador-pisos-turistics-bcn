@@ -20,6 +20,9 @@ from .routers import health, apartments
 # can stay a simple set lookup; cache them via a CDN if needed.
 CACHEABLE_ENDPOINTS = {
     "/api/v1/apartments",
+    "/api/v1/apartments/map",
+    "/api/v1/apartments/districts",
+    "/api/v1/apartments/neighborhoods",
 }
 CACHE_MAX_AGE = 604800  # 7 days in seconds
 
