@@ -160,4 +160,48 @@ ORDER BY distance_m
 LIMIT 10;
 ```
 
+---
+
+## Data Quality & Migrations
+
+### Coordinate Normalization (2026-06-11)
+
+**Issue**: Initial data validation revealed coordinate inconsistencies - 95 addresses (2.3% of total) had multiple different coordinate pairs across 751 apartment records.
+
+**Root Cause**: Different geocoding results across various data sources/years for the same physical address.
+
+**Resolution Strategy**: Normalized to use the first appearing coordinate (by `n_expedient`) for each unique address.
+
+**Migration**: `02-normalize-address-coordinates.sql`
+- **Records Updated**: 292 apartments
+- **Addresses Affected**: 95 unique addresses
+- **Validation**: ✅ All addresses now have consistent coordinates
+
+**Address Grouping**: Addresses are grouped by:
+```
+(tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2)
+```
+
+Example:
+- `Carrer LLIBERTAT 5B` (lletra1='B', lletra2=NULL) - 8 apartments
+- `Carrer LLIBERTAT 5BB` (lletra1='B', lletra2='B') - 4 apartments
+
+These are considered **different addresses** and maintain separate coordinates.
+
+### Data Quality Validation Query
+
+```sql
+-- Verify no coordinate conflicts exist
+SELECT COUNT(*) as addresses_with_conflicts
+FROM (
+    SELECT 
+        tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2
+    FROM barcelona.habitatges_us_turistic
+    WHERE longitud_x IS NOT NULL AND latitud_y IS NOT NULL
+    GROUP BY tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2
+    HAVING COUNT(DISTINCT CONCAT(longitud_x::text, ',', latitud_y::text)) > 1
+) conflicts;
+-- Expected result: 0
+```
+
 

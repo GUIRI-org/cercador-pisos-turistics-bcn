@@ -58,15 +58,45 @@ class ApartmentMeta(BaseModel):
     total: int = Field(..., description="Total number of results")
 
 
+class AddressGroup(BaseModel):
+    """Address-grouped apartment resource model."""
+    
+    # Address fields
+    tipus_carrer: Optional[str] = Field(None, description="Street type")
+    carrer: Optional[str] = Field(None, description="Street name")
+    tipus_num: Optional[int] = Field(None, description="Number type")
+    num1: Optional[int] = Field(None, description="Primary street number")
+    lletra1: Optional[str] = Field(None, description="Letter suffix for primary number")
+    num2: Optional[int] = Field(None, description="Secondary street number")
+    lletra2: Optional[str] = Field(None, description="Letter suffix for secondary number")
+    
+    # Location fields
+    codi_districte: Optional[int] = Field(None, description="District code")
+    nom_districte: Optional[str] = Field(None, description="District name")
+    codi_barri: Optional[int] = Field(None, description="Neighborhood code")
+    nom_barri: Optional[str] = Field(None, description="Neighborhood name")
+    longitud_x: Optional[float] = Field(None, description="Geographic longitude (WGS84)")
+    latitud_y: Optional[float] = Field(None, description="Geographic latitude (WGS84)")
+    
+    # Aggregated fields
+    apartments_count: int = Field(..., description="Number of apartments at this address")
+    total_places: int = Field(..., description="Total number of tourist places/beds at this address")
+    expedients: List[str] = Field(..., description="List of expedient numbers at this address")
+    registres_generalitat: List[str] = Field(..., description="List of registration numbers at this address")
+    
+    class Config:
+        from_attributes = True
+
+
 class ApartmentMapResponse(BaseModel):
     """Response model for apartments/map endpoint."""
-    data: List[Apartment] = Field(..., description="List of apartments")
+    data: List[AddressGroup] = Field(..., description="List of addresses with aggregated apartment data")
     meta: ApartmentMeta = Field(..., description="Response metadata")
 
 
 class ApartmentSearchResponse(BaseModel):
     """Response model for apartments/search endpoint."""
-    data: List[Apartment] = Field(..., description="List of apartments matching search criteria")
+    data: List[AddressGroup] = Field(..., description="List of addresses matching search criteria with aggregated data")
     meta: ApartmentMeta = Field(..., description="Response metadata")
 
 
@@ -134,6 +164,29 @@ def row_to_apartment(row: Any) -> Dict[str, Any]:
     }
 
 
+def row_to_address_group(row: Any) -> Dict[str, Any]:
+    """Convert a database row to an address group dictionary."""
+    return {
+        "tipus_carrer": row.tipus_carrer,
+        "carrer": row.carrer,
+        "tipus_num": row.tipus_num,
+        "num1": row.num1,
+        "lletra1": row.lletra1,
+        "num2": row.num2,
+        "lletra2": row.lletra2,
+        "codi_districte": row.codi_districte,
+        "nom_districte": row.nom_districte,
+        "codi_barri": row.codi_barri,
+        "nom_barri": row.nom_barri,
+        "longitud_x": float(row.longitud_x) if row.longitud_x is not None else None,
+        "latitud_y": float(row.latitud_y) if row.latitud_y is not None else None,
+        "apartments_count": row.apartments_count,
+        "total_places": row.total_places,
+        "expedients": row.expedients if row.expedients else [],
+        "registres_generalitat": row.registres_generalitat if row.registres_generalitat else [],
+    }
+
+
 # ============================================================================
 # Endpoints
 # ============================================================================
@@ -141,33 +194,41 @@ def row_to_apartment(row: Any) -> Dict[str, Any]:
 @router.get("/apartments/map", response_model=ApartmentMapResponse)
 async def get_apartments_map(db: Session = Depends(get_db)):
     """
-    Get all apartments from barcelona.habitatges_us_turistic table.
+    Get all apartments grouped by address from barcelona.habitatges_us_turistic table.
     
-    This endpoint returns all tourist apartments in Barcelona without pagination.
-    Useful for displaying all apartments on a map.
+    This endpoint returns all tourist apartments in Barcelona grouped by address.
+    Each result represents a unique address with aggregate information about
+    all apartments at that location. Useful for displaying addresses on a map.
     
     Returns:
-        ApartmentMapResponse: All apartments with metadata
+        ApartmentMapResponse: All addresses with aggregated apartment data and metadata
     """
     query = text("""
         SELECT 
-            n_expedient, codi_districte, nom_districte, codi_barri, nom_barri,
             tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2,
-            bloc, portal, escala, pis, porta, numero_registre_generalitat,
-            numero_places, longitud_x, latitud_y, year_updated, quarter_updated,
-            dataset_id, created_at, updated_at
+            MIN(codi_districte) as codi_districte,
+            MIN(nom_districte) as nom_districte,
+            MIN(codi_barri) as codi_barri,
+            MIN(nom_barri) as nom_barri,
+            MIN(longitud_x) as longitud_x,
+            MIN(latitud_y) as latitud_y,
+            COUNT(*) as apartments_count,
+            COALESCE(SUM(numero_places), 0) as total_places,
+            ARRAY_AGG(n_expedient ORDER BY n_expedient) FILTER (WHERE n_expedient IS NOT NULL) as expedients,
+            ARRAY_AGG(numero_registre_generalitat ORDER BY numero_registre_generalitat) FILTER (WHERE numero_registre_generalitat IS NOT NULL) as registres_generalitat
         FROM barcelona.habitatges_us_turistic
-        ORDER BY codi_districte, codi_barri
+        GROUP BY tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2
+        ORDER BY MIN(codi_districte), MIN(codi_barri), carrer, num1
     """)
     
     result = db.execute(query)
     rows = result.fetchall()
     
-    apartments = [row_to_apartment(row) for row in rows]
+    addresses = [row_to_address_group(row) for row in rows]
     
     return {
-        "data": apartments,
-        "meta": {"total": len(apartments)}
+        "data": addresses,
+        "meta": {"total": len(addresses)}
     }
 
 
@@ -184,10 +245,11 @@ async def search_apartments(
     db: Session = Depends(get_db)
 ):
     """
-    Search apartments by address or other criteria.
+    Search apartments by address or other criteria, grouped by address.
     
     This endpoint allows filtering apartments by various fields including address
     components (street type, street name, number) and location (district, neighborhood).
+    Results are grouped by address, showing aggregate information for each unique address.
     All filters are optional and can be combined.
     
     Args:
@@ -201,7 +263,7 @@ async def search_apartments(
         numero_registre_generalitat: Filter by registration number (exact match)
         
     Returns:
-        ApartmentSearchResponse: Matching apartments with metadata
+        ApartmentSearchResponse: Matching addresses with aggregated apartment data and metadata
     """
     # Build dynamic WHERE clause
     where_clauses = []
@@ -239,29 +301,36 @@ async def search_apartments(
         where_clauses.append("numero_registre_generalitat = :numero_registre_generalitat")
         params["numero_registre_generalitat"] = numero_registre_generalitat
     
-    # Build final query
+    # Build final query with grouping
     where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
     
     query = text(f"""
         SELECT 
-            n_expedient, codi_districte, nom_districte, codi_barri, nom_barri,
             tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2,
-            bloc, portal, escala, pis, porta, numero_registre_generalitat,
-            numero_places, longitud_x, latitud_y, year_updated, quarter_updated,
-            dataset_id, created_at, updated_at
+            MIN(codi_districte) as codi_districte,
+            MIN(nom_districte) as nom_districte,
+            MIN(codi_barri) as codi_barri,
+            MIN(nom_barri) as nom_barri,
+            MIN(longitud_x) as longitud_x,
+            MIN(latitud_y) as latitud_y,
+            COUNT(*) as apartments_count,
+            COALESCE(SUM(numero_places), 0) as total_places,
+            ARRAY_AGG(n_expedient ORDER BY n_expedient) FILTER (WHERE n_expedient IS NOT NULL) as expedients,
+            ARRAY_AGG(numero_registre_generalitat ORDER BY numero_registre_generalitat) FILTER (WHERE numero_registre_generalitat IS NOT NULL) as registres_generalitat
         FROM barcelona.habitatges_us_turistic
         WHERE {where_sql}
-        ORDER BY n_expedient
+        GROUP BY tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2
+        ORDER BY MIN(codi_districte), MIN(codi_barri), carrer, num1
     """)
     
     result = db.execute(query, params)
     rows = result.fetchall()
     
-    apartments = [row_to_apartment(row) for row in rows]
+    addresses = [row_to_address_group(row) for row in rows]
     
     return {
-        "data": apartments,
-        "meta": {"total": len(apartments)}
+        "data": addresses,
+        "meta": {"total": len(addresses)}
     }
 
 

@@ -37,6 +37,7 @@ services:
     volumes:
       - db-vol:/var/lib/postgresql/data
       - ../database/01-restore-dump.sh:/docker-entrypoint-initdb.d/01-restore-dump.sh:ro
+      - ../database/02-normalize-address-coordinates.sql:/docker-entrypoint-initdb.d/02-normalize-address-coordinates.sql:ro
       - ../database/${GLOBAL_DB_NAME}.sql.gz:/backup/${GLOBAL_DB_NAME}.sql.gz:ro
       - ./postgresql/custom-postgresql.conf:/etc/postgresql/postgresql.conf # Mount custom config
     command: postgres -c config_file=/etc/postgresql/postgresql.conf -c port=${GLOBAL_DB_PORT}

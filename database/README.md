@@ -6,6 +6,7 @@ This folder contains the first version of the database model.
 
 - [What data sources are included](#what-data-sources-are-included)
 - [Database Schema (DDL)](#database-schema-ddl)
+- [Migrations](#migrations)
 - [How to load CSV data](#how-to-load-csv-data)
 - [How to download the database](#how-to-download-the-database)
 - [Connecting to the database instance](#connecting-to-the-database-instance)
@@ -22,6 +23,63 @@ This folder contains the first version of the database model.
 {TODO}
 
 Refer to [DDL.md](DDL.md) when you need detailed information about the database structure, table relationships, or when making schema modifications.
+
+## Migrations
+
+Database migrations are SQL scripts that modify the database schema or data. They should be numbered sequentially and documented.
+
+### Available Migrations
+
+1. **`01-restore-dump.sh`** - Initial database restoration from dump file
+2. **`02-normalize-address-coordinates.sql`** (2026-06-11) - Normalizes coordinates for addresses with conflicting geocoding results
+   - Fixed 292 apartment records across 95 addresses
+   - Ensures each unique address has consistent coordinates
+   - Strategy: Uses first appearing coordinate (by `n_expedient`) per address
+
+### Automatic Execution
+
+Migrations are automatically executed during database container initialization via Docker's `docker-entrypoint-initdb.d/` mechanism. Files are executed in alphabetical order:
+
+1. `01-restore-dump.sh` - Restores the database dump
+2. `02-normalize-address-coordinates.sql` - Applies coordinate normalization
+
+**Note**: These scripts only run when initializing a fresh database. To apply migrations to an existing database, run them manually or rebuild the container with a fresh volume.
+
+### Running Migrations Manually
+
+To run a migration manually:
+
+```bash
+# From the project root
+cat database/02-normalize-address-coordinates.sql | docker exec -i guiripisos-pgsql psql -U postgres -d guiripisos -p 8054
+```
+
+Or directly:
+
+```bash
+docker exec guiripisos-pgsql psql -U postgres -d guiripisos -p 8054 -f /path/to/migration.sql
+```
+
+### Rebuilding Database with All Migrations
+
+To rebuild the database and apply all migrations from scratch:
+
+```bash
+# From the project root
+cd infra
+
+# Stop and remove the database container and volume
+make infra-undeploy
+
+# Rebuild and start with fresh database (migrations run automatically)
+make infra-deploy
+```
+
+This will:
+1. Remove the existing database container and volume
+2. Create a fresh PostgreSQL container
+3. Automatically run `01-restore-dump.sh` (restore database dump)
+4. Automatically run `02-normalize-address-coordinates.sql` (normalize coordinates)
 
 ## How to download the database
 
