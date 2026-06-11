@@ -88,6 +88,7 @@ class Neighborhood(BaseModel):
     codi_barri: int = Field(..., description="Neighborhood code")
     nom_barri: str = Field(..., description="Neighborhood name")
     codi_districte: int = Field(..., description="District code this neighborhood belongs to")
+    nom_districte: str = Field(..., description="District name this neighborhood belongs to")
     apartments: int = Field(..., description="Number of tourist apartments in this neighborhood")
 
 
@@ -321,7 +322,8 @@ async def get_neighborhoods(db: Session = Depends(get_db)):
         SELECT 
             hut.codi_barri, 
             MIN(hut.nom_barri) as nom_barri, 
-            MAX(hut.codi_districte) as codi_districte, 
+            MAX(hut.codi_districte) as codi_districte,
+            MIN(hut.nom_districte) as nom_districte,
             COUNT(*) as apartments
         FROM barcelona.habitatges_us_turistic hut 
         WHERE hut.codi_barri IS NOT NULL
@@ -337,6 +339,7 @@ async def get_neighborhoods(db: Session = Depends(get_db)):
             "codi_barri": row.codi_barri,
             "nom_barri": row.nom_barri,
             "codi_districte": row.codi_districte,
+            "nom_districte": row.nom_districte,
             "apartments": row.apartments
         }
         for row in rows

@@ -23,12 +23,14 @@ docs: |-
         "codi_barri": 1,
         "nom_barri": "el Raval",
         "codi_districte": 1,
+        "nom_districte": "Ciutat Vella",
         "apartments": 856
       },
       {
         "codi_barri": 2,
         "nom_barri": "el Barri Gòtic",
         "codi_districte": 1,
+        "nom_districte": "Ciutat Vella",
         "apartments": 645
       },
       ...
@@ -42,7 +44,7 @@ docs: |-
   ## Data Organization
   - **Ordered by**: District code, then neighborhood code
   - **Total neighborhoods**: ~73 barris across Barcelona
-  - **Includes**: Parent district code (`codi_districte`) for hierarchical filtering
+  - **Includes**: Parent district code (`codi_districte`) and name (`nom_districte`)
   - **Apartment count**: Number of tourist apartments in each neighborhood
   
   ## Use Cases
