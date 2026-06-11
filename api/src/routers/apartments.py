@@ -118,6 +118,41 @@ class ApartmentSearchResponse(BaseModel):
     meta: ApartmentMeta = Field(..., description="Response metadata")
 
 
+class ApartmentListItem(BaseModel):
+    """Individual apartment item for list endpoint."""
+    n_expedient: str = Field(..., description="Unique case number")
+    year: Optional[int] = Field(None, description="Year extracted from expedient")
+    codi_districte: Optional[int] = Field(None, description="District code")
+    nom_districte: Optional[str] = Field(None, description="District name")
+    codi_barri: Optional[int] = Field(None, description="Neighborhood code")
+    nom_barri: Optional[str] = Field(None, description="Neighborhood name")
+    tipus_carrer: Optional[str] = Field(None, description="Street type")
+    carrer: Optional[str] = Field(None, description="Street name")
+    tipus_num: Optional[int] = Field(None, description="Number type")
+    num1: Optional[int] = Field(None, description="Primary street number")
+    lletra1: Optional[str] = Field(None, description="Letter suffix for primary number")
+    num2: Optional[int] = Field(None, description="Secondary street number")
+    lletra2: Optional[str] = Field(None, description="Letter suffix for secondary number")
+    bloc: Optional[str] = Field(None, description="Building block")
+    portal: Optional[str] = Field(None, description="Portal/entrance number")
+    escala: Optional[str] = Field(None, description="Staircase identifier")
+    pis: Optional[str] = Field(None, description="Floor number")
+    porta: Optional[str] = Field(None, description="Door/unit number")
+    numero_registre_generalitat: Optional[str] = Field(None, description="Official registration number")
+    numero_places: Optional[int] = Field(None, description="Number of tourist places/beds")
+    longitud_x: Optional[float] = Field(None, description="Geographic longitude (WGS84)")
+    latitud_y: Optional[float] = Field(None, description="Geographic latitude (WGS84)")
+    
+    class Config:
+        from_attributes = True
+
+
+class ApartmentListResponse(BaseModel):
+    """Response model for apartments/list endpoint."""
+    data: List[ApartmentListItem] = Field(..., description="List of all apartments")
+    meta: ApartmentMeta = Field(..., description="Response metadata")
+
+
 class District(BaseModel):
     """District resource model with apartment count."""
     codi_districte: int = Field(..., description="District code")
@@ -275,6 +310,88 @@ async def get_apartments_map(db: Session = Depends(get_db)):
     return {
         "data": addresses,
         "meta": {"total": len(addresses)}
+    }
+
+
+@router.get("/apartments/list", response_model=ApartmentListResponse)
+async def get_apartments_list(db: Session = Depends(get_db)):
+    """
+    Get all apartments from barcelona.habitatges_us_turistic table.
+    
+    This endpoint returns all tourist apartments in Barcelona as individual records.
+    Each apartment is returned with its complete information including the year
+    extracted from the expedient number. Useful for displaying complete apartment
+    listings or exporting data.
+    
+    Returns:
+        ApartmentListResponse: All apartments with complete details and metadata
+    """
+    query = text("""
+        SELECT 
+            n_expedient,
+            CASE 
+                WHEN n_expedient ~ '^[0-9]{2}-[0-9]{4}-[0-9]+$' 
+                THEN CAST(SUBSTRING(n_expedient, 4, 4) AS INTEGER)
+                ELSE NULL
+            END as year,
+            codi_districte,
+            nom_districte,
+            codi_barri,
+            nom_barri,
+            tipus_carrer,
+            carrer,
+            tipus_num,
+            num1,
+            lletra1,
+            num2,
+            lletra2,
+            bloc,
+            portal,
+            escala,
+            pis,
+            porta,
+            numero_registre_generalitat,
+            numero_places,
+            longitud_x,
+            latitud_y
+        FROM barcelona.habitatges_us_turistic
+        ORDER BY n_expedient
+    """)
+    
+    result = db.execute(query)
+    rows = result.fetchall()
+    
+    apartments = [
+        {
+            "n_expedient": row.n_expedient,
+            "year": row.year,
+            "codi_districte": row.codi_districte,
+            "nom_districte": row.nom_districte,
+            "codi_barri": row.codi_barri,
+            "nom_barri": row.nom_barri,
+            "tipus_carrer": row.tipus_carrer,
+            "carrer": row.carrer,
+            "tipus_num": row.tipus_num,
+            "num1": row.num1,
+            "lletra1": row.lletra1,
+            "num2": row.num2,
+            "lletra2": row.lletra2,
+            "bloc": row.bloc,
+            "portal": row.portal,
+            "escala": row.escala,
+            "pis": row.pis,
+            "porta": row.porta,
+            "numero_registre_generalitat": row.numero_registre_generalitat,
+            "numero_places": row.numero_places,
+            "longitud_x": float(row.longitud_x) if row.longitud_x is not None else None,
+            "latitud_y": float(row.latitud_y) if row.latitud_y is not None else None,
+        }
+        for row in rows
+    ]
+    
+    return {
+        "data": apartments,
+        "meta": {"total": len(apartments)}
     }
 
 

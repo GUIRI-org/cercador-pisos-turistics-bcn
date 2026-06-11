@@ -1,0 +1,66 @@
+info:
+  name: Apartments list
+  type: http
+  seq: 7
+
+http:
+  method: GET
+  url: "{{baseURL}}/api/v1/apartments/list"
+  auth: inherit
+
+docs: |-
+  # Get All Apartments (List View)
+  
+  Returns all tourist apartments in Barcelona as individual records (10,735+ rows).
+  Each apartment includes the year extracted from the expedient number.
+  Ideal for exporting data or displaying complete apartment listings.
+  
+  ## Response Structure
+  ```json
+  {
+    "data": [
+      {
+        "n_expedient": "01-2015-001234",
+        "year": 2015,
+        "nom_districte": "Ciutat Vella",
+        "nom_barri": "el Raval",
+        "tipus_carrer": "Carrer",
+        "carrer": "de la Riera Alta",
+        "num1": 25,
+        "lletra1": null,
+        "num2": null,
+        "lletra2": null,
+        "bloc": null,
+        "portal": null,
+        "escala": "A",
+        "pis": "3",
+        "porta": "1",
+        "numero_registre_generalitat": "HUTB-123456",
+        "numero_places": 4,
+        "longitud_x": 2.1689,
+        "latitud_y": 41.3794,
+        "codi_districte": 1,
+        "codi_barri": 1
+      },
+      ...
+    ],
+    "meta": {
+      "total": 10735
+    }
+  }
+  ```
+  
+  ## Year Extraction
+  The `year` field is extracted from the expedient number pattern:
+  - Format: `XX-YYYY-NNNNNN` where YYYY is the year
+  - Example: `01-2015-001234` → year: 2015
+  - Returns null if expedient doesn't match the pattern
+  
+  ## Cache
+  This endpoint is cached for 7 days (604800 seconds) as the data changes only 1-2 times per year.
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
