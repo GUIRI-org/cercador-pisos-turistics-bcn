@@ -5,18 +5,24 @@ info:
 
 http:
   method: GET
-  url: "{{baseURL}}/api/v1/apartments/search?nom_barri=Gòtic"
-  auth: inherit
+  url: "{{baseURL}}/api/v1/apartments/search?codi_barri=2"
   params:
-    - name: nom_barri
-      value: Gòtic
-      enabled: true
+    - name: codi_barri
+      value: "2"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
 
 docs: |-
   # Search Apartments by Neighborhood
-  
+
   Search for tourist apartments within a specific neighborhood using `nom_barri` parameter.
-  
+
   ## Example Neighborhoods
   - el Barri Gòtic (Ciutat Vella)
   - el Raval (Ciutat Vella)
@@ -26,17 +32,17 @@ docs: |-
   - el Poble-sec (Sants-Montjuïc)
   - Gràcia (Gràcia)
   - el Poblenou (Sant Martí)
-  
+
   ## Search Behavior
   - **Case-insensitive**: "gòtic" matches "Gòtic"
   - **Partial matching**: "Gòt" will find "el Barri Gòtic"
   - **Combinable**: Can be combined with other filters
-  
+
   ## Example: Combine with address
   ```
   /apartments/search?nom_barri=Gòtic&carrer=Ferran
   ```
-  
+
   ## Response Structure
   ```json
   {
@@ -57,9 +63,3 @@ docs: |-
     }
   }
   ```
-
-settings:
-  encodeUrl: true
-  timeout: 0
-  followRedirects: true
-  maxRedirects: 5
