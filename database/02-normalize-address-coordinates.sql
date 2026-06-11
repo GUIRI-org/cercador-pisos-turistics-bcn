@@ -1,6 +1,17 @@
 -- Normalize coordinates for addresses with conflicting values
 -- Strategy: Use the coordinates from the first expedient (alphabetically) for each address
 -- This ensures consistency: same address = same coordinates
+--
+-- Migration Date: 2026-06-11
+-- Records Updated: 292 apartment records across 95 addresses
+-- Validation: ✅ All addresses now have consistent coordinates
+--
+-- Documentation:
+--   - Methodology: METHODOLOGY-coordinate-normalization.md
+--   - Issue Tracking: ../sandbox/ISSUE-coordinate-validation-pipeline.md
+--   - Schema Details: DDL.md (Data Quality & Migrations section)
+--
+-- Address Grouping: (tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2)
 
 BEGIN;
 

@@ -88,6 +88,63 @@ ON CONFLICT (n_expedient) DO UPDATE SET
     quarter_updated = EXCLUDED.quarter_updated,
     updated_at = CURRENT_TIMESTAMP;
 
+-- Fix apartments with missing neighborhood codes (codi_barri and nom_barri)
+-- Based on analysis of similar entries on the same streets or geographic proximity
+
+-- 1. Carrer BRUC #151 - District 2: Assign to "la Dreta de l'Eixample" (barri 7)
+--    Based on 50 similar addresses on the same street
+UPDATE barcelona.habitatges_us_turistic
+SET codi_barri = 7,
+    nom_barri = 'la Dreta de l''Eixample',
+    updated_at = CURRENT_TIMESTAMP
+WHERE n_expedient = '02-2010-0863'
+  AND codi_barri IS NULL;
+
+-- 2. Carrer CABANES #21 - District 3: Assign to "el Poble Sec" (barri 11)
+--    Based on 5 similar addresses on the same street
+UPDATE barcelona.habitatges_us_turistic
+SET codi_barri = 11,
+    nom_barri = 'el Poble Sec',
+    updated_at = CURRENT_TIMESTAMP
+WHERE n_expedient = '03-2014-0406'
+  AND codi_barri IS NULL;
+
+-- 3. Carrer EST #19 - District 1: Assign to "el Raval" (barri 1)
+--    Based on 10 similar addresses on the same street
+UPDATE barcelona.habitatges_us_turistic
+SET codi_barri = 1,
+    nom_barri = 'el Raval',
+    updated_at = CURRENT_TIMESTAMP
+WHERE n_expedient = '01-2022-0365'
+  AND codi_barri IS NULL;
+
+-- 4. Passeig de Gràcia #115 - District 6: Assign to "la Vila de Gràcia" (barri 31)
+--    Based on 13 apartments at the same address
+UPDATE barcelona.habitatges_us_turistic
+SET codi_barri = 31,
+    nom_barri = 'la Vila de Gràcia',
+    updated_at = CURRENT_TIMESTAMP
+WHERE n_expedient = '06-2008-0259'
+  AND codi_barri IS NULL;
+
+-- 5. Passeig Sant Antoni #30 - District 3: Assign to "Sants" (barri 18)
+--    Based on 31 apartments at the same address
+UPDATE barcelona.habitatges_us_turistic
+SET codi_barri = 18,
+    nom_barri = 'Sants',
+    updated_at = CURRENT_TIMESTAMP
+WHERE n_expedient = '03-2009-0168'
+  AND codi_barri IS NULL;
+
+-- 6. Carrer Tirso de Molina #14 - District 3: Assign to "Sants" (barri 18)
+--    Based on geographic proximity (10 nearest neighbors all in Sants)
+UPDATE barcelona.habitatges_us_turistic
+SET codi_barri = 18,
+    nom_barri = 'Sants',
+    updated_at = CURRENT_TIMESTAMP
+WHERE n_expedient = '03-2013-0028'
+  AND codi_barri IS NULL;
+
 -- Print summary statistics
 SELECT 
     COUNT(*) as total_records,

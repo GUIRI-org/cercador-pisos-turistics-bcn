@@ -177,6 +177,8 @@ LIMIT 10;
 - **Addresses Affected**: 95 unique addresses
 - **Validation**: ✅ All addresses now have consistent coordinates
 
+**Detailed Methodology**: See [METHODOLOGY-coordinate-normalization.md](METHODOLOGY-coordinate-normalization.md) for complete analysis, strategy selection, implementation details, and lessons learned.
+
 **Address Grouping**: Addresses are grouped by:
 ```
 (tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2)

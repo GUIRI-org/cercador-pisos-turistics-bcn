@@ -35,6 +35,7 @@ Database migrations are SQL scripts that modify the database schema or data. The
    - Fixed 292 apartment records across 95 addresses
    - Ensures each unique address has consistent coordinates
    - Strategy: Uses first appearing coordinate (by `n_expedient`) per address
+   - **Methodology**: See [METHODOLOGY-coordinate-normalization.md](METHODOLOGY-coordinate-normalization.md) for detailed analysis and implementation process
 
 ### Automatic Execution
 
