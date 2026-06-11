@@ -1,0 +1,31 @@
+x-common-env: &common-env
+  - path: .env # default
+    required: true
+  - path: .env-local # optional override
+    required: false
+
+name: ${GLOBAL_INSTALLATION_APP}
+
+networks:
+  guiripisos-network:
+    name: ${DOCKER_BASE_NAME}-network
+
+services:
+  api:
+    networks:
+      - guiripisos-network
+    env_file: *common-env
+    container_name: ${API_CONTAINER_NAME}
+    build:
+      context: ../api
+    restart: always
+    environment:
+      - DB_HOST=${DB_CONTAINER_NAME}
+      - DB_PORT=${GLOBAL_DB_PORT}
+      - DB_USER=${GLOBAL_DB_USER}
+      - DB_PASSWORD=${GLOBAL_DB_PASSWORD}
+      - DB_NAME=${GLOBAL_DB_NAME}
+    ports:
+      - "${API_PORT}:8000"
+    depends_on:
+      - db

@@ -11,7 +11,7 @@ networks:
     name: ${DOCKER_BASE_NAME}-network
 
 services:
-  s3-magic:
+  magic:
     env_file: *common-env
     networks:
       - guiripisos-network
@@ -43,5 +43,5 @@ services:
       - db
 
 volumes:
-  s3-magic-vol:
-    name: ${DOCKER_BASE_NAME}-s3-magic-vol
+  magic-vol:
+    name: ${DOCKER_BASE_NAME}-magic-vol
