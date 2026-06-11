@@ -100,6 +100,7 @@ class AddressGroup(BaseModel):
     # Aggregated fields
     apartments_count: int = Field(..., description="Number of apartments at this address")
     total_places: int = Field(..., description="Total number of tourist places/beds at this address")
+    year_from: Optional[int] = Field(None, description="Minimum year from all apartments at this address")
     apartments: List[ApartmentDetail] = Field(..., description="List of apartments at this address")
     
     class Config:
@@ -153,11 +154,20 @@ class ApartmentListResponse(BaseModel):
     meta: ApartmentMeta = Field(..., description="Response metadata")
 
 
+class Progression(BaseModel):
+    """Yearly progression of apartments and places."""
+    year: int = Field(..., description="Year")
+    apartments_count: int = Field(..., description="Number of apartments for this year")
+    total_places: int = Field(..., description="Total places for this year")
+
+
 class District(BaseModel):
     """District resource model with apartment count."""
     codi_districte: int = Field(..., description="District code")
     nom_districte: str = Field(..., description="District name")
-    apartments: int = Field(..., description="Number of tourist apartments in this district")
+    apartments_count: int = Field(..., description="Number of tourist apartments in this district")
+    total_places: int = Field(..., description="Total number of tourist places/beds in this district")
+    progression: List[Progression] = Field(..., description="Yearly progression of apartments and places")
 
 
 class DistrictListResponse(BaseModel):
@@ -172,7 +182,9 @@ class Neighborhood(BaseModel):
     nom_barri: str = Field(..., description="Neighborhood name")
     codi_districte: int = Field(..., description="District code this neighborhood belongs to")
     nom_districte: str = Field(..., description="District name this neighborhood belongs to")
-    apartments: int = Field(..., description="Number of tourist apartments in this neighborhood")
+    apartments_count: int = Field(..., description="Number of tourist apartments in this neighborhood")
+    total_places: int = Field(..., description="Total number of tourist places/beds in this neighborhood")
+    progression: List[Progression] = Field(..., description="Yearly progression of apartments and places")
 
 
 class NeighborhoodListResponse(BaseModel):
@@ -236,6 +248,7 @@ def row_to_address_group(row: Any) -> Dict[str, Any]:
         "latitud_y": float(row.latitud_y) if row.latitud_y is not None else None,
         "apartments_count": row.apartments_count,
         "total_places": row.total_places,
+        "year_from": row.year_from if hasattr(row, 'year_from') else None,
         "apartments": row.apartments if row.apartments else [],
     }
 
@@ -277,6 +290,11 @@ async def get_apartments_map(db: Session = Depends(get_db)):
             MIN(latitud_y) as latitud_y,
             COUNT(*) as apartments_count,
             COALESCE(SUM(numero_places), 0) as total_places,
+            MIN(CASE 
+                WHEN n_expedient ~ '^[0-9]{2}-[0-9]{4}-[0-9]+$' 
+                THEN CAST(SUBSTRING(n_expedient, 4, 4) AS INTEGER)
+                ELSE NULL
+            END) as year_from,
             COALESCE(
                 JSON_AGG(
                     JSON_BUILD_OBJECT(
@@ -488,6 +506,11 @@ async def search_apartments(
             MIN(latitud_y) as latitud_y,
             COUNT(*) as apartments_count,
             COALESCE(SUM(numero_places), 0) as total_places,
+            MIN(CASE 
+                WHEN n_expedient ~ '^[0-9]{{{{2}}}}-[0-9]{{{{4}}}}-[0-9]+$' 
+                THEN CAST(SUBSTRING(n_expedient, 4, 4) AS INTEGER)
+                ELSE NULL
+            END) as year_from,
             COALESCE(
                 JSON_AGG(
                     JSON_BUILD_OBJECT(
@@ -495,7 +518,7 @@ async def search_apartments(
                         'registre_generalitat', numero_registre_generalitat,
                         'num_places', numero_places,
                         'year', CASE 
-                            WHEN n_expedient ~ '^[0-9]{{2}}-[0-9]{{4}}-[0-9]+$' 
+                            WHEN n_expedient ~ '^[0-9]{{{{2}}}}-[0-9]{{{{4}}}}-[0-9]+$' 
                             THEN CAST(SUBSTRING(n_expedient, 4, 4) AS INTEGER)
                             ELSE NULL
                         END,
@@ -538,14 +561,39 @@ async def get_districts(db: Session = Depends(get_db)):
         DistrictListResponse: All districts with apartment counts and metadata
     """
     query = text("""
-        SELECT DISTINCT 
-            hut.codi_districte, 
-            MIN(hut.nom_districte) as nom_districte, 
-            COUNT(*) as apartments
-        FROM barcelona.habitatges_us_turistic hut 
-        WHERE hut.codi_barri IS NOT NULL
-        GROUP BY hut.codi_districte
-        ORDER BY hut.codi_districte
+        WITH district_year_stats AS (
+            SELECT 
+                hut.codi_districte,
+                MIN(hut.nom_districte) as nom_districte,
+                CASE 
+                    WHEN hut.n_expedient ~ '^[0-9]{2}-[0-9]{4}-[0-9]+$' 
+                    THEN CAST(SUBSTRING(hut.n_expedient, 4, 4) AS INTEGER)
+                    ELSE NULL
+                END as year,
+                COUNT(*) as apartments_count,
+                COALESCE(SUM(hut.numero_places), 0) as total_places
+            FROM barcelona.habitatges_us_turistic hut
+            WHERE hut.codi_barri IS NOT NULL
+            GROUP BY hut.codi_districte, year
+        )
+        SELECT 
+            codi_districte,
+            MIN(nom_districte) as nom_districte,
+            SUM(apartments_count) as apartments_count,
+            SUM(total_places) as total_places,
+            COALESCE(
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'year', year,
+                        'apartments_count', apartments_count,
+                        'total_places', total_places
+                    ) ORDER BY year
+                ) FILTER (WHERE year IS NOT NULL),
+                '[]'::json
+            ) as progression
+        FROM district_year_stats
+        GROUP BY codi_districte
+        ORDER BY codi_districte
     """)
     
     result = db.execute(query)
@@ -555,7 +603,9 @@ async def get_districts(db: Session = Depends(get_db)):
         {
             "codi_districte": row.codi_districte,
             "nom_districte": row.nom_districte,
-            "apartments": row.apartments
+            "apartments_count": row.apartments_count,
+            "total_places": row.total_places,
+            "progression": row.progression if row.progression else []
         }
         for row in rows
     ]
@@ -579,16 +629,43 @@ async def get_neighborhoods(db: Session = Depends(get_db)):
         NeighborhoodListResponse: All neighborhoods with apartment counts and metadata
     """
     query = text("""
+        WITH neighborhood_year_stats AS (
+            SELECT 
+                hut.codi_barri,
+                MIN(hut.nom_barri) as nom_barri,
+                MAX(hut.codi_districte) as codi_districte,
+                MIN(hut.nom_districte) as nom_districte,
+                CASE 
+                    WHEN hut.n_expedient ~ '^[0-9]{2}-[0-9]{4}-[0-9]+$' 
+                    THEN CAST(SUBSTRING(hut.n_expedient, 4, 4) AS INTEGER)
+                    ELSE NULL
+                END as year,
+                COUNT(*) as apartments_count,
+                COALESCE(SUM(hut.numero_places), 0) as total_places
+            FROM barcelona.habitatges_us_turistic hut
+            WHERE hut.codi_barri IS NOT NULL
+            GROUP BY hut.codi_barri, year
+        )
         SELECT 
-            hut.codi_barri, 
-            MIN(hut.nom_barri) as nom_barri, 
-            MAX(hut.codi_districte) as codi_districte,
-            MIN(hut.nom_districte) as nom_districte,
-            COUNT(*) as apartments
-        FROM barcelona.habitatges_us_turistic hut 
-        WHERE hut.codi_barri IS NOT NULL
-        GROUP BY hut.codi_barri
-        ORDER BY codi_districte, hut.codi_barri
+            codi_barri,
+            MIN(nom_barri) as nom_barri,
+            MAX(codi_districte) as codi_districte,
+            MIN(nom_districte) as nom_districte,
+            SUM(apartments_count) as apartments_count,
+            SUM(total_places) as total_places,
+            COALESCE(
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'year', year,
+                        'apartments_count', apartments_count,
+                        'total_places', total_places
+                    ) ORDER BY year
+                ) FILTER (WHERE year IS NOT NULL),
+                '[]'::json
+            ) as progression
+        FROM neighborhood_year_stats
+        GROUP BY codi_barri
+        ORDER BY MAX(codi_districte), codi_barri
     """)
     
     result = db.execute(query)
@@ -600,7 +677,9 @@ async def get_neighborhoods(db: Session = Depends(get_db)):
             "nom_barri": row.nom_barri,
             "codi_districte": row.codi_districte,
             "nom_districte": row.nom_districte,
-            "apartments": row.apartments
+            "apartments_count": row.apartments_count,
+            "total_places": row.total_places,
+            "progression": row.progression if row.progression else []
         }
         for row in rows
     ]

@@ -37,7 +37,7 @@ CREATE TABLE barcelona.habitatges_us_turistic (
     geom GEOMETRY(Point, 4326),
     year_updated SMALLINT,
     quarter_updated VARCHAR(2),
-    dataset_id INTEGER,
+    dataset_id INTEGER DEFAULT 1,
     created_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP  DEFAULT CURRENT_TIMESTAMP
 );

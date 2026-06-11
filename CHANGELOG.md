@@ -10,15 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **FastAPI REST API** (`api/`) for serving GUIRI Apartaments data to frontend
   - `/api/v1/apartments` - List all apartments with optional filtering by district/neighborhood
-  - `/api/v1/apartments/map` - Optimized apartment coordinates for map visualization
-  - `/api/v1/apartments/districts` - List all districts with apartment counts
-  - `/api/v1/apartments/neighborhoods` - List all neighborhoods with apartment counts
+  - `/api/v1/apartments/map` - Optimized apartment coordinates for map visualization with `year_from` field
+  - `/api/v1/apartments/search` - Address-grouped search with `year_from` field
+  - `/api/v1/apartments/districts` - List all districts with `apartments_count`, `total_places`, and yearly `progression`
+  - `/api/v1/apartments/neighborhoods` - List all neighborhoods with `apartments_count`, `total_places`, and yearly `progression`
   - `/api/v1/apartments/{n_expedient}` - Get single apartment by case number
   - `/api/v1/health` - Health check endpoint with database connectivity
   - CORS middleware for frontend integration
   - GZip compression for API responses
   - Cache-Control headers (7-day TTL) for static endpoints
   - Dockerized deployment with `compose-api.yaml`
+- **API enhancements** for temporal and statistical analysis
+  - `Progression` model for tracking yearly changes in apartments and tourist places
+  - `year_from` field in search and map endpoints showing minimum year from expedient numbers
+  - Yearly progression data in districts/neighborhoods endpoints with per-year breakdowns
 - **Bruno API collection** for GUIRI Apartments API endpoints (`api-collection/GUIRI Apartments/`)
   - Apartments map query
   - Search by district
@@ -43,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Infrastructure setup with PostgreSQL, Nginx, and Mage containers
 
 ### Changed
+- **API response field renames** for consistency across endpoints
+  - Districts endpoint: `apartments` → `apartments_count`
+  - Neighborhoods endpoint: `apartments` → `apartments_count`
+- **API response enhancements** with additional statistical fields
+  - Districts endpoint: Added `total_places` (sum of all tourist places/beds)
+  - Neighborhoods endpoint: Added `total_places` (sum of all tourist places/beds)
+  - Search and Map endpoints: Added `year_from` (minimum year from expedient numbers)
+- **Database schema** (`database/01-create-schema.sql`)
+  - Added `DEFAULT 1` to `dataset_id` column in `habitatges_us_turistic` table
 - **Database initialization architecture**: Migrated from dump-based to CSV-based approach
   - `infra/compose-db.yaml`: Updated volume mounts to use DDL + CSV files instead of dump file
   - `database/load-habitatges-csv.sql`: Updated CSV path for Docker container compatibility (`/data/hut_comunicacio_opendata.csv`)
