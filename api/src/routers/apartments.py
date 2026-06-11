@@ -58,8 +58,27 @@ class ApartmentMeta(BaseModel):
     total: int = Field(..., description="Total number of results")
 
 
+class ApartmentDetail(BaseModel):
+    """Individual apartment details within an address."""
+    expedient: str = Field(..., description="Expedient number")
+    registre_generalitat: Optional[str] = Field(None, description="Official registration number")
+    num_places: Optional[int] = Field(None, description="Number of tourist places/beds")
+    year: Optional[int] = Field(None, description="Year extracted from expedient")
+    bloc: Optional[str] = Field(None, description="Building block")
+    portal: Optional[str] = Field(None, description="Portal/entrance number")
+    escala: Optional[str] = Field(None, description="Staircase identifier")
+    pis: Optional[str] = Field(None, description="Floor number")
+    porta: Optional[str] = Field(None, description="Door/unit number")
+    
+    class Config:
+        from_attributes = True
+
+
 class AddressGroup(BaseModel):
     """Address-grouped apartment resource model."""
+    
+    # Full computed address
+    address: str = Field(..., description="Full formatted address")
     
     # Address fields
     tipus_carrer: Optional[str] = Field(None, description="Street type")
@@ -81,8 +100,7 @@ class AddressGroup(BaseModel):
     # Aggregated fields
     apartments_count: int = Field(..., description="Number of apartments at this address")
     total_places: int = Field(..., description="Total number of tourist places/beds at this address")
-    expedients: List[str] = Field(..., description="List of expedient numbers at this address")
-    registres_generalitat: List[str] = Field(..., description="List of registration numbers at this address")
+    apartments: List[ApartmentDetail] = Field(..., description="List of apartments at this address")
     
     class Config:
         from_attributes = True
@@ -167,6 +185,7 @@ def row_to_apartment(row: Any) -> Dict[str, Any]:
 def row_to_address_group(row: Any) -> Dict[str, Any]:
     """Convert a database row to an address group dictionary."""
     return {
+        "address": row.address,
         "tipus_carrer": row.tipus_carrer,
         "carrer": row.carrer,
         "tipus_num": row.tipus_num,
@@ -182,8 +201,7 @@ def row_to_address_group(row: Any) -> Dict[str, Any]:
         "latitud_y": float(row.latitud_y) if row.latitud_y is not None else None,
         "apartments_count": row.apartments_count,
         "total_places": row.total_places,
-        "expedients": row.expedients if row.expedients else [],
-        "registres_generalitat": row.registres_generalitat if row.registres_generalitat else [],
+        "apartments": row.apartments if row.apartments else [],
     }
 
 
@@ -205,6 +223,16 @@ async def get_apartments_map(db: Session = Depends(get_db)):
     """
     query = text("""
         SELECT 
+            -- Computed full address
+            TRIM(
+                COALESCE(tipus_carrer || ' ', '') ||
+                COALESCE(carrer, '') || ' ' ||
+                COALESCE(num1::text, '') ||
+                COALESCE(lletra1, '') ||
+                CASE WHEN num2 IS NOT NULL THEN '-' || num2::text ELSE '' END ||
+                COALESCE(lletra2, '')
+            ) as address,
+            
             tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2,
             MIN(codi_districte) as codi_districte,
             MIN(nom_districte) as nom_districte,
@@ -214,8 +242,26 @@ async def get_apartments_map(db: Session = Depends(get_db)):
             MIN(latitud_y) as latitud_y,
             COUNT(*) as apartments_count,
             COALESCE(SUM(numero_places), 0) as total_places,
-            ARRAY_AGG(n_expedient ORDER BY n_expedient) FILTER (WHERE n_expedient IS NOT NULL) as expedients,
-            ARRAY_AGG(numero_registre_generalitat ORDER BY numero_registre_generalitat) FILTER (WHERE numero_registre_generalitat IS NOT NULL) as registres_generalitat
+            COALESCE(
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'expedient', n_expedient,
+                        'registre_generalitat', numero_registre_generalitat,
+                        'num_places', numero_places,
+                        'year', CASE 
+                            WHEN n_expedient ~ '^[0-9]{2}-[0-9]{4}-[0-9]+$' 
+                            THEN CAST(SUBSTRING(n_expedient, 4, 4) AS INTEGER)
+                            ELSE NULL
+                        END,
+                        'bloc', bloc,
+                        'portal', portal,
+                        'escala', escala,
+                        'pis', pis,
+                        'porta', porta
+                    ) ORDER BY n_expedient
+                ) FILTER (WHERE n_expedient IS NOT NULL),
+                '[]'::json
+            ) as apartments
         FROM barcelona.habitatges_us_turistic
         GROUP BY tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2
         ORDER BY MIN(codi_districte), MIN(codi_barri), carrer, num1
@@ -306,6 +352,16 @@ async def search_apartments(
     
     query = text(f"""
         SELECT 
+            -- Computed full address
+            TRIM(
+                COALESCE(tipus_carrer || ' ', '') ||
+                COALESCE(carrer, '') || ' ' ||
+                COALESCE(num1::text, '') ||
+                COALESCE(lletra1, '') ||
+                CASE WHEN num2 IS NOT NULL THEN '-' || num2::text ELSE '' END ||
+                COALESCE(lletra2, '')
+            ) as address,
+            
             tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2,
             MIN(codi_districte) as codi_districte,
             MIN(nom_districte) as nom_districte,
@@ -315,8 +371,26 @@ async def search_apartments(
             MIN(latitud_y) as latitud_y,
             COUNT(*) as apartments_count,
             COALESCE(SUM(numero_places), 0) as total_places,
-            ARRAY_AGG(n_expedient ORDER BY n_expedient) FILTER (WHERE n_expedient IS NOT NULL) as expedients,
-            ARRAY_AGG(numero_registre_generalitat ORDER BY numero_registre_generalitat) FILTER (WHERE numero_registre_generalitat IS NOT NULL) as registres_generalitat
+            COALESCE(
+                JSON_AGG(
+                    JSON_BUILD_OBJECT(
+                        'expedient', n_expedient,
+                        'registre_generalitat', numero_registre_generalitat,
+                        'num_places', numero_places,
+                        'year', CASE 
+                            WHEN n_expedient ~ '^[0-9]{{2}}-[0-9]{{4}}-[0-9]+$' 
+                            THEN CAST(SUBSTRING(n_expedient, 4, 4) AS INTEGER)
+                            ELSE NULL
+                        END,
+                        'bloc', bloc,
+                        'portal', portal,
+                        'escala', escala,
+                        'pis', pis,
+                        'porta', porta
+                    ) ORDER BY n_expedient
+                ) FILTER (WHERE n_expedient IS NOT NULL),
+                '[]'::json
+            ) as apartments
         FROM barcelona.habitatges_us_turistic
         WHERE {where_sql}
         GROUP BY tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2
