@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
 - **FastAPI REST API** (`api/`) for serving GUIRI Apartaments data to frontend
   - `/api/v1/apartments` - List all apartments with optional filtering by district/neighborhood
   - `/api/v1/apartments/map` - Optimized apartment coordinates for map visualization
@@ -26,10 +27,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Districts list
   - Neighborhoods list
   - localhost environment configuration
+- **CSV-based database initialization** approach (replacing dump-based method)
+  - `database/01-create-schema.sql` - DDL script for creating schema, tables, and indexes
+  - Automatic CSV data loading from `data/interim/hut_comunicacio_opendata.csv`
+  - Sequential initialization scripts via Docker `docker-entrypoint-initdb.d/`
 - Database coordinate normalization script (`02-normalize-address-coordinates.sql`) to resolve conflicting coordinates for same addresses
 - Database schema (DDL) for Barcelona tourist housing data with PostGIS geometry support
 - CSV data loader script (`load-habitatges-csv.sql`) for importing habitatges_us_turistic dataset
-- Database dump auto-restore on container startup for pre-populated data
 - Bruno HTTP API collection for OpenData BCN APIs (Cerca territori, Adreces, Illa)
 - Observable Framework frontend with geoBCN street address search form (Tipo Vía, Carrer autocomplete, Número)
 - Chained tourist housing search in frontend: exact address query (street + number) plus street-only query (type + street)
@@ -39,8 +43,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Infrastructure setup with PostgreSQL, Nginx, and Mage containers
 
 ### Changed
+- **Database initialization architecture**: Migrated from dump-based to CSV-based approach
+  - `infra/compose-db.yaml`: Updated volume mounts to use DDL + CSV files instead of dump file
+  - `database/load-habitatges-csv.sql`: Updated CSV path for Docker container compatibility (`/data/hut_comunicacio_opendata.csv`)
+  - `database/README.md`: Comprehensive documentation rewrite explaining CSV-based initialization benefits
 - Updated `README.md` with API service information and improved quick start guide
 - Enhanced infrastructure setup to include FastAPI service in deployment
 
 ### Removed
+- `database/01-restore-dump.sh` - Shell script for restoring database dumps (replaced by DDL approach)
+- `database/guiripisos.sql.gz` - Binary database dump file (replaced by CSV + DDL scripts)
 - Old API collection example queries (replaced with standardized OpenData BCN examples)

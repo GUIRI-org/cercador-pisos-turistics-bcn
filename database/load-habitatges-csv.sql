@@ -39,7 +39,7 @@ CREATE TEMPORARY TABLE temp_habitatges (
 );
 
 -- Load CSV file into temporary table
-\COPY temp_habitatges FROM '../data/interim/hut_comunicacio_opendata.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',', NULL '', ENCODING 'UTF8')
+\COPY temp_habitatges FROM '/data/hut_comunicacio_opendata.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',', NULL '', ENCODING 'UTF8')
 
 -- Insert data from temporary table into main table, computing the geom column
 INSERT INTO barcelona.habitatges_us_turistic (

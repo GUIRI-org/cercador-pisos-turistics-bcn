@@ -36,9 +36,10 @@ services:
       - ${GLOBAL_DB_PORT}:${GLOBAL_DB_PORT}
     volumes:
       - db-vol:/var/lib/postgresql/data
-      - ../database/01-restore-dump.sh:/docker-entrypoint-initdb.d/01-restore-dump.sh:ro
-      - ../database/02-normalize-address-coordinates.sql:/docker-entrypoint-initdb.d/02-normalize-address-coordinates.sql:ro
-      - ../database/${GLOBAL_DB_NAME}.sql.gz:/backup/${GLOBAL_DB_NAME}.sql.gz:ro
+      - ../database/01-create-schema.sql:/docker-entrypoint-initdb.d/01-create-schema.sql:ro
+      - ../database/load-habitatges-csv.sql:/docker-entrypoint-initdb.d/02-load-data.sql:ro
+      - ../database/02-normalize-address-coordinates.sql:/docker-entrypoint-initdb.d/03-normalize-address-coordinates.sql:ro
+      - ../data/interim/hut_comunicacio_opendata.csv:/data/hut_comunicacio_opendata.csv:ro
       - ./postgresql/custom-postgresql.conf:/etc/postgresql/postgresql.conf # Mount custom config
     command: postgres -c config_file=/etc/postgresql/postgresql.conf -c port=${GLOBAL_DB_PORT}
     shm_size: "256mb"
