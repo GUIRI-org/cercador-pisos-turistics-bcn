@@ -30,10 +30,31 @@ The `infra/` folder contains all necessary resources to run the components of th
 
 - Docker and Docker Compose
 - Git
+- [Git LFS](https://git-lfs.github.com/) — the dataset CSV is stored in LFS
+
+  ```bash
+  # macOS
+  brew install git-lfs
+  git lfs install
+  ```
 
 **Setup**
 
-1. Clone and start infrastructure:
+1. Pull the dataset file from Git LFS:
+
+```bash
+git lfs pull
+```
+
+> If you skip this step the database will initialise with an empty table and all API calls will return 0 results.
+
+2. Add the local domains to `/etc/hosts` so the browser can resolve them:
+
+```bash
+sudo sh -c 'echo "127.0.0.1 guiripisos.local api.guiripisos.local mage.guiripisos.local" >> /etc/hosts'
+```
+
+3. Clone and start infrastructure:
 
 ```bash
 make infra-deploy
@@ -45,13 +66,13 @@ This launches:
 - Mage data pipeline UI
 - Nginx reverse proxy
 
-2. Access services:
+4. Access services:
 - Frontend: http://guiripisos.local:8888
 - API: http://api.guiripisos.local:8888/api/v1/docs
 - Mage: http://mage.guiripisos.local:8888
 - Database: `localhost:8054` (psql credentials in `infra/.env`)
 
-3. Start frontend dev server (optional):
+5. Start frontend dev server (optional):
 
 ```bash
 cd frontend/observable-framework-app
