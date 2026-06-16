@@ -16,9 +16,7 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
 ```js
 {
   const BASE = "https://geoportal.barcelona.cat/geoBCN/serveis/territori";
-  const HUT_RESOURCE_ID = "b32fa7f6-d464-403b-8a02-0292a64883bf";
-  const HUT_ENDPOINT = "https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search";
-  const HUT_PAGE_SIZE = 1000;
+  const GUIRI_API_BASE = "http://127.0.0.1:9092";
 
   // ── Parallax scene shells ───────────────────────────────────────────────────
   const scene = document.createElement("section");
@@ -138,7 +136,7 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
       .sort((a, b) => a.nom.localeCompare(b.nom, "ca"))
       .forEach(t => {
         const o = document.createElement("option");
-        o.value = t.codi; o.dataset.abr = t.abreviatura;
+        o.value = t.codi; o.dataset.abr = t.abreviatura; o.dataset.nom = t.nom;
         o.textContent = `${t.abreviatura} – ${t.nom}`;
         tipusSel.appendChild(o);
       });
@@ -246,9 +244,10 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
         &nbsp;·&nbsp; Barcelona
       </div>`;
 
-    const hutQuery = `${carrerInp.value} ${numInp.value.trim()}`.trim();
-    const hutStreetQuery = carrerInp.value.trim();
-    searchHutResults(hutQuery, hutStreetQuery);
+    const carrerNom = selectedVia?.nom || carrerInp.value.trim();
+    const tipusCarrer = selectedVia?.tipusVia?.nom || tipusSel.selectedOptions[0]?.dataset?.nom || null;
+    const num1 = numInp.value.trim() || null;
+    searchHutResults(carrerNom, tipusCarrer, num1);
   };
 
   const escapeHtml = (value) => String(value ?? "")
@@ -258,66 +257,54 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
-  const renderHutResults = (container, title, query, records) => {
-    if (!records.length) {
+  const renderHutResults = (container, title, addressGroups) => {
+    if (!addressGroups.length) {
       container.innerHTML = `
         <h4 class="geo-hut-title">${title}</h4>
-        <p class="geo-hut-status">No s'han trobat resultats per "${escapeHtml(query)}".</p>`;
+        <p class="geo-hut-status">No s'han trobat habitatges d'ús turístic.</p>`;
       return;
     }
 
-    const items = records.map(record => {
-      const address = [
-        record.TIPUS_CARRER,
-        record.CARRER,
-        record.NUM1,
-        record.LLETRA1
-      ].filter(Boolean).join(" ");
-      const district = [record.NOM_DISTRICTE, record.NOM_BARRI].filter(Boolean).join(" · ");
-
+    const totalApartments = addressGroups.reduce((s, g) => s + g.apartments_count, 0);
+    const items = addressGroups.map(group => {
+      const district = [group.nom_districte, group.nom_barri].filter(Boolean).join(" · ");
+      const apts = group.apartments.map(a => {
+        const pisParta = [a.pis, a.porta].filter(Boolean).join("/");
+        return `<li class="geo-hut-apt-item">
+          Expedient: ${escapeHtml(a.expedient || "-")}
+          &nbsp;·&nbsp; Registre: ${escapeHtml(a.registre_generalitat || "-")}
+          &nbsp;·&nbsp; Places: ${escapeHtml(String(a.num_places ?? "-"))}
+          ${pisParta ? `&nbsp;·&nbsp; Pis/Porta: ${escapeHtml(pisParta)}` : ""}
+        </li>`;
+      }).join("");
       return `<li class="geo-hut-item">
-        <div class="geo-hut-item-title">${escapeHtml(address || "Adreça no disponible")}</div>
-        <div class="geo-hut-item-meta">
-          Registre: ${escapeHtml(record.NUMERO_REGISTRE_GENERALITAT || "-")}
-          &nbsp;·&nbsp; Places: ${escapeHtml(record.NUMERO_PLACES || "-")}
-          &nbsp;·&nbsp; Expedient: ${escapeHtml(record.N_EXPEDIENT || "-")}
-        </div>
+        <div class="geo-hut-item-title">${escapeHtml(group.address || "Adreça no disponible")}</div>
         ${district ? `<div class="geo-hut-item-meta">${escapeHtml(district)}</div>` : ""}
+        <div class="geo-hut-item-meta">${group.apartments_count} habitatge(s) · ${group.total_places} places</div>
+        <ul class="geo-hut-apt-list">${apts}</ul>
       </li>`;
     }).join("");
 
     container.innerHTML = `
-      <h4 class="geo-hut-title">${title} (${records.length})</h4>
+      <h4 class="geo-hut-title">${title} (${totalApartments} habitatge(s) en ${addressGroups.length} adreça(es))</h4>
       <ul class="geo-hut-list">${items}</ul>`;
   };
 
-  const fetchAllHutRecords = async (query, requestId) => {
-    let offset = 0;
-    let total = Infinity;
-    const allRecords = [];
-
-    while (offset < total) {
-      if (requestId !== hutRequestId) return null;
-
-      const url = `${HUT_ENDPOINT}?resource_id=${HUT_RESOURCE_ID}&limit=${HUT_PAGE_SIZE}&offset=${offset}&q=${encodeURIComponent(query)}`;
-      const json = await fetch(url).then(r => r.json());
-      if (!json?.success) throw new Error("HUT API error");
-
-      const result = json?.result || {};
-      const records = result.records || [];
-      total = Number(result.total ?? records.length);
-      allRecords.push(...records);
-
-      if (!records.length || allRecords.length >= total) break;
-      offset += records.length;
-    }
-
-    return allRecords;
+  const fetchApartmentsByAddress = async (params, requestId) => {
+    if (requestId !== hutRequestId) return null;
+    const qs = new URLSearchParams();
+    if (params.carrer) qs.set("carrer", params.carrer);
+    if (params.num1 !== undefined && params.num1 !== null && params.num1 !== "") qs.set("num1", String(params.num1));
+    if (params.tipus_carrer) qs.set("tipus_carrer", params.tipus_carrer);
+    const url = `${GUIRI_API_BASE}/api/v1/apartments/search?${qs}`;
+    const json = await fetch(url).then(r => r.json());
+    if (requestId !== hutRequestId) return null;
+    return json?.data || [];
   };
 
-  const searchHutResults = (query, streetQuery) => {
+  const searchHutResults = (carrer, tipusCarrer, num1) => {
     clearTimeout(hutTimer);
-    if (!query || !streetQuery) {
+    if (!carrer) {
       clearHutResults();
       return;
     }
@@ -326,37 +313,35 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
       const requestId = ++hutRequestId;
       hutResultsDiv.style.display = "block";
       hutStreetResultsDiv.style.display = "block";
-      hutResultsDiv.innerHTML = "<div class=\"geo-hut-status\">Cercant habitatges turístics (tots els resultats)...</div>";
-      hutStreetResultsDiv.innerHTML = "<div class=\"geo-hut-status\">Cercant habitatges turístics per carrer (tots els resultats)...</div>";
+      hutResultsDiv.innerHTML = "<div class=\"geo-hut-status\">Cercant habitatges turístics...</div>";
+      hutStreetResultsDiv.innerHTML = "<div class=\"geo-hut-status\">Cercant habitatges turístics al carrer...</div>";
 
       try {
-        const [exactRecords, streetRecords] = await Promise.all([
-          fetchAllHutRecords(query, requestId),
-          fetchAllHutRecords(streetQuery, requestId)
+        const [exactGroups, streetGroups] = await Promise.all([
+          fetchApartmentsByAddress({ carrer, tipus_carrer: tipusCarrer, num1 }, requestId),
+          fetchApartmentsByAddress({ carrer, tipus_carrer: tipusCarrer }, requestId)
         ]);
         if (requestId !== hutRequestId) return;
-        if (!exactRecords || !streetRecords) return;
+        if (!exactGroups || !streetGroups) return;
 
         renderHutResults(
           hutResultsDiv,
-          "Viviendas de uso turístico (adreça amb número)",
-          query,
-          exactRecords
+          "Habitatges d'ús turístic (adreça amb número)",
+          exactGroups
         );
         renderHutResults(
           hutStreetResultsDiv,
-          "Viviendas de uso turístico (tipus i carrer, sense número)",
-          streetQuery,
-          streetRecords
+          "Habitatges d'ús turístic (carrer, sense número)",
+          streetGroups
         );
         setPageScrollEnabled(true);
       } catch {
         if (requestId !== hutRequestId) return;
         hutResultsDiv.innerHTML = `
-          <h4 class="geo-hut-title">Viviendas de uso turístico (adreça amb número)</h4>
+          <h4 class="geo-hut-title">Habitatges d'ús turístic (adreça amb número)</h4>
           <p class="geo-hut-status">No s'ha pogut consultar el servei en aquest moment.</p>`;
         hutStreetResultsDiv.innerHTML = `
-          <h4 class="geo-hut-title">Viviendas de uso turístico (tipus i carrer, sense número)</h4>
+          <h4 class="geo-hut-title">Habitatges d'ús turístic (carrer, sense número)</h4>
           <p class="geo-hut-status">No s'ha pogut consultar el servei en aquest moment.</p>`;
         setPageScrollEnabled(true);
       }
