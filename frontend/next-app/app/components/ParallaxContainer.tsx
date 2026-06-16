@@ -27,34 +27,37 @@ export function ParallaxContainer({ children }: { children: React.ReactNode }) {
       {/* Back plane - static background */}
       <div className="geo-plane geo-plane-back fixed inset-0 -z-30 bg-gradient-to-b from-slate-50 to-slate-100" />
 
-      {/* Mid plane - repeating pattern with parallax */}
+      {/* Mid plane — fixed to viewport, background shifts at 12% scroll speed
+           backgroundPositionY = scrollY * 0.12 → content at 100% feels much faster → slow parallax drift */}
       <div
-        className="geo-plane geo-plane-mid fixed inset-0 -z-20 opacity-30"
+        className="geo-plane geo-plane-mid fixed inset-0 -z-20 pointer-events-none"
         style={{
-          backgroundImage: `
-            repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 35px,
-              rgba(100, 150, 200, 0.1) 35px,
-              rgba(100, 150, 200, 0.1) 70px
-            )
-          `,
-          backgroundSize: '100% 100%',
-          transform: `translate3d(0, ${(-scrollY * 0.08).toFixed(2)}px, 0)`,
-          transformOrigin: 'center top',
+          backgroundImage: "url('/parallax/building-pattern-l.png'), url('/parallax/building-pattern-r.png')",
+          backgroundRepeat: 'repeat-y, repeat-y',
+          backgroundPosition: `left ${(scrollY * 0.12).toFixed(2)}px, right ${(scrollY * 0.12).toFixed(2)}px`,
+          backgroundSize: 'auto 800px, auto 800px',
         }}
       />
 
-      {/* Third plane - horizontal parallax */}
+      {/* Third plane - explicit horizontal image layer */}
       <div
-        className="geo-plane geo-plane-third fixed inset-0 -z-10 pointer-events-none"
+        className="geo-plane geo-plane-third fixed inset-0 z-[-25] pointer-events-none"
         style={{
           transform: `translate3d(${(scrollY * 0.12).toFixed(2)}px, 0, 0)`,
         }}
       >
-        <div className="absolute right-0 top-20 w-96 h-96 bg-gradient-to-br from-blue-200/20 to-purple-200/20 rounded-full blur-3xl" />
-        <div className="absolute left-1/4 bottom-20 w-80 h-80 bg-gradient-to-tr from-slate-300/10 to-slate-200/10 rounded-full blur-3xl" />
+        <img
+          src="/parallax/cloud-h.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute -right-16 top-16 w-[420px] max-w-[55vw]"
+        />
+        <img
+          src="/parallax/cloud-h.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute left-[18%] bottom-10 w-[360px] max-w-[48vw]"
+        />
       </div>
 
       {/* Content - scrolls normally */}

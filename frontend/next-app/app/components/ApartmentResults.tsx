@@ -13,18 +13,10 @@ export function ApartmentResults({
   addressGroups,
   loading,
 }: ApartmentResultsProps) {
-  const escapeHtml = (value?: string | number | null): string => {
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  };
 
   if (loading) {
     return (
-      <div className="rounded-lg bg-blue-50 p-4">
+      <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
         <h4 className="font-semibold text-gray-800">{title}</h4>
         <p className="mt-2 text-gray-600">Cercant habitatges turístics...</p>
       </div>
@@ -33,7 +25,7 @@ export function ApartmentResults({
 
   if (!addressGroups.length) {
     return (
-      <div className="rounded-lg bg-blue-50 p-4">
+      <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
         <h4 className="font-semibold text-gray-800">{title}</h4>
         <p className="mt-2 text-gray-600">No s'han trobat habitatges d'ús turístic.</p>
       </div>
@@ -43,7 +35,7 @@ export function ApartmentResults({
   const totalApartments = addressGroups.reduce((s, g) => s + g.apartments_count, 0);
 
   return (
-    <div className="rounded-lg bg-blue-50 p-4">
+    <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
       <h4 className="font-semibold text-gray-800">
         {title} ({totalApartments} habitatge(s) en {addressGroups.length} adreça(es))
       </h4>
@@ -54,12 +46,12 @@ export function ApartmentResults({
             .join(' · ');
 
           return (
-            <li key={idx} className="rounded bg-white p-3">
+            <li key={idx} className="rounded border border-white/35 bg-transparent p-3">
               <div className="font-semibold text-gray-900">
-                {escapeHtml(group.address || 'Adreça no disponible')}
+                {group.address || 'Adreça no disponible'}
               </div>
               {district && (
-                <div className="text-sm text-gray-600">{escapeHtml(district)}</div>
+                <div className="text-sm text-gray-600">{district}</div>
               )}
               <div className="text-sm text-gray-600">
                 {group.apartments_count} habitatge(s) · {group.total_places} places
@@ -69,15 +61,15 @@ export function ApartmentResults({
                   const pisParta = [apt.pis, apt.porta].filter(Boolean).join('/');
                   return (
                     <li key={aptIdx} className="text-xs text-gray-700">
-                      <span>Expedient: {escapeHtml(apt.expedient || '-')}</span>
+                      <span>Expedient: {apt.expedient || '-'}</span>
                       <span> · </span>
-                      <span>Registre: {escapeHtml(apt.registre_generalitat || '-')}</span>
+                      <span>Registre: {apt.registre_generalitat || '-'}</span>
                       <span> · </span>
-                      <span>Places: {escapeHtml(String(apt.num_places ?? '-'))}</span>
+                      <span>Places: {apt.num_places ?? '-'}</span>
                       {pisParta && (
                         <>
                           <span> · </span>
-                          <span>Pis/Porta: {escapeHtml(pisParta)}</span>
+                          <span>Pis/Porta: {pisParta}</span>
                         </>
                       )}
                     </li>

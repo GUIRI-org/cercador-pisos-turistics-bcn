@@ -1,18 +1,14 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { fetchTipusVies, searchCarrers } from '@/lib/api';
-import { TipusVia, CarrerVia, AdrecaSearchResult } from '@/lib/types';
+import { searchCarrers } from '@/lib/api';
+import { CarrerVia, AdrecaSearchResult } from '@/lib/types';
 
 interface SearchFormProps {
   onSearch: (carrer: string, tipusCarrer: string | null, num1: string | null) => void;
 }
 
 export function SearchForm({ onSearch }: SearchFormProps) {
-  const [tipusVies, setTipusVies] = useState<TipusVia[]>([]);
-  const [selectedTipus, setSelectedTipus] = useState('');
-  const [selectedTipusNom, setSelectedTipusNom] = useState<string | null>(null);
-
   const [carrerInput, setCarrerInput] = useState('');
   const [carrerSuggestions, setCarrerSuggestions] = useState<CarrerVia[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -25,25 +21,6 @@ export function SearchForm({ onSearch }: SearchFormProps) {
   const [numInput, setNumInput] = useState('');
   const [numOptions, setNumOptions] = useState<string[]>([]);
 
-  // Load tipus vies on mount
-  useEffect(() => {
-    fetchTipusVies().then(setTipusVies);
-  }, []);
-
-  // Handle tipus change
-  const handleTipusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const codi = e.target.value;
-    setSelectedTipus(codi);
-    const selected = tipusVies.find((t) => t.codi === codi);
-    setSelectedTipusNom(selected?.nom || null);
-    setCarrerInput('');
-    setCarrerSuggestions([]);
-    setShowSuggestions(false);
-    setSelectedCarrer(null);
-    setNumInput('');
-    setNumOptions([]);
-  };
-
   // Handle carrer input with debounce
   const handleCarrerInput = (value: string) => {
     setCarrerInput(value);
@@ -55,14 +32,9 @@ export function SearchForm({ onSearch }: SearchFormProps) {
     }
 
     carrerTimerRef.current = setTimeout(async () => {
-      const { vies, adreces } = await searchCarrers(
-        value,
-        selectedTipus ? tipusVies.find((t) => t.codi === selectedTipus)?.abreviatura : undefined
-      );
+      const { vies, adreces } = await searchCarrers(value);
 
-      const filtered = selectedTipus
-        ? vies.filter((v) => !selectedTipus || v.tipusVia?.codi === selectedTipus)
-        : vies;
+      const filtered = vies;
 
       setCarrerSuggestions(filtered);
       setStoredAdreces(adreces);
@@ -107,7 +79,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
     }
 
     const carrerNom = selectedCarrer?.nom || carrerInput.trim();
-    const tipusCarrer = selectedCarrer?.tipusVia?.nom || selectedTipusNom || null;
+    const tipusCarrer = selectedCarrer?.tipusVia?.nom || null;
     const num1 = numInput.trim() || null;
 
     onSearch(carrerNom, tipusCarrer, num1);
@@ -131,89 +103,75 @@ export function SearchForm({ onSearch }: SearchFormProps) {
   }, []);
 
   return (
-    <div className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-lg">
-      <div>
-        <label htmlFor="tipus" className="block text-sm font-medium text-gray-700">
-          Tipo Vía
-        </label>
-        <select
-          id="tipus"
-          value={selectedTipus}
-          onChange={handleTipusChange}
-          className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-        >
-          <option value="">Seleccione una opción</option>
-          {tipusVies.map((t) => (
-            <option key={t.codi} value={t.codi}>
-              {t.abreviatura} – {t.nom}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="relative">
-        <label htmlFor="carrer" className="block text-sm font-medium text-gray-700">
-          Calle <span className="text-red-500">*</span>
-        </label>
-        <input
-          ref={carrerInputRef}
-          id="carrer"
-          type="text"
-          value={carrerInput}
-          onChange={(e) => handleCarrerInput(e.target.value)}
-          onFocus={() => carrerInput.trim().length >= 2 && setShowSuggestions(true)}
-          placeholder="Escriu el nom del carrer…"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-        />
-
-        {showSuggestions && (
-          <ul
-            ref={suggestionsRef}
-            className="absolute top-full left-0 right-0 z-10 border border-gray-300 border-t-0 bg-white"
-          >
-            {carrerSuggestions.length === 0 ? (
-              <li className="px-3 py-2 text-gray-500">Cap carrer trobat</li>
-            ) : (
-              carrerSuggestions.map((via) => (
-                <li
-                  key={via.codi}
-                  onClick={() => handleSelectCarrer(via)}
-                  className="cursor-pointer px-3 py-2 hover:bg-blue-50"
-                >
-                  {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
-                </li>
-              ))
-            )}
-          </ul>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="num" className="block text-sm font-medium text-gray-700">
-          Número <span className="text-red-500">*</span>
-        </label>
-        <div className="mt-1 flex gap-2">
+    <div className="w-full bg-transparent py-4">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(280px,1.4fr)_minmax(120px,0.6fr)_auto] md:items-end">
+        <div className="relative">
+          <label htmlFor="carrer" className="block text-sm font-medium text-gray-700">
+            Street <span className="text-red-500">*</span>
+          </label>
           <input
-            id="num"
+            ref={carrerInputRef}
+            id="carrer"
             type="text"
-            value={numInput}
-            onChange={handleNumChange}
-            disabled={!selectedCarrer}
-            placeholder="–"
-            list="num-list"
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100"
+            value={carrerInput}
+            onChange={(e) => handleCarrerInput(e.target.value)}
+            onFocus={() => carrerInput.trim().length >= 2 && setShowSuggestions(true)}
+            placeholder="Type the street name…"
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 bg-white"
           />
-          <datalist id="num-list">
-            {numOptions.map((num) => (
-              <option key={num} value={num} />
-            ))}
-          </datalist>
+
+          {showSuggestions && (
+            <ul
+              ref={suggestionsRef}
+              className="absolute top-full left-0 right-0 z-10 border border-gray-300 border-t-0 bg-white"
+            >
+              {carrerSuggestions.length === 0 ? (
+                <li className="px-3 py-2 text-gray-500">No street found</li>
+              ) : (
+                carrerSuggestions.map((via) => (
+                  <li
+                    key={via.codi}
+                    onClick={() => handleSelectCarrer(via)}
+                    className="cursor-pointer px-3 py-2 hover:bg-blue-50"
+                  >
+                    {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="num" className="block text-sm font-medium text-gray-700">
+            Number <span className="text-red-500">*</span>
+          </label>
+          <div className="mt-1">
+            <input
+              id="num"
+              type="text"
+              value={numInput}
+              onChange={handleNumChange}
+              disabled={!selectedCarrer}
+              placeholder="–"
+              list="num-list"
+              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100 bg-white"
+            />
+            <datalist id="num-list">
+              {numOptions.map((num) => (
+                <option key={num} value={num} />
+              ))}
+            </datalist>
+          </div>
+        </div>
+
+        <div>
           <button
             onClick={handleSearch}
             disabled={!selectedCarrer || !numInput.trim()}
-            className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400"
+            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400 md:w-auto"
           >
-            Cercar
+            Search
           </button>
         </div>
       </div>

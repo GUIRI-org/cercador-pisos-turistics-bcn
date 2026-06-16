@@ -1,0 +1,13 @@
+<svg width="1200" height="640" viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="geoPattern" width="180" height="180" patternUnits="userSpaceOnUse">
+      <rect width="180" height="180" fill="#f2f7fb"/>
+      <path d="M0 45 H180 M0 135 H180" stroke="#bfd5e7" stroke-width="1"/>
+      <path d="M45 0 V180 M135 0 V180" stroke="#bfd5e7" stroke-width="1"/>
+      <circle cx="45" cy="45" r="8" fill="#94b9d6"/>
+      <circle cx="135" cy="135" r="8" fill="#94b9d6"/>
+      <path d="M45 45 L135 135 M135 45 L45 135" stroke="#9bbfdb" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="640" fill="url(#geoPattern)"/>
+</svg>

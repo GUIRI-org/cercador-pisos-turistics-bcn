@@ -60,10 +60,16 @@ export default function Home() {
     []
   );
 
-  // Handle sticky form behavior
+  // Handle sticky form behavior — desktop only (md+)
   useEffect(() => {
     const syncStickyForm = () => {
       if (!formPanelRef.current) return;
+
+      // On mobile (< md = 768px) never fix — let layout flow
+      if (window.innerWidth < 768) {
+        setFormIsFixed(false);
+        return;
+      }
 
       if (formNaturalTopRef.current === null) {
         // First call: measure natural offset from document top
@@ -73,8 +79,13 @@ export default function Home() {
       }
 
       const shouldFix = window.scrollY >= (formNaturalTopRef.current ?? 0);
-
       setFormIsFixed(shouldFix);
+    };
+
+    // Re-evaluate on resize (e.g. rotating phone → tablet)
+    const onResize = () => {
+      formNaturalTopRef.current = null;
+      syncStickyForm();
     };
 
     // Initial measurement after layout settles
@@ -84,32 +95,38 @@ export default function Home() {
     });
 
     window.addEventListener('scroll', syncStickyForm, { passive: true });
-    return () => window.removeEventListener('scroll', syncStickyForm);
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', syncStickyForm);
+      window.removeEventListener('resize', onResize);
+    };
   }, []);
 
   return (
     <ParallaxContainer>
-      <main className="min-h-screen">
+      <main className={`min-h-screen flex flex-col ${showResults ? '' : 'justify-center'}`}>
         {/* Header */}
-        <div className="relative z-10 bg-white/90 shadow-sm backdrop-blur-sm">
+        <div className="relative z-10">
           <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              Cercador de pisos turístics Barcelona
+              Barcelona Tourist Apartments
             </h1>
             <p className="mt-2 text-gray-600">
-              Cerca una adreça de Barcelona per identificar habitatges amb llicència turística.
+              Welcome to the Barcelona Tourist Apartment Finder
             </p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        <div
+          className={`mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 ${showResults ? 'py-8' : 'py-4'}`}
+        >
           {/* Search Section - Sticky */}
           <div
             ref={formPanelRef}
             className={`transition-all duration-200 ${
               formIsFixed
-                ? 'fixed left-0 right-0 top-0 z-20 shadow-lg bg-gradient-to-b from-white via-white to-white/95'
+                ? 'fixed left-0 right-0 top-0 z-20 bg-transparent'
                 : 'relative bg-transparent'
             }`}
             style={
@@ -128,10 +145,7 @@ export default function Home() {
                 : {}
             }
           >
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">Cerca per adreça</h2>
-            <p className="mb-6 text-gray-600">
-              Selecciona el tipus de via, el carrer i el número per identificar una adreça de Barcelona.
-            </p>
+            <h2 className="mb-4 text-xl font-semibold text-gray-900">Join our community and find the perfect guiri apartment in Barcelona</h2>
             <SearchForm onSearch={handleSearch} />
           </div>
 
@@ -140,10 +154,10 @@ export default function Home() {
 
           {/* Results Section */}
           {showResults && (
-            <div className="space-y-6 relative z-10">
+            <div className="space-y-6 relative">
               {/* Selected Address */}
               {selectedCarrer && (
-                <div className="rounded-lg bg-white p-4 shadow">
+                <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
                   <strong className="text-lg text-gray-900">
                     {selectedCarrer}, {selectedNum}
                   </strong>
@@ -171,16 +185,16 @@ export default function Home() {
           )}
 
           {/* Footer Link */}
-          <div className="mt-12 border-t border-gray-200 pt-8 text-center text-sm text-gray-600 relative z-10">
+          <div className="mt-12 border-t border-gray-200 pt-8 text-center text-sm text-gray-600 relative">
             <p>
-              Per obtenir ajuda per concretar el lloc dels fets, consulteu el{' '}
+              A project created with the aim of benefiting citizenship by {' '}
               <a
-                href="https://geoportal.barcelona.cat/planolBCN/ca/"
+                href="#"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline"
               >
-                plànol de BCN
+                El Guiri
               </a>
               .
             </p>
