@@ -4,8 +4,22 @@ import { useEffect, useState, useRef } from 'react';
 import { searchCarrers } from '@/lib/api';
 import { CarrerVia, AdrecaSearchResult } from '@/lib/types';
 
+export interface SelectedStreetInfo {
+  codi: string;
+  nom: string;
+  nomComplet?: string;
+  tipusViaNom?: string;
+  tipusViaCodi?: string;
+  availableNumbers: number;
+}
+
 interface SearchFormProps {
-  onSearch: (carrer: string, tipusCarrer: string | null, num1: string | null) => void;
+  onSearch: (
+    carrer: string,
+    tipusCarrer: string | null,
+    num1: string | null,
+    selectedStreetInfo: SelectedStreetInfo
+  ) => void;
 }
 
 export function SearchForm({ onSearch }: SearchFormProps) {
@@ -24,6 +38,9 @@ export function SearchForm({ onSearch }: SearchFormProps) {
   // Handle carrer input with debounce
   const handleCarrerInput = (value: string) => {
     setCarrerInput(value);
+    setSelectedCarrer(null);
+    setNumInput('');
+    setNumOptions([]);
     clearTimeout(carrerTimerRef.current);
 
     if (value.trim().length < 2) {
@@ -81,8 +98,16 @@ export function SearchForm({ onSearch }: SearchFormProps) {
     const carrerNom = selectedCarrer?.nom || carrerInput.trim();
     const tipusCarrer = selectedCarrer?.tipusVia?.nom || null;
     const num1 = numInput.trim() || null;
+    const selectedStreetInfo: SelectedStreetInfo = {
+      codi: selectedCarrer.codi,
+      nom: selectedCarrer.nom,
+      nomComplet: selectedCarrer.nomComplet,
+      tipusViaNom: selectedCarrer.tipusVia?.nom,
+      tipusViaCodi: selectedCarrer.tipusVia?.codi,
+      availableNumbers: numOptions.length,
+    };
 
-    onSearch(carrerNom, tipusCarrer, num1);
+    onSearch(carrerNom, tipusCarrer, num1, selectedStreetInfo);
   };
 
   // Close suggestions on outside click

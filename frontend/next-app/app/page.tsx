@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { searchApartments } from '@/lib/api';
 import { AddressGroup } from '@/lib/types';
-import { SearchForm } from './components/SearchForm';
+import { SearchForm, SelectedStreetInfo } from './components/SearchForm';
 import { ApartmentResults } from './components/ApartmentResults';
 import { ParallaxContainer } from './components/ParallaxContainer';
 
@@ -11,11 +11,13 @@ export default function Home() {
   const [selectedCarrer, setSelectedCarrer] = useState('');
   const [selectedTipusCarrer, setSelectedTipusCarrer] = useState<string | null>(null);
   const [selectedNum, setSelectedNum] = useState<string | null>(null);
+  const [selectedStreetInfo, setSelectedStreetInfo] = useState<SelectedStreetInfo | null>(null);
 
   const [exactGroups, setExactGroups] = useState<AddressGroup[]>([]);
   const [streetGroups, setStreetGroups] = useState<AddressGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [searchFormKey, setSearchFormKey] = useState(0);
 
   const searchTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const requestIdRef = useRef(0);
@@ -27,10 +29,16 @@ export default function Home() {
   const formNaturalTopRef = useRef<number | null>(null);
 
   const handleSearch = useCallback(
-    (carrer: string, tipusCarrer: string | null, num1: string | null) => {
+    (
+      carrer: string,
+      tipusCarrer: string | null,
+      num1: string | null,
+      streetInfo: SelectedStreetInfo
+    ) => {
       setSelectedCarrer(carrer);
       setSelectedTipusCarrer(tipusCarrer);
       setSelectedNum(num1);
+      setSelectedStreetInfo(streetInfo);
 
       clearTimeout(searchTimerRef.current);
       setLoading(true);
@@ -59,6 +67,24 @@ export default function Home() {
     },
     []
   );
+
+  const handleResetSearch = useCallback(() => {
+    clearTimeout(searchTimerRef.current);
+    requestIdRef.current += 1;
+
+    setSelectedCarrer('');
+    setSelectedTipusCarrer(null);
+    setSelectedNum(null);
+    setSelectedStreetInfo(null);
+    setExactGroups([]);
+    setStreetGroups([]);
+    setLoading(false);
+    setShowResults(false);
+    setFormIsFixed(false);
+    setSearchFormKey((prev) => prev + 1);
+    formNaturalTopRef.current = null;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   // Handle sticky form behavior — desktop only (md+)
   useEffect(() => {
@@ -102,6 +128,12 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!formPanelRef.current) return;
+    // Re-measure after sticky class/styles are applied so dependent sticky offsets stay aligned.
+    setFormHeight(formPanelRef.current.offsetHeight);
+  }, [formIsFixed, showResults]);
+
   return (
     <ParallaxContainer>
       <main className={`min-h-screen flex flex-col ${showResults ? '' : 'justify-center'}`}>
@@ -124,29 +156,31 @@ export default function Home() {
           {/* Search Section - Sticky */}
           <div
             ref={formPanelRef}
-            className={`transition-all duration-200 ${
-              formIsFixed
-                ? 'fixed left-0 right-0 top-0 z-20 bg-transparent'
-                : 'relative bg-transparent'
-            }`}
+            className={`transition-all duration-200 ${formIsFixed
+              ? 'fixed left-0 right-0 top-0 z-20 bg-slate-50/90'
+              : 'relative'
+              }`}
             style={
               formIsFixed
                 ? {
-                    maxWidth: '56rem',
-                    marginLeft: 'auto',
-                    marginRight: 'auto',
-                    left: 'calc(50% - 28rem)',
-                    right: 'calc(50% - 28rem)',
-                    paddingLeft: '1rem',
-                    paddingRight: '1rem',
-                    paddingTop: '1rem',
-                    paddingBottom: '1rem',
-                  }
+                  maxWidth: '56rem',
+                  marginLeft: 'auto',
+                  marginRight: 'auto',
+                  left: 'calc(50% - 28rem)',
+                  right: 'calc(50% - 28rem)',
+                  paddingLeft: '1rem',
+                  paddingRight: '1rem',
+                  paddingTop: '1rem',
+                  paddingBottom: '1rem',
+                }
                 : {}
             }
           >
-            <h2 className="mb-4 text-xl font-semibold text-gray-900">Join our community and find the perfect guiri apartment in Barcelona</h2>
-            <SearchForm onSearch={handleSearch} />
+            <h2 className="text-xl font-semibold text-gray-900">Join our community and find the perfect guiri apartment in Barcelona</h2>
+            <SearchForm
+              key={searchFormKey}
+              onSearch={handleSearch}
+            />
           </div>
 
           {/* Spacer when form is fixed */}
@@ -154,26 +188,44 @@ export default function Home() {
 
           {/* Results Section */}
           {showResults && (
-            <div className="space-y-6 relative">
+            <div className="space-y-6 relative mt-6">
+              {/* Exact Address Results */}
+              <ApartmentResults
+                title={`${selectedTipusCarrer} ${selectedCarrer}, ${selectedNum}`}
+                addressGroups={exactGroups}
+                loading={loading}
+                onResetSearch={handleResetSearch}
+              />
               {/* Selected Address */}
               {selectedCarrer && (
-                <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
-                  <strong className="text-lg text-gray-900">
-                    {selectedCarrer}, {selectedNum}
-                  </strong>
-                  <div className="mt-2 text-sm text-gray-600">
-                    {selectedTipusCarrer && <span>{selectedTipusCarrer} · </span>}
-                    Barcelona
+                <div
+                  className={`alert alert-light z-10`}
+                >
+                  <div>
+                    <strong className="text-lg text-gray-900">
+                      {selectedCarrer}, {selectedNum}
+                    </strong>
+                    <div className="mt-2 text-sm text-gray-600">
+                      {selectedTipusCarrer && <span>{selectedTipusCarrer} · </span>}
+                      Barcelona
+                    </div>
+                    {selectedStreetInfo && (
+                      <div className="mt-2 text-sm text-gray-700">
+                        <div>
+                          Via completa: {selectedStreetInfo.nomComplet || `${selectedStreetInfo.tipusViaNom || ''} ${selectedStreetInfo.nom}`.trim()}
+                        </div>
+                        <div>
+                          Codi via: {selectedStreetInfo.codi}
+                          {selectedStreetInfo.tipusViaCodi ? ` · Codi tipus via: ${selectedStreetInfo.tipusViaCodi}` : ''}
+                        </div>
+                        <div>Números disponibles detectats: {selectedStreetInfo.availableNumbers}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Exact Address Results */}
-              <ApartmentResults
-                title="Habitatges d'ús turístic (adreça amb número)"
-                addressGroups={exactGroups}
-                loading={loading}
-              />
+
 
               {/* Street Results */}
               <ApartmentResults
