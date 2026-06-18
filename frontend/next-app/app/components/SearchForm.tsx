@@ -128,78 +128,74 @@ export function SearchForm({ onSearch }: SearchFormProps) {
   }, []);
 
   return (
-    <div className="w-full bg-transparent py-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(280px,1.4fr)_minmax(120px,0.6fr)_auto] md:items-end">
-        <div className="relative">
-          <label htmlFor="carrer" className="block text-sm font-medium text-gray-700">
-            Street <span className="text-red-500">*</span>
-          </label>
-          <input
-            ref={carrerInputRef}
-            id="carrer"
-            type="text"
-            value={carrerInput}
-            onChange={(e) => handleCarrerInput(e.target.value)}
-            onFocus={() => carrerInput.trim().length >= 2 && setShowSuggestions(true)}
-            placeholder="Type the street name…"
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 bg-white"
-          />
+    <div className="form-container d-flex gap-1 bg-warning p-1 rounded">
+      <div className="form-floating flex-auto">
 
-          {showSuggestions && (
-            <ul
-              ref={suggestionsRef}
-              className="absolute top-full left-0 right-0 z-10 border border-gray-300 border-t-0 bg-white"
-            >
-              {carrerSuggestions.length === 0 ? (
-                <li className="px-3 py-2 text-gray-500">No street found</li>
-              ) : (
-                carrerSuggestions.map((via) => (
-                  <li
-                    key={via.codi}
-                    onClick={() => handleSelectCarrer(via)}
-                    className="cursor-pointer px-3 py-2 hover:bg-blue-50"
-                  >
-                    {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </div>
+        <input
+          ref={carrerInputRef}
+          id="carrer"
+          type="text"
+          value={carrerInput}
+          onChange={(e) => handleCarrerInput(e.target.value)}
+          onFocus={() => carrerInput.trim().length >= 2 && setShowSuggestions(true)}
+          placeholder="Type the street name…"
+          className="form-control border-none"
+        />
 
-        <div>
-          <label htmlFor="num" className="block text-sm font-medium text-gray-700">
-            Number <span className="text-red-500">*</span>
-          </label>
-          <div className="mt-1">
-            <input
-              id="num"
-              type="text"
-              value={numInput}
-              onChange={handleNumChange}
-              disabled={!selectedCarrer}
-              placeholder="–"
-              list="num-list"
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-100 bg-white"
-            />
-            <datalist id="num-list">
-              {numOptions.map((num) => (
-                <option key={num} value={num} />
-              ))}
-            </datalist>
-          </div>
-        </div>
-
-        <div>
-          <button
-            onClick={handleSearch}
-            disabled={!selectedCarrer || !numInput.trim()}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:bg-gray-400 md:w-auto"
+        {showSuggestions && (
+          <ul
+            ref={suggestionsRef}
+            className="absolute top-full left-0 right-0 z-10 border border-gray-300 border-t-0 bg-white"
           >
-            Search
-          </button>
-        </div>
+            {carrerSuggestions.length === 0 ? (
+              <li className="px-3 py-2 text-gray-500">No street found</li>
+            ) : (
+              carrerSuggestions.map((via) => (
+                <li
+                  key={via.codi}
+                  onClick={() => handleSelectCarrer(via)}
+                  className="cursor-pointer px-3 py-2 hover:bg-blue-50"
+                >
+                  {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+
+        <label htmlFor="carrer">Street <span className="text-red-500">*</span></label>
       </div>
+
+      <div className="form-floating">
+
+        <input
+          id="num"
+          type="number"
+          value={numInput}
+          onChange={handleNumChange}
+          disabled={!selectedCarrer}
+          placeholder="–"
+          list="num-list"
+          className="form-control border-none"
+          style={{ width: '6rem' }}
+        />
+        <datalist id="num-list">
+          {numOptions.map((num) => (
+            <option key={num} value={num} />
+          ))}
+        </datalist>
+
+        <label htmlFor="num">Number <span className="text-red-500">*</span></label>
+      </div>
+
+      <button
+        onClick={handleSearch}
+        disabled={!selectedCarrer || !numInput.trim()}
+        className="btn btn-primary btn-lg px-4"
+      >
+        Search
+      </button>
     </div>
+
   );
 }

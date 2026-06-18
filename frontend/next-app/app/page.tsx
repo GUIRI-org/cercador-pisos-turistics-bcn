@@ -136,7 +136,7 @@ export default function Home() {
 
   return (
     <ParallaxContainer>
-      <main className={`min-h-screen flex flex-col ${showResults ? '' : 'justify-center'}`}>
+      <main className="min-h-screen flex flex-col">
         {/* Header */}
         <div className="relative z-10">
           <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -144,7 +144,7 @@ export default function Home() {
               Barcelona Tourist Apartments
             </h1>
             <p className="mt-2 text-gray-600">
-              Welcome to the Barcelona Tourist Apartment Finder
+              Join our community and find the perfect guiri apartment in Barcelona
             </p>
           </div>
         </div>
@@ -176,7 +176,6 @@ export default function Home() {
                 : {}
             }
           >
-            <h2 className="text-xl font-semibold text-gray-900">Join our community and find the perfect guiri apartment in Barcelona</h2>
             <SearchForm
               key={searchFormKey}
               onSearch={handleSearch}
