@@ -183,7 +183,7 @@ export function ApartmentResults({
   }
 
   return (
-    <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
+    <div className="">
       <div className="d-flex justify-content-between align-items-start gap-3">
         <h4 className="font-semibold text-gray-800 mb-0">
           {title}
@@ -251,33 +251,30 @@ export function ApartmentResults({
           return (
             <div
               key={idx}
-              className={`bg-transparent p-3 d-flex flex-column gap-2 ${isPriorityResult ? 'rounded-3 border border-success-subtle bg-success-subtle' : ''}`}
+              className={`bg-white p-3 d-flex flex-column gap-1 ${isPriorityResult ? 'rounded-3 border border-success-subtle bg-success-subtle' : 'bg-white'}`}
             >
               {showCollapsibleHeader ? (
                 <div
-                  className="collapsible-item-header d-flex justify-content-between align-items-center"
+                  className="collapsible-item-header position-relative"
                   role="button"
                   onClick={() => toggleItem(idx)}
                   style={{ cursor: 'pointer' }}
                 >
                   <h4 className="font-semibold text-gray-900 d-flex align-items-center gap-2 mb-0">
-                    <span>{group.address || 'Adreça no disponible'}</span>
+                    <span>{group.address || 'Address not available'}</span>
                   </h4>
-                  <div className="d-flex align-items-center gap-3">
-                    <h3 className="">
-                      {group.apartments_count} habitatge(s) · {group.total_places} places
-                    </h3>
+                  <h5 className="">
+                    {group.total_places} places across {group.apartments_count} apartment(s)
+                  </h5>
+                  <div className="position-absolute end-0 top-0 d-flex align-items-center gap-3">
                     <span style={{ fontSize: '0.8rem', transition: 'transform 0.2s', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                   </div>
                 </div>
               ) : (
                 <div className="d-flex align-items-center gap-3 mb-1">
-                  <span className={`badge ${isPriorityResult ? 'text-bg-success' : 'text-bg-secondary'}`}>
-                    #{idx + 1}
-                  </span>
-                  <h3 className="mb-0">
-                    {group.apartments_count} habitatge(s) · {group.total_places} places
-                  </h3>
+                  <h5 className="mb-0">
+                    {group.total_places} places across {group.apartments_count} apartment(s)
+                  </h5>
                 </div>
               )}
               {isOpen && (
@@ -292,7 +289,6 @@ export function ApartmentResults({
                       />
                     )}
                     <div className="text-sm text-gray-700 d-grid gap-1">
-                      <div className="fw-semibold text-gray-800">Extended information</div>
                       {streetLabel && (
                         <div className="text-sm text-gray-600">Street: {streetLabel}</div>
                       )}

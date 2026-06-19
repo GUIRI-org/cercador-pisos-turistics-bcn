@@ -174,15 +174,13 @@ export default function Home() {
           </div> */}
         </div>
       </nav>
-      <main className="container" style={{ maxWidth: '640px' }}>
-        <div className="border mt-4">
+      <main className="container" style={{ maxWidth: '640px', minHeight: '100vh', paddingTop: '1rem', paddingBottom: '1rem' }}>
           <h1 className="text-3xl font-bold text-gray-900">
             Barcelona Tourist Apartments
           </h1>
           <p className="mt-2 text-gray-600">
             Join our community and find the perfect guiri apartment in Barcelona
           </p>
-        </div>
 
         {/* Content */}
         {/* Search Section - Sticky */}
@@ -256,14 +254,14 @@ export default function Home() {
               </div>
             )} */}
 
-
-
             {/* Street Results */}
-            <ApartmentResults
-              title={`Other addresses on ${selectedTipusCarrer ? `${selectedTipusCarrer} ` : ''}${selectedCarrer} (${filteredStreetGroups.length})`}
-              addressGroups={filteredStreetGroups}
-              loading={loading}
-            />
+            {(loading || filteredStreetGroups.length > 0) && (
+              <ApartmentResults
+                title={`Same street (${filteredStreetGroups.length})`}
+                addressGroups={filteredStreetGroups}
+                loading={loading}
+              />
+            )}
           </div>
         )}
 

@@ -46,6 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Externalized frontend styles into `src/styles.css` with Bootstrap CSS import
 - Mage documentation (guidelines and README)
 - Infrastructure setup with PostgreSQL, Nginx, and Mage containers
+- Next.js frontend enhancements in `frontend/next-app/`
+  - Leaflet mini-map in apartment results with support for nearby street markers
+  - Street-level result filtering to hide addresses already shown in exact-address results
+  - Floor (`pis`) normalization and grouping to a consistent two-digit format (`01`, `02`, `03`, ...)
+  - Conditional rendering for "Same street" results only when data exists (or while loading)
+  - Custom brand asset added: `public/guiri-gamba.svg`
+  - Shared Bootstrap style overrides in `styles/bootstrap.scss`
 
 ### Changed
 - **API response field renames** for consistency across endpoints
@@ -63,6 +70,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `database/README.md`: Comprehensive documentation rewrite explaining CSV-based initialization benefits
 - Updated `README.md` with API service information and improved quick start guide
 - Enhanced infrastructure setup to include FastAPI service in deployment
+- `frontend/next-app/app/components/ApartmentResults.tsx`
+  - Removed repeated collapsible address header in exact-address mode to avoid duplicated address labels
+  - Kept prioritized-result visual differentiation while preserving result summary styles
+  - Improved apartment deduplication consistency by normalizing `pis` in grouping keys
+- `frontend/next-app/app/page.tsx`
+  - Updated street results title copy to "Same street"
+  - Refined sticky search panel width/position values for centered 640px layout
 
 ### Removed
 - `database/01-restore-dump.sh` - Shell script for restoring database dumps (replaced by DDL approach)

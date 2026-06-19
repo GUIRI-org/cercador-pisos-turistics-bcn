@@ -1,24 +1,50 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import type { ComponentType } from 'react';
 import dynamic from 'next/dynamic';
+import type {
+  CircleMarkerProps,
+  MapContainerProps,
+  TileLayerProps,
+  TooltipProps,
+} from 'react-leaflet';
+
+type LeafletMapContainerProps = MapContainerProps & {
+  center: [number, number];
+  zoom: number;
+  scrollWheelZoom?: boolean;
+  dragging?: boolean;
+  zoomControl?: boolean;
+  attributionControl?: boolean;
+};
+
+type LeafletCircleMarkerProps = CircleMarkerProps & {
+  center: [number, number];
+  radius?: number;
+  pathOptions?: Record<string, unknown>;
+};
+
+type LeafletTooltipProps = TooltipProps & {
+  direction?: string;
+  offset?: [number, number];
+};
 
 const MapContainer = dynamic(
   () => import('react-leaflet').then((m) => m.MapContainer),
   { ssr: false }
-) as any;
+) as ComponentType<LeafletMapContainerProps>;
 const TileLayer = dynamic(
   () => import('react-leaflet').then((m) => m.TileLayer),
   { ssr: false }
-) as any;
+) as ComponentType<TileLayerProps>;
 const CircleMarker = dynamic(
   () => import('react-leaflet').then((m) => m.CircleMarker),
   { ssr: false }
-) as any;
+) as ComponentType<LeafletCircleMarkerProps>;
 const Tooltip = dynamic(
   () => import('react-leaflet').then((m) => m.Tooltip),
   { ssr: false }
-) as any;
+) as ComponentType<LeafletTooltipProps>;
 
 interface AddressMiniMapProps {
   lat: number;
@@ -32,16 +58,6 @@ interface AddressMiniMapProps {
 }
 
 export function AddressMiniMap({ lat, lng, label, otherMarkers = [] }: AddressMiniMapProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="ratio ratio-1x1 rounded border border-gray-300 bg-gray-100" />;
-  }
-
   return (
     <div className="ratio ratio-1x1 rounded overflow-hidden border border-gray-300" style={{ minWidth: '180px', maxWidth: '220px' }}>
       <MapContainer

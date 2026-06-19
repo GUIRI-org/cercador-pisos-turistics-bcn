@@ -177,7 +177,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
           placeholder="–"
           list="num-list"
           className="form-control border-none"
-          style={{ width: '6rem' }}
+          style={{ width: '120px' }}
         />
         <datalist id="num-list">
           {numOptions.map((num) => (

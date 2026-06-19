@@ -1,0 +1,52 @@
+// ============================================================================
+// Bootstrap Customization File
+// ============================================================================
+// This file imports Bootstrap's Sass source, allowing you to customize
+// Bootstrap variables and rules before and after compilation.
+//
+// To customize Bootstrap, uncomment variable overrides below (before the
+// @import) and modify their values as needed.
+// ============================================================================
+
+// ============================================================================
+// STEP 1: Override Bootstrap Variables (Optional)
+// ============================================================================
+// Uncomment and modify any of the Bootstrap variables below to customize
+// colors, spacing, typography, etc.
+//
+// Example customizations:
+// $primary: #0066cc;
+// $secondary: #6c757d;
+// $success: #28a745;
+// $warning: #ffc107;
+// $danger: #dc3545;
+//
+// $body-bg: #f5f5f5;
+// $body-color: #333333;
+//
+// $font-family-base: 'Your Font', sans-serif;
+// $font-size-base: 1rem;
+//
+// $grid-gutter-width: 2rem;
+// $border-radius: 0.375rem;
+
+// ============================================================================
+// STEP 2: Import Bootstrap
+// ============================================================================
+// This imports all of Bootstrap's Sass source files
+@use 'bootstrap/scss/bootstrap';
+
+// ============================================================================
+// STEP 3: Custom Override Rules (Optional)
+// ============================================================================
+// Add any custom CSS or Sass rules here to extend or override Bootstrap
+//
+// Example:
+// .btn-primary {
+//   font-weight: 600;
+//   letter-spacing: 0.5px;
+// }
+//
+// .form-control {
+//   border-radius: 0.5rem;
+// }
