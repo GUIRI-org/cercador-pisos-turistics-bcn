@@ -1,11 +1,27 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { searchApartments } from '@/lib/api';
 import { AddressGroup } from '@/lib/types';
 import { SearchForm, SelectedStreetInfo } from './components/SearchForm';
 import { ApartmentResults } from './components/ApartmentResults';
 import { ParallaxContainer } from './components/ParallaxContainer';
+
+const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
+
+const getAddressGroupKey = (group: AddressGroup) => {
+  return [
+    normalizeAddressPart(group.tipus_carrer),
+    normalizeAddressPart(group.carrer),
+    normalizeAddressPart(group.num1),
+    normalizeAddressPart(group.lletra1),
+    normalizeAddressPart(group.num2),
+    normalizeAddressPart(group.lletra2),
+    normalizeAddressPart(group.address),
+    normalizeAddressPart(group.latitud_y),
+    normalizeAddressPart(group.longitud_x),
+  ].join('|');
+};
 
 export default function Home() {
   const [selectedCarrer, setSelectedCarrer] = useState('');
@@ -134,123 +150,138 @@ export default function Home() {
     setFormHeight(formPanelRef.current.offsetHeight);
   }, [formIsFixed, showResults]);
 
+  const filteredStreetGroups = useMemo(() => {
+    if (!exactGroups.length) return streetGroups;
+
+    const exactAddressKeys = new Set(exactGroups.map(getAddressGroupKey));
+    return streetGroups.filter((group) => !exactAddressKeys.has(getAddressGroupKey(group)));
+  }, [exactGroups, streetGroups]);
+
   return (
     <ParallaxContainer>
-      <main className="min-h-screen flex flex-col">
-        {/* Header */}
-        <div className="relative z-10">
-          <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Barcelona Tourist Apartments
-            </h1>
-            <p className="mt-2 text-gray-600">
-              Join our community and find the perfect guiri apartment in Barcelona
-            </p>
-          </div>
+      <nav className="navbar">
+        <div className="container">
+          <a className="navbar-brand" href="#">
+            <img src="guiri-gamba.svg" alt="Guiri Gamba" width="32" height="32" className="d-inline-block" /> El Guiri
+          </a>
+          {/* <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
+            <span className="navbar-toggler-icon"></span>
+          </button>
+          <div className="collapse navbar-collapse" id="navbarText">
+            <span className="navbar-text">
+              Navbar text with an inline element
+            </span>
+          </div> */}
+        </div>
+      </nav>
+      <main className="container" style={{ maxWidth: '640px' }}>
+        <div className="border mt-4">
+          <h1 className="text-3xl font-bold text-gray-900">
+            Barcelona Tourist Apartments
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Join our community and find the perfect guiri apartment in Barcelona
+          </p>
         </div>
 
         {/* Content */}
+        {/* Search Section - Sticky */}
         <div
-          className={`mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 ${showResults ? 'py-8' : 'py-4'}`}
+          ref={formPanelRef}
+          className={`transition-all duration-200 ${formIsFixed
+            ? 'fixed left-0 right-0 top-0 z-20 bg-slate-50/90'
+            : 'relative'
+            }`}
+          style={
+            formIsFixed
+              ? {
+                maxWidth: '640px',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+                left: 'calc(50% - 320px)',
+                right: 'calc(50% - 320px)',
+                paddingLeft: '1rem',
+                paddingRight: '1rem',
+                paddingTop: '1rem',
+                paddingBottom: '1rem',
+              }
+              : {}
+          }
         >
-          {/* Search Section - Sticky */}
-          <div
-            ref={formPanelRef}
-            className={`transition-all duration-200 ${formIsFixed
-              ? 'fixed left-0 right-0 top-0 z-20 bg-slate-50/90'
-              : 'relative'
-              }`}
-            style={
-              formIsFixed
-                ? {
-                  maxWidth: '56rem',
-                  marginLeft: 'auto',
-                  marginRight: 'auto',
-                  left: 'calc(50% - 28rem)',
-                  right: 'calc(50% - 28rem)',
-                  paddingLeft: '1rem',
-                  paddingRight: '1rem',
-                  paddingTop: '1rem',
-                  paddingBottom: '1rem',
-                }
-                : {}
-            }
-          >
-            <SearchForm
-              key={searchFormKey}
-              onSearch={handleSearch}
+          <SearchForm
+            key={searchFormKey}
+            onSearch={handleSearch}
+          />
+        </div>
+
+        {/* Spacer when form is fixed */}
+        {formIsFixed && <div style={{ height: `${formHeight}px` }} />}
+
+        {/* Results Section */}
+        {showResults && (
+          <div className="space-y-6 relative mt-6">
+            {/* Exact Address Results */}
+            <ApartmentResults
+              title={`${selectedTipusCarrer ? `${selectedTipusCarrer} ` : ''}${selectedCarrer}${selectedNum ? `, ${selectedNum}` : ''}`.trim()}
+              addressGroups={exactGroups}
+              loading={loading}
+              onResetSearch={handleResetSearch}
+            />
+            {/* Selected Address */}
+            {/* {selectedCarrer && (
+              <div
+                className={`alert alert-light z-10`}
+              >
+                <div>
+                  <strong className="text-lg text-gray-900">
+                    {selectedCarrer}, {selectedNum}
+                  </strong>
+                  <div className="mt-2 text-sm text-gray-600">
+                    {selectedTipusCarrer && <span>{selectedTipusCarrer} · </span>}
+                    Barcelona
+                  </div>
+                  {selectedStreetInfo && (
+                    <div className="mt-2 text-sm text-gray-700">
+                      <div>
+                        Via completa: {selectedStreetInfo.nomComplet || `${selectedStreetInfo.tipusViaNom || ''} ${selectedStreetInfo.nom}`.trim()}
+                      </div>
+                      <div>
+                        Codi via: {selectedStreetInfo.codi}
+                        {selectedStreetInfo.tipusViaCodi ? ` · Codi tipus via: ${selectedStreetInfo.tipusViaCodi}` : ''}
+                      </div>
+                      <div>Números disponibles detectats: {selectedStreetInfo.availableNumbers}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )} */}
+
+
+
+            {/* Street Results */}
+            <ApartmentResults
+              title={`Other addresses on ${selectedTipusCarrer ? `${selectedTipusCarrer} ` : ''}${selectedCarrer} (${filteredStreetGroups.length})`}
+              addressGroups={filteredStreetGroups}
+              loading={loading}
             />
           </div>
+        )}
 
-          {/* Spacer when form is fixed */}
-          {formIsFixed && <div style={{ height: `${formHeight}px` }} />}
-
-          {/* Results Section */}
-          {showResults && (
-            <div className="space-y-6 relative mt-6">
-              {/* Exact Address Results */}
-              <ApartmentResults
-                title={`${selectedTipusCarrer} ${selectedCarrer}, ${selectedNum}`}
-                addressGroups={exactGroups}
-                loading={loading}
-                onResetSearch={handleResetSearch}
-              />
-              {/* Selected Address */}
-              {selectedCarrer && (
-                <div
-                  className={`alert alert-light z-10`}
-                >
-                  <div>
-                    <strong className="text-lg text-gray-900">
-                      {selectedCarrer}, {selectedNum}
-                    </strong>
-                    <div className="mt-2 text-sm text-gray-600">
-                      {selectedTipusCarrer && <span>{selectedTipusCarrer} · </span>}
-                      Barcelona
-                    </div>
-                    {selectedStreetInfo && (
-                      <div className="mt-2 text-sm text-gray-700">
-                        <div>
-                          Via completa: {selectedStreetInfo.nomComplet || `${selectedStreetInfo.tipusViaNom || ''} ${selectedStreetInfo.nom}`.trim()}
-                        </div>
-                        <div>
-                          Codi via: {selectedStreetInfo.codi}
-                          {selectedStreetInfo.tipusViaCodi ? ` · Codi tipus via: ${selectedStreetInfo.tipusViaCodi}` : ''}
-                        </div>
-                        <div>Números disponibles detectats: {selectedStreetInfo.availableNumbers}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-
-
-              {/* Street Results */}
-              <ApartmentResults
-                title="Habitatges d'ús turístic (carrer, sense número)"
-                addressGroups={streetGroups}
-                loading={loading}
-              />
-            </div>
-          )}
-
-          {/* Footer Link */}
-          <div className="mt-12 border-t border-gray-200 pt-8 text-center text-sm text-gray-600 relative">
-            <p>
-              A project created with the aim of benefiting citizenship by {' '}
-              <a
-                href="#"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                El Guiri
-              </a>
-              .
-            </p>
-          </div>
-        </div>
+        {/* Footer Link */}
+        {/* <div className="mt-12 border-t border-gray-200 pt-8 text-center text-sm text-gray-600 relative">
+          <p>
+            A project created with the aim of benefiting citizenship by {' '}
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:underline"
+            >
+              El Guiri
+            </a>
+            .
+          </p>
+        </div> */}
       </main>
     </ParallaxContainer>
   );
