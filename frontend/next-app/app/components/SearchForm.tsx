@@ -128,8 +128,8 @@ export function SearchForm({ onSearch }: SearchFormProps) {
   }, []);
 
   return (
-    <div className="form-container d-flex gap-1 bg-warning p-1 rounded">
-      <div className="form-floating flex-auto">
+    <div className="form-container d-flex flex-column flex-md-row gap-1 gap-md-2 bg-warning p-1 p-md-2 rounded" style={{ minWidth: 0 }}>
+      <div className="form-floating flex-md-grow-1" style={{ minWidth: 0 }}>
 
         <input
           ref={carrerInputRef}
@@ -138,8 +138,9 @@ export function SearchForm({ onSearch }: SearchFormProps) {
           value={carrerInput}
           onChange={(e) => handleCarrerInput(e.target.value)}
           onFocus={() => carrerInput.trim().length >= 2 && setShowSuggestions(true)}
-          placeholder="Type the street name…"
+          placeholder="Type street…"
           className="form-control border-none"
+          style={{ fontSize: '0.95rem' }}
         />
 
         {showSuggestions && (
@@ -163,10 +164,11 @@ export function SearchForm({ onSearch }: SearchFormProps) {
           </ul>
         )}
 
-        <label htmlFor="carrer">Street <span className="text-red-500">*</span></label>
+        <label htmlFor="carrer" className="d-none d-md-block">Street <span className="text-red-500">*</span></label>
+        <label htmlFor="carrer" className="d-md-none" style={{ fontSize: '0.85rem' }}>Street <span className="text-red-500">*</span></label>
       </div>
 
-      <div className="form-floating">
+      <div className="form-floating" style={{ minWidth: 0 }}>
 
         <input
           id="num"
@@ -177,7 +179,7 @@ export function SearchForm({ onSearch }: SearchFormProps) {
           placeholder="–"
           list="num-list"
           className="form-control border-none"
-          style={{ width: '120px' }}
+          style={{ width: '100%', fontSize: '0.95rem' }}
         />
         <datalist id="num-list">
           {numOptions.map((num) => (
@@ -185,13 +187,16 @@ export function SearchForm({ onSearch }: SearchFormProps) {
           ))}
         </datalist>
 
-        <label htmlFor="num">Number <span className="text-red-500">*</span></label>
+        <label htmlFor="num" className="d-none d-md-block">Number <span className="text-red-500">*</span></label>
+        <label htmlFor="num" className="d-md-none" style={{ fontSize: '0.85rem' }}>Nº <span className="text-red-500">*</span></label>
       </div>
 
       <button
         onClick={handleSearch}
         disabled={!selectedCarrer || !numInput.trim()}
-        className="btn btn-primary btn-lg px-4"
+        className="btn btn-secondary"
+        style={{  }}
+        title="Search"
       >
         Search
       </button>
