@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cercador de pisos turístics · Next.js app
 
-## Getting Started
+Frontend for searching Barcelona tourist apartment licenses by address. Built with Next.js (static export), Bootstrap, Leaflet, and the GeoBCN / GUIRI internal APIs.
 
-First, run the development server:
+## Pages
+
+| Route | Description |
+|---|---|
+| `/` | Main search — queries the internal GUIRI API |
+| `/opendata-search` | Alternative search — queries Open Data BCN datastore directly |
+
+## Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev         # starts dev server at http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Building
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Root deployment (served at `https://example.com/`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+NEXT_PUBLIC_SITE_URL=https://example.com npm run build
+# output: out/
+```
 
-## Learn More
+### Subfolder deployment (served at `https://example.com/guiri-ptb/`)
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+NEXT_PUBLIC_SITE_URL=https://example.com \
+NEXT_PUBLIC_BASE_PATH=/guiri-ptb \
+npm run build
+# output: out/
+# upload the contents of out/ to your server's /guiri-ptb/ directory
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SITE_URL` | `https://elguiri.cat` | Canonical base URL used for OGP metadata |
+| `NEXT_PUBLIC_BASE_PATH` | _(empty)_ | Subfolder path, e.g. `/guiri-ptb`. Leave empty for root deploys |
 
-## Deploy on Vercel
+## Deploy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+After running the build command, upload the contents of `out/` to your server:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Example: rsync to a subfolder on a remote server
+rsync -av out/ user@server:/var/www/html/guiri-ptb/
+```
+
+No Node.js server is required — the output is fully static HTML/CSS/JS.

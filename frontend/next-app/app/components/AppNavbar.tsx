@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 interface AppNavbarProps {
   secondaryHref: string;
   secondaryLabel: string;
@@ -22,7 +24,7 @@ export function AppNavbar({ secondaryHref, secondaryLabel, compact = false }: Ap
           href="/"
           aria-current={isMainActive ? 'page' : undefined}
         >
-          <img src="/guiri-gamba.svg" alt="Guiri Gamba" width="32" height="32" className="d-inline-block" /> El Guiri
+          <img src={`${BASE}/guiri-gamba.svg`} alt="Guiri Gamba" width="32" height="32" className="d-inline-block" /> El Guiri
         </Link>
         <Link
           href={secondaryHref}
