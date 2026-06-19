@@ -6,6 +6,7 @@ import { AddressGroup } from '@/lib/types';
 import { SearchForm, SelectedStreetInfo } from './components/SearchForm';
 import { ApartmentResults } from './components/ApartmentResults';
 import { ParallaxContainer } from './components/ParallaxContainer';
+import { AppNavbar } from './components/AppNavbar';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
 
@@ -159,21 +160,7 @@ export default function Home() {
 
   return (
     <ParallaxContainer>
-      <nav className="navbar">
-        <div className="container">
-          <a className="navbar-brand" href="#">
-            <img src="guiri-gamba.svg" alt="Guiri Gamba" width="32" height="32" className="d-inline-block" /> El Guiri
-          </a>
-          {/* <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarText" aria-controls="navbarText" aria-expanded="false" aria-label="Toggle navigation">
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          <div className="collapse navbar-collapse" id="navbarText">
-            <span className="navbar-text">
-              Navbar text with an inline element
-            </span>
-          </div> */}
-        </div>
-      </nav>
+      <AppNavbar secondaryHref="/opendata-search" secondaryLabel="Alternative search" />
       <main className="container" style={{ maxWidth: '640px', minHeight: '100vh', paddingTop: '1rem', paddingBottom: '1rem' }}>
           <h1 className="text-3xl font-bold text-gray-900">
             Barcelona Tourist Apartments
