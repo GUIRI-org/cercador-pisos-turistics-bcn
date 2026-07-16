@@ -98,3 +98,12 @@ svg = lookup.find_svg(lat=41.3851, lon=2.1734, width=800, height=800)
 | Initial load + index | ~0.3 s |
 | Single point lookup | < 1 ms |
 | 1 M lookups (reusing instance) | ~30–60 s |
+
+
+## Next
+
+- look for the entire Catalunya seccions censals
+- For Barcelone we used this https://opendata-ajuntament.barcelona.cat/data/ca/dataset/808daafa-d9ce-48c0-925a-fa5afdb1ed41/resource/11851135-6919-4dcb-91ed-821e5e87a428
+- For the entire Catalunya let's check:
+    - https://ide.cat/geonetwork/srv/cat/catalog.search#/metadata/seccions-censals-v1r0-20250101
+    - https://www.icgc.cat/ca/Geoinformacio-i-mapes/Dades-i-productes/Geoinformacio-cartografica/Seccions-censals
