@@ -9,7 +9,7 @@ import {
 } from './types';
 
 const BASE = 'https://geoportal.barcelona.cat/geoBCN/serveis/territori';
-const GUIRI_API_BASE = 'http://127.0.0.1:9092';
+const GUIRI_API_BASE = process.env.NEXT_PUBLIC_GUIRI_API_BASE || 'http://127.0.0.1:9092';
 const OPENDATA_DATASTORE_BASE = 'https://opendata-ajuntament.barcelona.cat/data/api/action/datastore_search';
 const OPENDATA_HUT_RESOURCE_ID = 'b32fa7f6-d464-403b-8a02-0292a64883bf';
 

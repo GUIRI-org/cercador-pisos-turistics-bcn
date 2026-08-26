@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- **Next.js app Docker configuration** for containerized deployment
+  - `frontend/next-app/Dockerfile` - Docker image for Next.js development server
+  - `infra/compose-next-app.yaml` - Docker Compose service definition for Next.js app
+  - Container port configuration (`NEXT_APP_CONTAINER_PORT`) in infrastructure environment
+  - Service integration with existing API container via Docker network
+- **Environment variable support** for Next.js frontend configuration
+  - `frontend/next-app/.env.sample` - Template file for environment configuration
+  - `NEXT_PUBLIC_GUIRI_API_BASE` - Configurable API base URL (default: `http://127.0.0.1:9092`)
+  - Environment variable documentation in frontend README
+- **Infrastructure enhancements** for Next.js deployment
+  - Next.js container name configuration (`NEXT_APP_CONTAINER_NAME`)
+  - Frontend compose files integrated into infrastructure common script
+  - API base URL configuration for containerized environment (`NEXT_APP_GUIRI_API_BASE`)
 - **FastAPI REST API** (`api/`) for serving GUIRI Apartaments data to frontend
   - `/api/v1/apartments` - List all apartments with optional filtering by district/neighborhood
   - `/api/v1/apartments/map` - Optimized apartment coordinates for map visualization with `year_from` field
@@ -77,6 +90,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `frontend/next-app/app/page.tsx`
   - Updated street results title copy to "Same street"
   - Refined sticky search panel width/position values for centered 640px layout
+- `frontend/next-app/.gitignore`
+  - Added exception to allow `.env.sample` to be tracked in version control
+- `frontend/next-app/lib/api.ts`
+  - Made `GUIRI_API_BASE` read from `NEXT_PUBLIC_GUIRI_API_BASE` environment variable with fallback to default value
 
 ### Removed
 - `database/01-restore-dump.sh` - Shell script for restoring database dumps (replaced by DDL approach)

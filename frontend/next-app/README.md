@@ -13,8 +13,11 @@ Frontend for searching Barcelona tourist apartment licenses by address. Built wi
 
 ```bash
 npm install
-npm run dev         # starts dev server at http://localhost:3000
+cp .env.sample .env.local  # create local environment file (optional)
+npm run dev                # starts dev server at http://localhost:3000
 ```
+
+The application will use default values if `.env.local` is not created.
 
 ## Building
 
@@ -39,6 +42,7 @@ npm run build
 
 | Variable | Default | Description |
 |---|---|---|
+| `NEXT_PUBLIC_GUIRI_API_BASE` | `http://127.0.0.1:9092` | Base URL for the GUIRI Apartments API |
 | `NEXT_PUBLIC_SITE_URL` | `https://elguiri.cat` | Canonical base URL used for OGP metadata |
 | `NEXT_PUBLIC_BASE_PATH` | _(empty)_ | Subfolder path, e.g. `/guiri-ptb`. Leave empty for root deploys |
 
