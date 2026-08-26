@@ -94,6 +94,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added exception to allow `.env.sample` to be tracked in version control
 - `frontend/next-app/lib/api.ts`
   - Made `GUIRI_API_BASE` read from `NEXT_PUBLIC_GUIRI_API_BASE` environment variable with fallback to default value
+- `frontend/next-app/next.config.ts`
+  - Added `allowedDevOrigins` for localhost/127.0.0.1 to support Docker containerized development
 
 ### Removed
 - `database/01-restore-dump.sh` - Shell script for restoring database dumps (replaced by DDL approach)
