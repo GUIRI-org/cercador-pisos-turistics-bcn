@@ -34,12 +34,15 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v5
+        with:
+            lfs: true
 
       - name: Set up node
         uses: actions/setup-node@v6
         with:
           cache: "npm"
           node-version: "25.1.0"
+          cache-dependency-path: "frontend/next-app"
 
       - name: Configure Application Environment Variables
         env:
