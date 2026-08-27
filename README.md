@@ -46,7 +46,7 @@ The `infra/` folder contains all necessary resources to run the components of th
 git lfs pull
 ```
 
-> If you skip this step the database will initialise with an empty table and all API calls will return 0 results.
+> If you skip this step the database will initialize with an empty table and all API calls will return 0 results.
 
 2. Add the local domains to `/etc/hosts` so the browser can resolve them:
 
