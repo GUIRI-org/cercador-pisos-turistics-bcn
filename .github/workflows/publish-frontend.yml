@@ -40,6 +40,7 @@ jobs:
         with:
           cache: "npm"
           node-version: "25.1.0"
+          cache-dependency-path: "frontend/next-app"
 
       - name: Configure Application Environment Variables
         env:
