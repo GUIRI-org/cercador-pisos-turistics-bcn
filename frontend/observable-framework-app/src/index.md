@@ -16,7 +16,7 @@ Selecciona el tipus de via, el carrer i el número per identificar una adreça d
 ```js
 {
   const BASE = "https://geoportal.barcelona.cat/geoBCN/serveis/territori";
-  const GUIRI_API_BASE = "http://127.0.0.1:9092";
+  const GUIRI_API_BASE = process.env.OBSERVABLE_APP_GUIRI_API_BASE || "http://127.0.0.1:9092";
 
   // ── Parallax scene shells ───────────────────────────────────────────────────
   const scene = document.createElement("section");

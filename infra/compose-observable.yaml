@@ -1,0 +1,28 @@
+x-common-env: &common-env
+  - path: .env # default
+    required: true
+  - path: .env-local # optional override
+    required: false
+
+name: ${GLOBAL_INSTALLATION_APP}
+
+networks:
+  guiripisos-network:
+    name: ${DOCKER_BASE_NAME}-network
+
+services:
+  app-new:
+    env_file: *common-env
+    networks:
+      - guiripisos-network
+    container_name: ${OBSERVABLE_APP_CONTAINER_NAME}
+    build:
+      context: ../frontend/next-app
+      dockerfile: Dockerfile
+    restart: "no"
+    environment:
+      - OBSERVABLE_APP_GUIRI_API_BASE=${OBSERVABLE_APP_GUIRI_API_BASE}
+    ports:
+      - 127.0.0.1:${OBSERVABLE_APP_CONTAINER_PORT}:3000
+    depends_on:
+      - api
