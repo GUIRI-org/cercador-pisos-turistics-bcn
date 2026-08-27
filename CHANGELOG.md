@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
+- **Github Actions**: publish frontend automatically
+  - Publish next-js app to the server
+
 - **Next.js app Docker configuration** for containerized deployment
   - `frontend/next-app/Dockerfile` - Docker image for Next.js development server
   - `infra/compose-next-app.yaml` - Docker Compose service definition for Next.js app
