@@ -40,7 +40,6 @@ jobs:
         with:
           cache: "npm"
           node-version: "25.1.0"
-          cache-dependency-path: "frontend/next-app"
 
       - name: Configure Application Environment Variables
         env:
@@ -71,7 +70,7 @@ jobs:
             port: ${{ secrets.SERVER_PORT }}
             username: ${{ secrets.SERVER_USER }}
             ssh_private_key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
-            local_path: './frontend/next-app/out/'
+            local_path: './frontend/next-app/out/*'
             remote_path: ${{ vars.SERVER_REMOTE_PATH }}
             sftp_only: true
             delete_remote_files: false
