@@ -1,32 +1,40 @@
 # Guiripisos Deployment Workflow
 #
-# Deploys to staging on push to main, production on push to production.
+# Branch convention:
+#   - `production` branch → deploys to production environment (required)
+#   - `staging` branch → deploys to staging environment (OPTIONAL)
+#   - `main` branch → default development branch (no auto-deploy)
+#
+# If your project does NOT have a staging environment:
+#   1. Remove `staging` from the push branches list
+#   2. Remove `staging` from the workflow_dispatch options
+#
 # Frontend is deployed via SFTP, backend via SSH + Docker Compose.
 #
 # Required Secrets (Repository level):
 #   - SERVER_HOST, SERVER_USER, SERVER_SSH_KEY
 #   - SFTP_HOST, SFTP_USER, SFTP_PASSWORD
 #
-# Required Secrets (Environment level - staging & production):
+# Required Secrets (Environment level - per environment):
 #   - DB_PASSWORD, DEPLOY_PATH
 
 name: Deploy
 
 on:
-  # push:
-  #   branches:
-  #     - main
-  #     - production
+  push:
+    branches:
+      - production
+      - staging  # Optional: remove if project has no staging environment
   workflow_dispatch:
     inputs:
       environment:
-        description: "Environment to deploy to"
+        description: 'Environment to deploy to'
         required: true
-        default: "staging"
+        default: 'production'
         type: choice
         options:
-          - staging
           - production
+          - staging  # Optional: remove if project has no staging environment
 
 env:
   PROJECT_NAME: guiripisos
@@ -48,19 +56,18 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             ENV="${{ inputs.environment }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          elif [ "${{ github.ref }}" == "refs/heads/production" ]; then
             ENV="production"
           else
             ENV="staging"
           fi
-
+          
           echo "environment=$ENV" >> $GITHUB_OUTPUT
-
+          echo "branch=$ENV" >> $GITHUB_OUTPUT
+          
           if [ "$ENV" == "production" ]; then
-            echo "branch=production" >> $GITHUB_OUTPUT
             echo "domain=guiripisos.danielca.net" >> $GITHUB_OUTPUT
           else
-            echo "branch=main" >> $GITHUB_OUTPUT
             echo "domain=stg.guiripisos.danielca.net" >> $GITHUB_OUTPUT
           fi
 
@@ -71,7 +78,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.environment }}
-
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -95,8 +102,8 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
           cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
 
       - name: Install dependencies
@@ -134,7 +141,7 @@ jobs:
     needs: setup
     runs-on: ubuntu-latest
     environment: ${{ needs.setup.outputs.environment }}
-
+    
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -144,23 +151,23 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             set -e
-
+            
             echo "🚀 Deploying ${{ env.PROJECT_NAME }} to ${{ needs.setup.outputs.environment }}"
-
+            
             # Navigate to project directory
             cd ${{ secrets.DEPLOY_PATH }}
-
+            
             # Pull latest changes
             echo "📥 Pulling latest changes from ${{ needs.setup.outputs.branch }}..."
             git fetch origin ${{ needs.setup.outputs.branch }}
             git reset --hard origin/${{ needs.setup.outputs.branch }}
-
+            
             # Run deployment
             echo "🐳 Starting Docker deployment..."
             cd infra
             chmod +x deploy.sh
             ./deploy.sh
-
+            
             echo "✅ Deployment complete!"
 
   # ============================================================
@@ -169,7 +176,7 @@ jobs:
   health-check:
     needs: [setup, deploy-backend]
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Wait for services
         run: sleep 30
@@ -178,10 +185,10 @@ jobs:
         continue-on-error: true
         run: |
           DOMAIN="${{ needs.setup.outputs.domain }}"
-
+          
           echo "Checking https://api.${DOMAIN}/health..."
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://api.${DOMAIN}/health" --max-time 10 || echo "000")
-
+          
           if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
             echo "✅ API is healthy (HTTP $HTTP_STATUS)"
           else
@@ -193,10 +200,10 @@ jobs:
         continue-on-error: true
         run: |
           DOMAIN="${{ needs.setup.outputs.domain }}"
-
+          
           echo "Checking https://${DOMAIN}..."
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${DOMAIN}" --max-time 10 || echo "000")
-
+          
           if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
             echo "✅ Frontend is accessible (HTTP $HTTP_STATUS)"
           else
@@ -210,7 +217,7 @@ jobs:
     needs: [setup, deploy-frontend, deploy-backend, health-check]
     runs-on: ubuntu-latest
     if: always()
-
+    
     steps:
       - name: Deployment summary
         run: |
