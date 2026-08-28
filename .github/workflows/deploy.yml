@@ -11,22 +11,27 @@
 #
 # Frontend is deployed via SFTP, backend via SSH + Docker Compose.
 #
-# Required Secrets (Repository level):
-#   - SERVER_HOST, SERVER_USER, SERVER_SSH_KEY
-#   - SFTP_HOST, SFTP_USER, SFTP_PASSWORD
+# Required Variables (Environment level - per environment):
+#   - SERVER_URL: Server IP address (e.g., 78.46.45.253)
+#   - SERVER_REMOTE_PATH: Full path to the cloned repo on server
+#   - NEXT_PUBLIC_GUIRI_API_BASE: API URL for frontend
+#   - NEXT_PUBLIC_SITE_URL: Site URL for frontend
 #
 # Required Secrets (Environment level - per environment):
-#   - DEPLOY_PATH: Full path to the cloned repo on server
+#   - SERVER_PORT: SSH port (usually 22)
+#   - SERVER_USER: SSH user (deploy)
+#   - SERVER_SSH_PRIVATE_KEY: SSH private key for deployment
 #
 # Note: Database credentials are stored in the .env file on the server.
 
 name: Deploy
 
 on:
-  # push:
-  #   branches:
-  #     - production
-  #     - staging  # Optional: remove if project has no staging environment
+  push:
+    branches:
+      - production
+      - main # TEMP
+      - staging  # Optional: remove if project has no staging environment
   workflow_dispatch:
     inputs:
       environment:
@@ -36,7 +41,7 @@ on:
         type: choice
         options:
           - production
-          - main  # Temp
+          - main  # TEMP
           - staging  # Optional: remove if project has no staging environment
 
 env:
@@ -62,7 +67,7 @@ jobs:
           elif [ "${{ github.ref }}" == "refs/heads/production" ]; then
             ENV="production"
           else
-            ENV="production"
+            ENV="production" # TEMP
           fi
           
           echo "environment=$ENV" >> $GITHUB_OUTPUT
@@ -84,7 +89,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
             lfs: true
 
@@ -99,41 +104,49 @@ jobs:
             if [ "$CHANGED" -gt 0 ]; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
-              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "changed=false" >> $GITHUB_OUTPUT
             fi
           fi
 
       - name: Setup Node.js
         if: steps.changes.outputs.changed == 'true'
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: '25.1.0'
           cache: 'npm'
-          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}
 
       - name: Install dependencies
         if: steps.changes.outputs.changed == 'true'
         working-directory: ${{ env.FRONTEND_PATH }}
         run: npm ci
 
+      - name: Configure Application Environment Variables
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          cp ${{ env.FRONTEND_PATH }}/.env.sample ${{ env.FRONTEND_PATH }}/.env
+          sed -i "s#NEXT_PUBLIC_GUIRI_API_BASE=.*#NEXT_PUBLIC_GUIRI_API_BASE=${{ vars.NEXT_PUBLIC_GUIRI_API_BASE }}#" ${{ env.FRONTEND_PATH }}/.env
+          sed -i "s#NEXT_PUBLIC_SITE_URL=.*#NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}#" ${{ env.FRONTEND_PATH }}/.env
+
       - name: Build frontend
         if: steps.changes.outputs.changed == 'true'
         working-directory: ${{ env.FRONTEND_PATH }}
         run: npm run build
         env:
-          NEXT_PUBLIC_API_URL: https://api.${{ needs.setup.outputs.domain }}
+          CI: true
 
       - name: Deploy via SFTP
         if: steps.changes.outputs.changed == 'true'
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
         with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USER }}
-          password: ${{ secrets.SFTP_PASSWORD }}
-          protocol: sftp
-          local-dir: ${{ env.FRONTEND_PATH }}/out/
-          server-dir: ${{ secrets.SFTP_PASSWORD }}/infra/frontend_build
-          dangerous-clean-slate: false
+          server: ${{ vars.SERVER_URL }}
+          port: ${{ secrets.SERVER_PORT }}
+          username: ${{ secrets.SERVER_USER }}
+          ssh_private_key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
+          local_path: './${{ env.FRONTEND_PATH }}/out/*'
+          remote_path: ${{ vars.SERVER_REMOTE_PATH }}/infra/frontend_build
+          sftp_only: true
+          delete_remote_files: false
 
       - name: Skip frontend deploy
         if: steps.changes.outputs.changed != 'true'
@@ -149,18 +162,18 @@ jobs:
     
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
-          host: ${{ secrets.SERVER_HOST }}
+          host: ${{ vars.SERVER_URL }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
           script: |
             set -e
             
             echo "🚀 Deploying ${{ env.PROJECT_NAME }} to ${{ needs.setup.outputs.environment }}"
             
             # Navigate to project directory
-            cd ${{ secrets.DEPLOY_PATH }}
+            cd ${{ vars.SERVER_REMOTE_PATH }}
             
             # Pull latest changes
             echo "📥 Pulling latest changes from ${{ needs.setup.outputs.branch }}..."
