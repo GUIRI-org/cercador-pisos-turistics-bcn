@@ -23,10 +23,10 @@
 name: Deploy
 
 on:
-  push:
-    branches:
-      - production
-      - staging  # Optional: remove if project has no staging environment
+  # push:
+  #   branches:
+  #     - production
+  #     - staging  # Optional: remove if project has no staging environment
   workflow_dispatch:
     inputs:
       environment:
