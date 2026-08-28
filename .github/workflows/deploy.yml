@@ -101,9 +101,13 @@ jobs:
           filters: |
             frontend:
               - 'frontend/next-app/**'
-              - '.github/workflows/deploy.yml'
             workflow:
               - '.github/workflows/deploy.yml'
+            api:
+              - 'api/**'
+            database:
+              - 'database/**'
+
 
       - name: Setup Node.js
         if: steps.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
