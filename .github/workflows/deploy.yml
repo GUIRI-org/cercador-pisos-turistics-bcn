@@ -36,6 +36,7 @@ on:
         type: choice
         options:
           - production
+          - main  # Temp
           - staging  # Optional: remove if project has no staging environment
 
 env:
@@ -61,16 +62,16 @@ jobs:
           elif [ "${{ github.ref }}" == "refs/heads/production" ]; then
             ENV="production"
           else
-            ENV="staging"
+            ENV="production"
           fi
           
           echo "environment=$ENV" >> $GITHUB_OUTPUT
           echo "branch=$ENV" >> $GITHUB_OUTPUT
           
           if [ "$ENV" == "production" ]; then
-            echo "domain=guiripisos.danielca.net" >> $GITHUB_OUTPUT
+            echo "domain=apartamento.danielca.net" >> $GITHUB_OUTPUT
           else
-            echo "domain=stg.guiripisos.danielca.net" >> $GITHUB_OUTPUT
+            echo "domain=stg.apartamento.danielca.net" >> $GITHUB_OUTPUT
           fi
 
   # ============================================================
@@ -84,6 +85,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+            lfs: true
 
       - name: Check for frontend changes
         id: changes
@@ -96,15 +99,15 @@ jobs:
             if [ "$CHANGED" -gt 0 ]; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
-              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "changed=true" >> $GITHUB_OUTPUT
             fi
           fi
 
       - name: Setup Node.js
         if: steps.changes.outputs.changed == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '25.1.0'
           cache: 'npm'
           cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
 
@@ -122,14 +125,14 @@ jobs:
 
       - name: Deploy via SFTP
         if: steps.changes.outputs.changed == 'true'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASSWORD }}
           protocol: sftp
           local-dir: ${{ env.FRONTEND_PATH }}/out/
-          server-dir: /home/admin/web/${{ needs.setup.outputs.domain }}/public_html/
+          server-dir: ${{ secrets.SFTP_PASSWORD }}/infra/frontend_build
           dangerous-clean-slate: false
 
       - name: Skip frontend deploy
