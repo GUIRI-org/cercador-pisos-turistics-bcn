@@ -1,0 +1,79 @@
+# deploy-frontend.yml
+# This workflow builds the two javascript applications in the frontend folder
+# and publishes to the web hosting using SFTP.
+
+name: Build and publish websites (Next)
+
+on:
+  workflow_dispatch:
+  push:
+    # It will publish changes on the 'production' branch, only.
+    branches:
+      - production
+    paths:
+        - ".github/workflows/publish-frontend.yml"
+        - "frontend/next-app/**"
+
+
+jobs:
+  publish-website:
+    name: Publish website
+    runs-on: ubuntu-latest
+    environment:
+        name: 'production'
+
+    steps:
+
+      - name: Display Deployment Information
+        run: |
+            echo "Starting Frontend Deployment Process"
+            echo "🚀 Current branch: ${{ github.ref_name }}"
+            echo "🎯 Target environment: production"
+            echo "⏰ Deployment started at: $(date)"
+            echo "------------------------------------------------"
+
+      - name: Checkout repo
+        uses: actions/checkout@v5
+        with:
+            lfs: true
+
+      - name: Set up node
+        uses: actions/setup-node@v6
+        with:
+          cache: "npm"
+          node-version: "25.1.0"
+          cache-dependency-path: "frontend/next-app"
+
+      - name: Configure Application Environment Variables
+        env:
+            NEXT_PUBLIC_GUIRI_API_BASE: ${{ vars.NEXT_PUBLIC_GUIRI_API_BASE }}
+            NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+        run: |
+            echo "Setting up environment for the frontend locally"
+            cp frontend/next-app/.env.sample frontend/next-app/.env
+            sed -i "s#NEXT_PUBLIC_GUIRI_API_BASE=.*#NEXT_PUBLIC_GUIRI_API_BASE=$NEXT_PUBLIC_GUIRI_API_BASE#" frontend/next-app/.env
+            sed -i "s#NEXT_PUBLIC_SITE_URL=.*#NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL#" frontend/next-app/.env
+
+      - name: Build Next.js app
+        run: |
+          echo "📦 Building Next.js app application..."
+          cd frontend/next-app
+          echo "🔧 Installing dependencies..."
+          npm install
+          echo "🏗️ Running build process..."
+          npm run build
+          echo "✅ New frontend build completed"
+        env:
+          CI: true
+
+      - name: Publish Next website to server via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+            server: ${{ vars.SERVER_URL }}
+            port: ${{ secrets.SERVER_PORT }}
+            username: ${{ secrets.SERVER_USER }}
+            ssh_private_key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
+            local_path: './frontend/next-app/out/*'
+            remote_path: ${{ vars.SERVER_REMOTE_PATH }}
+            sftp_only: true
+            delete_remote_files: false
