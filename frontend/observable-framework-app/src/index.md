@@ -3,7 +3,7 @@ toc: false
 theme: [air, ocean-floor, wide]
 ---
 
-# Pisos turístics a Barcelona
+# Pisos turístics per districte i barri
 
 ```js
 const barriosData = FileAttachment("data/barriosData.json").json();
@@ -48,7 +48,7 @@ const tableSearchValue = view(tableSearch);
 
 ---
 
-## Pisos turístics per districte i barri
+
 
 ```js
 // Sort districts by total apartments ascending for the ordinal y-axis (most at top)
@@ -58,53 +58,7 @@ const districtStats = d3.groups(barriosData.data, d => d.nom_districte)
 
 const districtOrder = districtStats.map(d => d.nom_districte);
 const districtTotalMap = new Map(districtStats.map(d => [d.nom_districte, d.total]));
-```
 
-<div class="card">
-
-${resize(width => Plot.plot({
-  width,
-  height: 420,
-  marginLeft: 230,
-  marginRight: 20,
-  marginTop: 30,
-  marginBottom: 50,
-  x: {
-    label: "Apartments →",
-    inset: 10,
-    grid: true
-  },
-  y: {
-    label: null,
-    domain: districtOrder,
-    tickFormat: d => `${d} (${districtTotalMap.get(d).toLocaleString("es-ES")})`
-  },
-  color: {
-    legend: false,
-    domain: districtOrder,
-    scheme: "tableau10"
-  },
-  marks: [
-    Plot.dot(barriosData.data, {
-      x: "apartments",
-      y: "nom_districte",
-      fill: "nom_districte",
-      r: 5,
-      opacity: 0.85,
-      tip: true,
-      channels: {
-        Barri: "nom_barri",
-        Apartaments: "apartments"
-      }
-    })
-  ]
-}))}
-
-</div>
-
-### Tots els barris
-
-```js
 const scaleTypeInput = Inputs.radio(
   ["linear", "log", "pow"],
   { label: "Scale type", value: "log" }
@@ -112,10 +66,58 @@ const scaleTypeInput = Inputs.radio(
 const scaleType = Generators.input(scaleTypeInput);
 ```
 
+## Apartments by district
+
+<div class="full">
+${resize(width => Plot.plot({
+  width,
+  height: 360,
+  marginLeft: 140,
+  marginRight: 40,
+  marginTop: 10,
+  marginBottom: 40,
+  x: {
+    label: "Apartments →",
+    grid: true,
+    tickFormat: d3.format(",")
+  },
+  y: {
+    label: null,
+    domain: districtOrder
+  },
+  color: {
+    scheme: "tableau10"
+  },
+  marks: [
+    Plot.barX(districtStats, {
+      x: "total",
+      y: "nom_districte",
+      fill: "nom_districte",
+      tip: true,
+      channels: {
+        District: "nom_districte",
+        Apartments: "total"
+      }
+    }),
+    Plot.text(districtStats, {
+      x: "total",
+      y: "nom_districte",
+      text: d => d.total.toLocaleString("es-ES"),
+      textAnchor: "start",
+      dx: 6,
+      fill: "currentColor"
+    }),
+    Plot.ruleX([0])
+  ]
+}))}
+
+</div>
+
+## Neighbourhood distribution
+
 ${scaleTypeInput}
 
-<div class="card">
-
+<div class="full">
 ${resize(width => Plot.plot({
   width,
   height: 320,
