@@ -1,4 +1,4 @@
-# Guiripisos Deployment Workflow!
+# Guiripisos Deployment Workflow
 #
 # Branch convention:
 #   - `production` branch → deploys to production environment (required)
@@ -140,8 +140,8 @@ jobs:
           port: ${{ secrets.SERVER_PORT }}
           username: ${{ secrets.SERVER_USER }}
           ssh_private_key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
-          local_path: './${{ env.FRONTEND_PATH }}/out/'
-          remote_path: ${{ vars.SERVER_REMOTE_PATH }}/infra/frontend_build/
+          local_path: './${{ env.FRONTEND_PATH }}/out/*'
+          remote_path: ${{ vars.SERVER_REMOTE_PATH }}/infra/frontend_build
           sftp_only: true
           delete_remote_files: false
 
