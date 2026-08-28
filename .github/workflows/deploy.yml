@@ -79,6 +79,7 @@ jobs:
             echo "domain=stg.apartamento.danielca.net" >> $GITHUB_OUTPUT
           fi
 
+
   # ============================================================
   # Build and deploy frontend via SFTP
   # ============================================================
@@ -100,6 +101,7 @@ jobs:
           filters: |
             frontend:
               - 'frontend/next-app/**'
+              - '.github/workflows/deploy.yml'
             workflow:
               - '.github/workflows/deploy.yml'
 
