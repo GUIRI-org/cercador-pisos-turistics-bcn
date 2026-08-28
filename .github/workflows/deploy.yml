@@ -16,7 +16,9 @@
 #   - SFTP_HOST, SFTP_USER, SFTP_PASSWORD
 #
 # Required Secrets (Environment level - per environment):
-#   - DB_PASSWORD, DEPLOY_PATH
+#   - DEPLOY_PATH: Full path to the cloned repo on server
+#
+# Note: Database credentials are stored in the .env file on the server.
 
 name: Deploy
 

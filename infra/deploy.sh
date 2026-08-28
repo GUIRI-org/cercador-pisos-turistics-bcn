@@ -84,8 +84,9 @@ fi
 log_info "Waiting for services to start..."
 sleep 10
 
-NGINX_CONTAINER="${NGINX_CONTAINER_NAME:-${DOCKER_BASE_NAME}-nginx}"
-DB_CONTAINER="${DB_CONTAINER_NAME:-${DOCKER_BASE_NAME}-pgsql}"
+# Container names are computed from DOCKER_BASE_NAME
+NGINX_CONTAINER="${DOCKER_BASE_NAME}-nginx"
+DB_CONTAINER="${DOCKER_BASE_NAME}-pgsql"
 
 if docker exec "$DB_CONTAINER" pg_isready -U "${GLOBAL_DB_USER:-postgres}" &>/dev/null; then
     log_success "PostgreSQL ready"
