@@ -1,0 +1,227 @@
+# Guiripisos Deployment Workflow
+#
+# Deploys to staging on push to main, production on push to production.
+# Frontend is deployed via SFTP, backend via SSH + Docker Compose.
+#
+# Required Secrets (Repository level):
+#   - SERVER_HOST, SERVER_USER, SERVER_SSH_KEY
+#   - SFTP_HOST, SFTP_USER, SFTP_PASSWORD
+#
+# Required Secrets (Environment level - staging & production):
+#   - DB_PASSWORD, DEPLOY_PATH
+
+name: Deploy
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  #     - production
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  PROJECT_NAME: guiripisos
+  FRONTEND_PATH: frontend/next-app
+
+jobs:
+  # ============================================================
+  # Determine deployment environment based on branch
+  # ============================================================
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      branch: ${{ steps.set-env.outputs.branch }}
+      domain: ${{ steps.set-env.outputs.domain }}
+    steps:
+      - name: Determine environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ENV="${{ inputs.environment }}"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
+          if [ "$ENV" == "production" ]; then
+            echo "branch=production" >> $GITHUB_OUTPUT
+            echo "domain=guiripisos.danielca.net" >> $GITHUB_OUTPUT
+          else
+            echo "branch=main" >> $GITHUB_OUTPUT
+            echo "domain=stg.guiripisos.danielca.net" >> $GITHUB_OUTPUT
+          fi
+
+  # ============================================================
+  # Build and deploy frontend via SFTP
+  # ============================================================
+  deploy-frontend:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for frontend changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            # Check if frontend files changed in this push
+            CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -c "^frontend/" || echo "0")
+            if [ "$CHANGED" -gt 0 ]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Setup Node.js
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: ${{ env.FRONTEND_PATH }}/package-lock.json
+
+      - name: Install dependencies
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm ci
+
+      - name: Build frontend
+        if: steps.changes.outputs.changed == 'true'
+        working-directory: ${{ env.FRONTEND_PATH }}
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://api.${{ needs.setup.outputs.domain }}
+
+      - name: Deploy via SFTP
+        if: steps.changes.outputs.changed == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          protocol: sftp
+          local-dir: ${{ env.FRONTEND_PATH }}/out/
+          server-dir: /home/admin/web/${{ needs.setup.outputs.domain }}/public_html/
+          dangerous-clean-slate: false
+
+      - name: Skip frontend deploy
+        if: steps.changes.outputs.changed != 'true'
+        run: echo "No frontend changes detected, skipping deployment"
+
+  # ============================================================
+  # Deploy backend services via SSH + Docker Compose
+  # ============================================================
+  deploy-backend:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "🚀 Deploying ${{ env.PROJECT_NAME }} to ${{ needs.setup.outputs.environment }}"
+
+            # Navigate to project directory
+            cd ${{ secrets.DEPLOY_PATH }}
+
+            # Pull latest changes
+            echo "📥 Pulling latest changes from ${{ needs.setup.outputs.branch }}..."
+            git fetch origin ${{ needs.setup.outputs.branch }}
+            git reset --hard origin/${{ needs.setup.outputs.branch }}
+
+            # Run deployment
+            echo "🐳 Starting Docker deployment..."
+            cd infra
+            chmod +x deploy.sh
+            ./deploy.sh
+
+            echo "✅ Deployment complete!"
+
+  # ============================================================
+  # Health check after deployment
+  # ============================================================
+  health-check:
+    needs: [setup, deploy-backend]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Wait for services
+        run: sleep 30
+
+      - name: Check API health
+        continue-on-error: true
+        run: |
+          DOMAIN="${{ needs.setup.outputs.domain }}"
+
+          echo "Checking https://api.${DOMAIN}/health..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://api.${DOMAIN}/health" --max-time 10 || echo "000")
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "✅ API is healthy (HTTP $HTTP_STATUS)"
+          else
+            echo "⚠️ API health check returned HTTP $HTTP_STATUS"
+            echo "Note: This may be normal if /health endpoint doesn't exist"
+          fi
+
+      - name: Check frontend
+        continue-on-error: true
+        run: |
+          DOMAIN="${{ needs.setup.outputs.domain }}"
+
+          echo "Checking https://${DOMAIN}..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://${DOMAIN}" --max-time 10 || echo "000")
+
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "✅ Frontend is accessible (HTTP $HTTP_STATUS)"
+          else
+            echo "⚠️ Frontend returned HTTP $HTTP_STATUS"
+          fi
+
+  # ============================================================
+  # Summary
+  # ============================================================
+  summary:
+    needs: [setup, deploy-frontend, deploy-backend, health-check]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | ${{ env.PROJECT_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ needs.setup.outputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Domain | ${{ needs.setup.outputs.domain }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ needs.setup.outputs.branch }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.deploy-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.deploy-backend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Health Check | ${{ needs.health-check.result }} |" >> $GITHUB_STEP_SUMMARY

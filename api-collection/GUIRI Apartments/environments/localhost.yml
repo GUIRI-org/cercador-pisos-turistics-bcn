@@ -1,3 +1,4 @@
+# Direct access to API container (bypasses Nginx, no /etc/hosts needed)
 name: localhost
 variables:
   - name: baseURL

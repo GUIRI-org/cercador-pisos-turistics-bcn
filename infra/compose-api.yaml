@@ -15,13 +15,13 @@ services:
     networks:
       - guiripisos-network
     env_file: *common-env
-    container_name: ${API_CONTAINER_NAME}
+    container_name: ${DOCKER_BASE_NAME}-api
     build:
       context: ../api
     restart: always
     environment:
-      - DB_HOST=${DB_CONTAINER_NAME}
-      - DB_PORT=${GLOBAL_DB_PORT}
+      - DB_HOST=${DOCKER_BASE_NAME}-pgsql
+      - DB_PORT=5432
       - DB_USER=${GLOBAL_DB_USER}
       - DB_PASSWORD=${GLOBAL_DB_PASSWORD}
       - DB_NAME=${GLOBAL_DB_NAME}

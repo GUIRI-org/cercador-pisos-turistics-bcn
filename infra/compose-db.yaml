@@ -16,11 +16,11 @@ services:
     networks:
       - guiripisos-network
     platform: ${DOCKER_PLATFORM}
-    container_name: ${DB_CONTAINER_NAME}
+    container_name: ${DOCKER_BASE_NAME}-pgsql
     image: postgis/postgis:17-3.4
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${GLOBAL_DB_USER} -d ${GLOBAL_DB_NAME} -p ${GLOBAL_DB_PORT}"]
+      test: ["CMD-SHELL", "pg_isready -U ${GLOBAL_DB_USER} -d ${GLOBAL_DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -31,17 +31,18 @@ services:
       - POSTGRES_USER=${GLOBAL_DB_USER}
       - POSTGRES_PASSWORD=${GLOBAL_DB_PASSWORD}
       - POSTGRES_DB=${GLOBAL_DB_NAME}
-      - POSTGRES_PORT=${GLOBAL_DB_PORT}
     ports:
-      - ${GLOBAL_DB_PORT}:${GLOBAL_DB_PORT}
+      # External access for SQL clients (DBeaver, psql, etc.)
+      # Staging: 54NN, Production: 55NN (where NN = PROJECT_NUMBER)
+      - "${GLOBAL_DB_EXTERNAL_PORT:-5432}:5432"
     volumes:
       - db-vol:/var/lib/postgresql/data
       - ../database/01-create-schema.sql:/docker-entrypoint-initdb.d/01-create-schema.sql:ro
       - ../database/load-habitatges-csv.sql:/docker-entrypoint-initdb.d/02-load-data.sql:ro
       - ../database/02-normalize-address-coordinates.sql:/docker-entrypoint-initdb.d/03-normalize-address-coordinates.sql:ro
       - ../data/interim/hut_comunicacio_opendata.csv:/data/hut_comunicacio_opendata.csv:ro
-      - ./postgresql/custom-postgresql.conf:/etc/postgresql/postgresql.conf # Mount custom config
-    command: postgres -c config_file=/etc/postgresql/postgresql.conf -c port=${GLOBAL_DB_PORT}
+      - ./postgresql/custom-postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     shm_size: "256mb"
 
 volumes:

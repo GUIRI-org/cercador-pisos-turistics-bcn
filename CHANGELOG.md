@@ -8,8 +8,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Unreleased
 
 ### Added
-- **Github Actions**: publish frontend automatically
-  - Publish next-js app to the server
+- **Automated deployment infrastructure** using GitHub Actions and Docker Compose
+  - `.github/workflows/deploy.yml` - Branch-based deployment workflow (develop → staging, main → production)
+  - `infra/deploy.sh` - Server-side orchestration script for zero-downtime deployments
+  - Dual deployment strategy: frontend via SFTP (fast), backend via SSH + Docker Compose
+  - Support for manual workflow dispatch with environment selection
+- **Environment-specific configuration templates**
+  - `infra/.env.staging.example` - Staging environment configuration with port 8001 (80 + project 01)
+  - `infra/.env.production.example` - Production environment configuration with port 8101 (81 + project 01)
+  - Port allocation convention: staging uses `80{NN}`, production uses `81{NN}` where NN = project number
+  - Database external ports: staging `54{NN}`, production `55{NN}`
+- **Infrastructure documentation** (`infra/README.md`)
+  - Complete architecture diagrams and service descriptions
+  - Quick start guide for local development
+  - Deployment workflow explanations
+  - Environment-specific configuration instructions
+- **API collection environment** for local development (`api-collection/GUIRI Apartments/environments/local.yml`)
+- **Github Actions**: Multi-environment frontend publishing
+  - Updated `publish-frontend.yml` to support staging and production environments based on branch
+
+### Changed
+- **Infrastructure environment configuration** (`infra/.env.sample`)
+  - Restructured with clear section organization (Project Identity, PostgreSQL, Nginx, Mage, API, Frontend, Docker)
+  - Added comprehensive inline documentation for all configuration values
+  - Introduced project number convention for port allocation across environments
+  - Simplified container naming with automatic derivation from `DOCKER_BASE_NAME`
+  - Added references to deployment documentation (`docs/deployment-blueprint.md`)
+- **Docker Compose service configurations** for improved environment isolation
+  - `infra/compose-db.yaml` - Updated PostgreSQL configuration for environment-specific settings
+  - `infra/compose-api.yaml` - Enhanced API service configuration
+  - `infra/compose-mage.yaml` - Refined Mage.ai service settings
+  - `infra/compose-next-app.yaml` - Updated Next.js development container configuration
+  - `infra/compose-nginx.yaml` - Improved Nginx proxy configuration
+- **Nginx configuration template** (`infra/nginx/docker/conf.d/01-core.conf.template`)
+  - Updated proxy settings for multi-environment support
+- **Makefile** - Updated commands to align with new infrastructure scripts
+- **Project README** - Added deployment workflow and infrastructure documentation references
 
 - **Next.js app Docker configuration** for containerized deployment
   - `frontend/next-app/Dockerfile` - Docker image for Next.js development server

@@ -16,7 +16,7 @@ services:
     networks:
       - guiripisos-network
     image: nginx:1.27
-    container_name: ${NGINX_CONTAINER_NAME}
+    container_name: ${DOCKER_BASE_NAME}-nginx
     restart: always
     environment:
       - ENABLE_FRONTEND=${ENABLE_FRONTEND:-false}

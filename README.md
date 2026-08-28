@@ -24,7 +24,7 @@ Data source: [Barcelona Open Data — Viviendas de uso turístico](https://opend
 
 ## Quick Start
 
-The `infra/` folder contains all necessary resources to run the components of the platform using Docker on an empty host: your computer or a server in the cloud. -- [How to set up the platform](./infra/README.md).
+The `infra/` folder contains all necessary resources to run the components of the platform using Docker on an empty host: your computer or a server in the cloud. — [How to set up the platform](./infra/README.md).
 
 **Prerequisites**
 
@@ -51,7 +51,7 @@ git lfs pull
 2. Add the local domains to `/etc/hosts` so the browser can resolve them:
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 guiripisos.local api.guiripisos.local mage.guiripisos.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 guiripisos.local api.guiripisos.local mage.guiripisos.local next.guiripisos.local" >> /etc/hosts'
 ```
 
 3. Clone and start infrastructure:
@@ -68,9 +68,37 @@ This launches:
 
 4. Access services:
 - Frontend: http://guiripisos.local:8888
+- Next JS: http://next.guiripisos.local:8888
 - API: http://api.guiripisos.local:8888/api/v1/docs
 - Mage: http://mage.guiripisos.local:8888
-- Database: `localhost:8054` (psql credentials in `infra/.env`)
+- Database: `localhost:5432` (psql credentials in `infra/.env`)
+
+1. Start frontend dev server (optional):
+
+```bash
+cd frontend/observable-framework-app
+npm install
+npm run dev
+```
+
+Then visit http://localhost:3000
+
+## Make Commands
+
+Run `make help` to see all available commands. Quick reference:
+
+| Command | Purpose |
+|---------|---------|
+| `make infra-deploy` | Start local development environment |
+| `make infra-undeploy` | Stop all containers |
+| `make infra-logs-follow` | Stream container logs |
+| `make cicd-deploy` | Full deployment (for CI/CD pipelines) |
+
+**Naming convention:**
+- `infra-*` → Local development (quick start/stop)
+- `cicd-*` → Server deployment (full sequence with health checks)
+
+See [docs/make-commands.md](docs/make-commands.md) for complete documentation.
 
 5. Start frontend dev server (optional):
 
@@ -169,9 +197,16 @@ The `api-collection/` directory contains HTTP request examples:
 
 Collection format: [Bruno](https://www.usebruno.com/) — a git-friendly HTTP client
 
+**Environments:**
+| Environment | Base URL | Notes |
+|-------------|----------|-------|
+| `local` | `http://api.guiripisos.local:8888` | Via Nginx (requires `/etc/hosts` setup) |
+| `localhost` | `http://127.0.0.1:9092` | Direct API access (no domain needed) |
+
 
 ## Documentation
 
+- [Make Commands](docs/make-commands.md) — Complete reference for all Makefile commands
 - [Database Guide](database/README.md) — Schema, data loading, and queries
 - [Infrastructure Setup](infra/README.md) — Docker, networking, and deployment
 - [Mage Pipelines](magic/README.md) — Data processing workflows

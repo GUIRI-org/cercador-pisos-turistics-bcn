@@ -15,23 +15,23 @@ services:
     env_file: *common-env
     networks:
       - guiripisos-network
-    command: mage start ${PROJECT_NAME}
-    container_name: ${MAGE_CONTAINER_NAME}
+    command: mage start ${MAGE_PROJECT_NAME}
+    container_name: ${DOCKER_BASE_NAME}-mage
     build:
       context: .
       dockerfile: Dockerfile.mage
       args:
-        - USER_CODE_PATH=/home/src/${PROJECT_NAME}
+        - USER_CODE_PATH=/home/src/${MAGE_PROJECT_NAME}
     extra_hosts:
       - host.docker.internal:host-gateway
     environment:
-      ENV: ${MAGE_ENV}
-      USER_CODE_PATH: /home/src/${PROJECT_NAME}
-      POSTGRES_DB: ${MAGE_DB_NAME}
-      POSTGRES_USER: ${MAGE_DB_USER}
-      POSTGRES_PASSWORD: ${MAGE_DB_PASSWORD}
-      POSTGRES_HOST: ${MAGE_DB_HOST}
-      PG_HOST_PORT: ${MAGE_DB_PORT}
+      ENV: ${GLOBAL_ENV}
+      USER_CODE_PATH: /home/src/${MAGE_PROJECT_NAME}
+      POSTGRES_DB: ${GLOBAL_DB_NAME}
+      POSTGRES_USER: ${GLOBAL_DB_USER}
+      POSTGRES_PASSWORD: ${GLOBAL_DB_PASSWORD}
+      POSTGRES_HOST: ${DOCKER_BASE_NAME}-pgsql
+      PG_HOST_PORT: 5432
     ports:
       - 127.0.0.1:${MAGE_PORT}:6789
     # We want the mage service to be started every time the server starts running, regardles of its state when the server shutted off.
