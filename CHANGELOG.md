@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## v0.0.3 - Aug 28, 2026
+- Fix mage issue with permissions
+ 
 ## v0.0.2 - Aug 28, 2026
 
 - Fix ci/cd

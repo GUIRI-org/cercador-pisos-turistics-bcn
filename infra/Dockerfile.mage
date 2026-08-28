@@ -4,7 +4,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG PROJECT_NAME='mage-guiripisos'
 ARG USER_CODE_PATH=/home/src/${PROJECT_NAME}
-ARG USER_LOCAL='guiri' 
+ARG USER_LOCAL='deploy' 
 
 # Clone libraries
 ## Install git 
@@ -28,7 +28,7 @@ COPY magic/requirements.txt ${USER_CODE_PATH}/requirements.txt
 RUN pip3 install --no-cache-dir -r ${USER_CODE_PATH}/requirements.txt
 
 # Set the Siris user
-USER guiri
+USER ${USER_LOCAL}}
 
 ENV PYTHONPATH="${USER_CODE_PATH}:${PYTHONPATH}:/home/${USER_LOCAL}/.local/lib/python3.10/site-packages"
 
