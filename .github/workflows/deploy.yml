@@ -162,12 +162,26 @@ jobs:
     environment: ${{ needs.setup.outputs.environment }}
     
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Detect Changed Paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            database:
+              - 'database/**'
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          DATABASE_CHANGED: ${{ steps.changes.outputs.database }}
         with:
           host: ${{ vars.SERVER_URL }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
+          envs: DATABASE_CHANGED
           script: |
             set -e
             
@@ -182,8 +196,14 @@ jobs:
             git reset --hard origin/${{ needs.setup.outputs.branch }}
             
             # Run deployment using Make
-            echo "� Starting Docker deployment..."
-            make cicd-deploy
+            if [ "$DATABASE_CHANGED" == "true" ]; then
+              echo "🗄️ Database changes detected - running full purge and recreate..."
+              # make infra-undeploy-purge
+              make cicd-deploy-recreate
+            else
+              echo "🐳 Starting standard Docker deployment..."
+              make cicd-deploy
+            fi
             
             echo "✅ Deployment complete!"
 
