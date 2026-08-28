@@ -18,8 +18,6 @@ services:
     image: nginx:1.27
     container_name: ${DOCKER_BASE_NAME}-nginx
     restart: always
-    environment:
-      - ENABLE_FRONTEND=${ENABLE_FRONTEND:-false}
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes:
