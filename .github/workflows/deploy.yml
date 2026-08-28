@@ -181,11 +181,9 @@ jobs:
             git fetch origin ${{ needs.setup.outputs.branch }}
             git reset --hard origin/${{ needs.setup.outputs.branch }}
             
-            # Run deployment
-            echo "🐳 Starting Docker deployment..."
-            cd infra
-            chmod +x deploy.sh
-            ./deploy.sh
+            # Run deployment using Make
+            echo "� Starting Docker deployment..."
+            make cicd-deploy
             
             echo "✅ Deployment complete!"
 
