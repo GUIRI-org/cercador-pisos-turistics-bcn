@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-## v0.0.1 - Aug 28, 2026
+## v0.0.2 - Aug 28, 2026
 
+- Fix ci/cd
+
+## v0.0.1 - Aug 28, 2026
 ### Added
 - **Github Actions**: publish frontend automatically
   - Publish next-js app to the server

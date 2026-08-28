@@ -30,8 +30,8 @@ on:
   push:
     branches:
       - production
-      - main # TEMP
       - staging  # Optional: remove if project has no staging environment
+      # - main # TEMP
   workflow_dispatch:
     inputs:
       environment:
@@ -41,8 +41,8 @@ on:
         type: choice
         options:
           - production
-          - main  # TEMP
           - staging  # Optional: remove if project has no staging environment
+          # - main  # TEMP
 
 env:
   PROJECT_NAME: guiripisos
@@ -67,7 +67,7 @@ jobs:
           elif [ "${{ github.ref }}" == "refs/heads/production" ]; then
             ENV="production"
           else
-            ENV="production" # TEMP
+            ENV="staging" 
           fi
           
           echo "environment=$ENV" >> $GITHUB_OUTPUT
