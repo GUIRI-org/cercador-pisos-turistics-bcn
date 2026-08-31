@@ -5,156 +5,65 @@ theme: [air, ocean-floor, wide]
 
 # Pisos turístics per districte i barri
 
-```js
-const barriosData = FileAttachment("data/barriosData.json").json();
-```
+<style>
+.nav-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
 
-```js
-// Create search input (for searchable table)
-const tableSearch = Inputs.search(barriosData.data, {
-  placeholder: "Search by neighbourhood or district…"
-});
+.nav-card {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  min-height: 130px;
+}
 
-const tableSearchValue = view(tableSearch);
-```
+.nav-card h2,
+.nav-card p {
+  margin: 0;
+}
 
-<div class="card" style="padding: 0">
-  <div style="padding: 1em">
-    ${display(tableSearch)}
-  </div>
-  ${display(Inputs.table(tableSearchValue, {
-      columns: [
-        "codi_barri",
-        "nom_barri",
-        "codi_districte",
-        "nom_districte",
-        "apartments"
-      ],
-      header: {
-        codi_barri: "#",
-        nom_barri: "Neighbourhood",
-        codi_districte: "District #",
-        nom_districte: "District",
-        apartments: "Apartments"
-      },
-      width: {
-        codi_barri: 50,
-        codi_districte: 80
-      },
-      sort: "apartments",
-      reverse: true
-    }))}
-</div>
+.nav-card h2 {
+  font-size: 1.1rem;
+}
 
----
+.nav-card p {
+  color: var(--theme-foreground-muted);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
 
+.nav-card a {
+  align-self: end;
+  font-weight: 700;
+}
+</style>
 
-
-```js
-// Sort districts by total apartments ascending for the ordinal y-axis (most at top)
-const districtStats = d3.groups(barriosData.data, d => d.nom_districte)
-  .map(([nom_districte, barris]) => ({ nom_districte, total: d3.sum(barris, d => d.apartments) }))
-  .sort((a, b) => d3.ascending(a.total, b.total));
-
-const districtOrder = districtStats.map(d => d.nom_districte);
-const districtTotalMap = new Map(districtStats.map(d => [d.nom_districte, d.total]));
-
-const scaleTypeInput = Inputs.radio(
-  ["linear", "log", "pow"],
-  { label: "Scale type", value: "log" }
-);
-const scaleType = Generators.input(scaleTypeInput);
-```
-
-## Apartments by district
-
-<div class="full">
-${resize(width => Plot.plot({
-  width,
-  height: 360,
-  marginLeft: 140,
-  marginRight: 40,
-  marginTop: 10,
-  marginBottom: 40,
-  x: {
-    label: "Apartments →",
-    grid: true,
-    tickFormat: d3.format(",")
-  },
-  y: {
-    label: null,
-    domain: districtOrder
-  },
-  color: {
-    scheme: "tableau10"
-  },
-  marks: [
-    Plot.barX(districtStats, {
-      x: "total",
-      y: "nom_districte",
-      fill: "nom_districte",
-      tip: true,
-      channels: {
-        District: "nom_districte",
-        Apartments: "total"
-      }
-    }),
-    Plot.text(districtStats, {
-      x: "total",
-      y: "nom_districte",
-      text: d => d.total.toLocaleString("es-ES"),
-      textAnchor: "start",
-      dx: 6,
-      fill: "currentColor"
-    }),
-    Plot.ruleX([0])
-  ]
-}))}
-
-</div>
-
-## Neighbourhood distribution
-
-${scaleTypeInput}
-
-<div class="full">
-${resize(width => Plot.plot({
-  width,
-  height: 320,
-  marginLeft: 20,
-  marginRight: 20,
-  marginTop: 10,
-  marginBottom: 50,
-  x: {
-    type: scaleType,
-    label: `Apartments (${scaleType} scale) →`,
-    grid: true,
-    tickFormat: d3.format(",")
-  },
-  y: {
-    axis: null
-  },
-  color: {
-    legend: true,
-    label: "Districte",
-    domain: districtOrder,
-    scheme: "tableau10",
-    tickFormat: d => `${d} (${districtTotalMap.get(d).toLocaleString("es-ES")})`
-  },
-  marks: [
-    Plot.dot(barriosData.data, Plot.dodgeY("middle", {
-      x: "apartments",
-      fill: "nom_districte",
-      r: 5,
-      opacity: 0.85,
-      tip: true,
-      channels: {
-        Barri: "nom_barri",
-        Districte: "nom_districte",
-        Apartaments: "apartments"
-      }
-    }))
-  ]
-}))}
-
+<div class="nav-card-grid">
+  <article class="card nav-card">
+    <h2>Districts</h2>
+    <p>District-level cards with apartments, places, buildings, and active streets.</p>
+    <a href="./districts">Open districts</a>
+  </article>
+  <article class="card nav-card">
+    <h2>Neighbourhoods</h2>
+    <p>Barrio cards ordered by apartment count, with places and district context.</p>
+    <a href="./neighbourhoods">Open neighbourhoods</a>
+  </article>
+  <article class="card nav-card">
+    <h2>Streets</h2>
+    <p>Street cards with building, apartment, and place totals by street.</p>
+    <a href="./streets">Open streets</a>
+  </article>
+  <article class="card nav-card">
+    <h2>Charts</h2>
+    <p>Visual distributions by district and neighbourhood.</p>
+    <a href="./charts">Open charts</a>
+  </article>
+  <article class="card nav-card">
+    <h2>Data tables</h2>
+    <p>Searchable summary and raw API apartment tables.</p>
+    <a href="./data-tables">Open tables</a>
+  </article>
 </div>

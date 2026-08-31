@@ -22,6 +22,13 @@ Build static output:
 npm run build
 ```
 
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_GUIRI_API_BASE` | `http://127.0.0.1:9092` | Base URL for the GUIRI Apartments API, matching the Next.js app. |
+| `GUIRI_API_BASE` | `http://127.0.0.1:9092` | Observable-specific fallback for the same API base URL. |
+
 ## Search chain logic
 
 The app implements a chained workflow in src/index.md:
