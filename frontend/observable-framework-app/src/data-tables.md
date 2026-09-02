@@ -32,11 +32,6 @@ const rawApartmentsData = fetch(`${guiriApiBase}/api/v1/apartments/list`)
 ```
 
 ```js
-const tableSearch = Inputs.search(barriosData.data, {
-  placeholder: "Search by neighbourhood or district..."
-});
-
-const tableSearchValue = view(tableSearch);
 
 const rawApartmentsSearch = Inputs.search(rawApartmentsData.data, {
   placeholder: "Search raw apartments..."

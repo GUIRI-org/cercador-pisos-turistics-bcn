@@ -1,5 +1,5 @@
 ---
-toc: false
+toc: true
 theme: [air, ocean-floor, wide]
 ---
 
@@ -165,7 +165,8 @@ function barrioStackedBar(district) {
 }
 
 function districtCard(district) {
-  return html`<article class="card district-card">
+  return html`  
+  <article class="card district-card">
     <div class="district-card__header">
       <h3 class="district-card__title">${district.nom_districte}</h3>
     </div>
@@ -184,7 +185,7 @@ function districtCardGrid(districts) {
 
 <style>
 .district-overview {
-  padding: 1rem;
+  padding: 0rem;
   margin-bottom: 1rem;
 }
 
@@ -329,11 +330,8 @@ function districtCardGrid(districts) {
 }
 </style>
 
+The treemap visualization is showing the distribution of districts in the city of Barcelona by the total of apartments with touristic license **${d3.sum(districtCards, d => d.total)}** apartments. Each of the districts is divided by neighborhood displaying the size according to the distribution of apartments with touristic license
+
 <div class="card district-overview">
   ${display(districtDistributionTreemap(districtCards))}
-</div>
-
-## Barrios by district
-<div>
-${display(districtCardGrid(districtCards))}
 </div>

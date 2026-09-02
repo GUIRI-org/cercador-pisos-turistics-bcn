@@ -13,8 +13,7 @@ export default {
     {name: "Districts", path: "/districts"},
     {name: "Neighbourhoods", path: "/neighbourhoods"},
     {name: "Streets", path: "/streets"},
-    {name: "Charts", path: "/charts"},
-    {name: "Data tables", path: "/data-tables"}
+    {name: "Data tables", path: "/data-tables"},
   ],
 
   // Content to add to the head of the page, e.g. for a favicon:

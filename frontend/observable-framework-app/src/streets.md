@@ -221,5 +221,6 @@ const visibleStreetCards = streetCards.slice((streetPageValue - 1) * streetPageS
   color: var(--theme-foreground);
 }
 </style>
-
+<div>
 ${display(streetCardGrid(visibleStreetCards))}
+</div>
