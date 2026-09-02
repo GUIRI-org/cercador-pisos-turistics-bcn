@@ -26,13 +26,6 @@ export function AppNavbar({ secondaryHref, secondaryLabel, compact = false }: Ap
         >
           <img src={`${BASE}/guiri-gamba.svg`} alt="Guiri Gamba" width="32" height="32" className="d-inline-block" /> El Guiri
         </Link>
-        <Link
-          href={secondaryHref}
-          className={`btn btn-sm ${isSecondaryActive ? 'btn-secondary' : 'btn-outline-secondary'}`}
-          aria-current={isSecondaryActive ? 'page' : undefined}
-        >
-          {secondaryLabel}
-        </Link>
       </div>
     </nav>
   );
