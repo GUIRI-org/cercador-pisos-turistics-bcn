@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## v0.0.4 - Sep 3, 2026
+- Fix mage issue with shm_size
+
 ## v0.0.3 - Aug 28, 2026
 - Fix mage issue with permissions
  
