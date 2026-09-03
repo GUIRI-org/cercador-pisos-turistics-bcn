@@ -5,16 +5,18 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG PROJECT_NAME='mage-guiripisos'
 ARG USER_CODE_PATH=/home/src/${PROJECT_NAME}
 ARG USER_LOCAL='deploy'
-# Match the host's actual `deploy` user UID/GID (set MAGE_UID/MAGE_GID in .env
-# if it differs from the default `useradd` assignment on your server).
+# Must match the UID/GID that already owns the git checkout on the host
+# (../magic/ and ../data/ are bind-mounted, so permissions come from there,
+# not from the image). Check with `id <user>` on the server and set
+# MAGE_UID/MAGE_GID in .env accordingly — do NOT chown files at runtime,
+# that breaks `git reset --hard` on the next CI/CD deploy.
 ARG USER_UID=1000
 ARG USER_GID=1000
 
 # Clone libraries
-## Install git and gosu (used by the entrypoint to drop root privileges after
-## fixing bind-mount ownership)
+## Install git
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git gosu && \
+    apt-get install -y --no-install-recommends git && \
     apt-get autoremove -yqq --purge && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -33,15 +35,12 @@ COPY magic/requirements.txt ${USER_CODE_PATH}/requirements.txt
 
 RUN pip3 install --no-cache-dir -r ${USER_CODE_PATH}/requirements.txt
 
-ENV USER_LOCAL=${USER_LOCAL}
+# Set the user (matches the host's existing file owner — no chown at runtime)
+USER ${USER_LOCAL}
 
 ENV PYTHONPATH="${USER_CODE_PATH}:${PYTHONPATH}:/home/${USER_LOCAL}/.local/lib/python3.10/site-packages"
 
 # Important: set back to the root folder
 WORKDIR /home/src
 
-# ../magic/ and ../data/ are bind-mounted here, so their ownership depends on
-# the host, not the image. Start as root, fix ownership to match USER_LOCAL,
-# then drop to it via gosu — avoids a manual `chown` step per environment.
-ENTRYPOINT ["/bin/sh", "-c", "chown -R ${USER_LOCAL}:${USER_LOCAL} /home/src && exec gosu ${USER_LOCAL} \"$@\"", "sh"]
 CMD ["/bin/sh", "-c", "/app/run_app.sh"]
