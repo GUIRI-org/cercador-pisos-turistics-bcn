@@ -27,7 +27,7 @@ COPY magic/requirements.txt ${USER_CODE_PATH}/requirements.txt
 
 RUN pip3 install --no-cache-dir -r ${USER_CODE_PATH}/requirements.txt
 
-# Set the Siris user
+# Set the user
 USER ${USER_LOCAL}
 
 ENV PYTHONPATH="${USER_CODE_PATH}:${PYTHONPATH}:/home/${USER_LOCAL}/.local/lib/python3.10/site-packages"

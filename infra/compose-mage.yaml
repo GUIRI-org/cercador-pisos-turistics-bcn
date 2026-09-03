@@ -36,6 +36,9 @@ services:
       - 127.0.0.1:${MAGE_PORT}:6789
     # We want the mage service to be started every time the server starts running, regardles of its state when the server shutted off.
     restart: always
+    # Mage's scheduler relies on Python multiprocessing (semaphores/pipes via /dev/shm).
+    # Docker's default 64MB /dev/shm is too small and causes BrokenPipeError crash loops.
+    shm_size: '1gb'
     volumes:
       - ../magic/:/home/src/
       - ../data:/home/src/data
