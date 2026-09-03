@@ -38,7 +38,7 @@ services:
     restart: always
     # Mage's scheduler relies on Python multiprocessing (semaphores/pipes via /dev/shm).
     # Docker's default 64MB /dev/shm is too small and causes BrokenPipeError crash loops.
-    shm_size: '1gb'
+    shm_size: '512mb'
     volumes:
       - ../magic/:/home/src/
       - ../data:/home/src/data
