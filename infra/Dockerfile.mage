@@ -4,18 +4,24 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG PROJECT_NAME='mage-guiripisos'
 ARG USER_CODE_PATH=/home/src/${PROJECT_NAME}
-ARG USER_LOCAL='deploy' 
+ARG USER_LOCAL='deploy'
+# Match the host's actual `deploy` user UID/GID (set MAGE_UID/MAGE_GID in .env
+# if it differs from the default `useradd` assignment on your server).
+ARG USER_UID=1000
+ARG USER_GID=1000
 
-# Clone libraries
-## Install git 
+# Clone libraries
+## Install git and gosu (used by the entrypoint to drop root privileges after
+## fixing bind-mount ownership)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git && \
+    apt-get install -y --no-install-recommends git gosu && \
     apt-get autoremove -yqq --purge && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Add non-root user for Mage service
-RUN adduser --disabled-password --gecos '' ${USER_LOCAL} && adduser ${USER_LOCAL} ${USER_LOCAL}
+# Add non-root user for Mage service with a fixed, predictable UID/GID
+RUN addgroup --gid ${USER_GID} ${USER_LOCAL} && \
+    adduser --disabled-password --gecos '' --uid ${USER_UID} --gid ${USER_GID} ${USER_LOCAL}
 
 # Grant the user permissions to the Mage related directories
 RUN mkdir /home/src/mage_data; chown -R ${USER_LOCAL} /home/src/mage_data
@@ -27,12 +33,15 @@ COPY magic/requirements.txt ${USER_CODE_PATH}/requirements.txt
 
 RUN pip3 install --no-cache-dir -r ${USER_CODE_PATH}/requirements.txt
 
-# Set the user
-USER ${USER_LOCAL}
+ENV USER_LOCAL=${USER_LOCAL}
 
 ENV PYTHONPATH="${USER_CODE_PATH}:${PYTHONPATH}:/home/${USER_LOCAL}/.local/lib/python3.10/site-packages"
 
 # Important: set back to the root folder
 WORKDIR /home/src
 
+# ../magic/ and ../data/ are bind-mounted here, so their ownership depends on
+# the host, not the image. Start as root, fix ownership to match USER_LOCAL,
+# then drop to it via gosu — avoids a manual `chown` step per environment.
+ENTRYPOINT ["/bin/sh", "-c", "chown -R ${USER_LOCAL}:${USER_LOCAL} /home/src && exec gosu ${USER_LOCAL} \"$@\"", "sh"]
 CMD ["/bin/sh", "-c", "/app/run_app.sh"]

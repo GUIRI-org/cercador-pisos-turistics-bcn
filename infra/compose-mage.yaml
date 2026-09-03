@@ -22,6 +22,8 @@ services:
       dockerfile: Dockerfile.mage
       args:
         - USER_CODE_PATH=/home/src/${MAGE_PROJECT_NAME}
+        - USER_UID=${MAGE_UID:-1000}
+        - USER_GID=${MAGE_GID:-1000}
     extra_hosts:
       - host.docker.internal:host-gateway
     environment:
@@ -38,7 +40,7 @@ services:
     restart: always
     # Mage's scheduler relies on Python multiprocessing (semaphores/pipes via /dev/shm).
     # Docker's default 64MB /dev/shm is too small and causes BrokenPipeError crash loops.
-    shm_size: '512mb'
+    shm_size: '1gb'
     volumes:
       - ../magic/:/home/src/
       - ../data:/home/src/data
