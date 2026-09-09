@@ -104,6 +104,340 @@ const dedupeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
   return Array.from(merged.values());
 };
 
+const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
+  const aNum = a.num1 ?? Number.POSITIVE_INFINITY;
+  const bNum = b.num1 ?? Number.POSITIVE_INFINITY;
+  if (aNum !== bNum) return aNum - bNum;
+  return (a.lletra1 || '').localeCompare(b.lletra1 || '', 'ca');
+};
+
+// Each district gets a fixed hue; neighbourhoods within it are shades (gradient) of that hue.
+const hashStringToHue = (value: string): number => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+  }
+  return hash % 360;
+};
+
+function buildDistrictColorScale(groups: AddressGroup[]) {
+  const districtHues = new Map<string, number>();
+  const neighborhoodsByDistrict = new Map<string, string[]>();
+
+  groups.forEach((group) => {
+    const district = group.nom_districte || 'Sense districte';
+    const neighborhood = group.nom_barri || 'Sense barri';
+
+    if (!districtHues.has(district)) {
+      districtHues.set(district, hashStringToHue(district));
+    }
+
+    const neighborhoods = neighborhoodsByDistrict.get(district) || [];
+    if (!neighborhoods.includes(neighborhood)) {
+      neighborhoods.push(neighborhood);
+    }
+    neighborhoodsByDistrict.set(district, neighborhoods);
+  });
+
+  neighborhoodsByDistrict.forEach((neighborhoods) => neighborhoods.sort((a, b) => a.localeCompare(b, 'ca')));
+
+  const neighborhoodLightness = new Map<string, number>();
+  neighborhoodsByDistrict.forEach((neighborhoods, district) => {
+    const count = neighborhoods.length;
+    neighborhoods.forEach((neighborhood, idx) => {
+      const lightness = count > 1 ? 35 + (idx / (count - 1)) * 35 : 45;
+      neighborhoodLightness.set(`${district}||${neighborhood}`, lightness);
+    });
+  });
+
+  const colorFor = (district: string, neighborhood: string) => {
+    const hue = districtHues.get(district) ?? 210;
+    const lightness = neighborhoodLightness.get(`${district}||${neighborhood}`) ?? 45;
+    return `hsl(${hue}, 60%, ${lightness}%)`;
+  };
+
+  return { districtHues, neighborhoodsByDistrict, colorFor };
+}
+
+type DistributionBar = {
+  key: string;
+  num: number;
+  apartments: number;
+  places: number;
+  district: string;
+  neighborhood: string;
+};
+
+type DistributionMetric = 'apartments' | 'places';
+
+const METRIC_LABELS: Record<DistributionMetric, string> = {
+  apartments: 'apartaments',
+  places: 'places',
+};
+
+type DistributionColumn =
+  | { type: 'bar'; bar: DistributionBar }
+  | { type: 'ellipsis' };
+
+// Gaps wider than this between consecutive street numbers collapse into a single "…" column.
+const MAX_NUMBER_GAP_BEFORE_ELLIPSIS = 12;
+
+// Fixed column widths so bars stay legible and the chart can overflow its container instead of squeezing.
+const BAR_COLUMN_WIDTH = 18;
+const ELLIPSIS_COLUMN_WIDTH = 14;
+const Y_AXIS_WIDTH = 26;
+
+// Columns are built once from every number on the street (both parities) so the odd/even
+// charts line up on the same axis instead of each compressing gaps independently.
+function buildSharedColumns(nums: number[], startNum: number): DistributionColumn[] {
+  const sorted = Array.from(new Set(nums)).sort((a, b) => a - b);
+  const columns: DistributionColumn[] = [];
+
+  if (sorted.length === 0 || sorted[0] !== startNum) {
+    columns.push({ type: 'bar', bar: { key: String(startNum), num: startNum, apartments: 0, places: 0, district: '', neighborhood: '' } });
+  }
+
+  let prevNum: number | null = columns.length ? startNum : null;
+  sorted.forEach((num) => {
+    if (prevNum !== null && num - prevNum > MAX_NUMBER_GAP_BEFORE_ELLIPSIS) {
+      columns.push({ type: 'ellipsis' });
+    }
+    columns.push({ type: 'bar', bar: { key: String(num), num, apartments: 0, places: 0, district: '', neighborhood: '' } });
+    prevNum = num;
+  });
+
+  return columns;
+}
+
+// Fills a shared column layout with the real bar data available for one parity, leaving the rest empty.
+function fillColumns(sharedColumns: DistributionColumn[], barsByNum: Map<number, DistributionBar>): DistributionColumn[] {
+  return sharedColumns.map((column) => {
+    if (column.type === 'ellipsis') return column;
+    const bar = barsByNum.get(column.bar.num);
+    return bar ? { type: 'bar', bar } : column;
+  });
+}
+
+function NumberAxisLabels({ columns }: { columns: DistributionColumn[] }) {
+  return (
+    <div className="d-flex mt-2" style={{ gap: '4px' }}>
+      <div className="flex-shrink-0" style={{ width: `${Y_AXIS_WIDTH}px` }} />
+      <div className="d-flex" style={{ gap: '2px' }}>
+        {columns.map((column, idx) => (
+          <div
+            key={`label-${idx}`}
+            style={{
+              flex: `0 0 ${column.type === 'ellipsis' ? ELLIPSIS_COLUMN_WIDTH : BAR_COLUMN_WIDTH}px`,
+              fontSize: '0.6rem',
+              textAlign: 'center',
+              color: '#666',
+            }}
+          >
+            {column.type === 'ellipsis' ? '···' : column.bar.key}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DistributionChart({
+  title,
+  titlePlacement = 'top',
+  columns,
+  colorFor,
+  maxValue,
+  metric,
+  invertY = false,
+}: {
+  title: string;
+  titlePlacement?: 'top' | 'bottom';
+  columns: DistributionColumn[];
+  colorFor: (district: string, neighborhood: string) => string;
+  maxValue: number;
+  metric: DistributionMetric;
+  invertY?: boolean;
+}) {
+  const chartHeight = 110;
+  // Ticks read top-to-bottom: max→0 normally, or 0→max when the axis is inverted.
+  const yTicks = (invertY ? [0, 0.25, 0.5, 0.75, 1] : [1, 0.75, 0.5, 0.25, 0]).map((fraction) =>
+    Math.round(maxValue * fraction)
+  );
+
+  const titleEl = <div className="text-sm text-gray-600 mb-1">{title}</div>;
+
+  return (
+    <div className="mt-2">
+      {titlePlacement === 'top' && titleEl}
+      <div className="d-flex" style={{ gap: '4px' }}>
+        <div
+          className="d-flex flex-column justify-content-between text-end flex-shrink-0"
+          style={{
+            height: chartHeight,
+            fontSize: '0.6rem',
+            color: '#666',
+            width: `${Y_AXIS_WIDTH}px`,
+            position: 'sticky',
+            left: 0,
+            background: '#f9fafb',
+            zIndex: 1,
+          }}
+        >
+          {yTicks.map((tick, idx) => (
+            <div key={idx}>{tick}</div>
+          ))}
+        </div>
+        <div
+          className="position-relative flex-shrink-0"
+          style={{
+            height: chartHeight,
+            width: columns.reduce((sum, c) => sum + (c.type === 'ellipsis' ? ELLIPSIS_COLUMN_WIDTH : BAR_COLUMN_WIDTH) + 2, 0),
+            borderLeft: '1px solid #ccc',
+            ...(invertY ? { borderTop: '1px solid #ccc' } : { borderBottom: '1px solid #ccc' }),
+          }}
+        >
+          {yTicks.map((_, idx) => (
+            <div
+              key={idx}
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: `${(idx / (yTicks.length - 1)) * 100}%`,
+                borderTop: '1px dashed #e0e0e0',
+              }}
+            />
+          ))}
+          <div className={`d-flex h-100 ${invertY ? 'align-items-start' : 'align-items-end'}`} style={{ gap: '2px' }}>
+            {columns.map((column, idx) => {
+              if (column.type === 'ellipsis') {
+                return (
+                  <div
+                    key={`ellipsis-${idx}`}
+                    className={`d-flex justify-content-center ${invertY ? 'align-items-start' : 'align-items-end'}`}
+                    style={{ flex: `0 0 ${ELLIPSIS_COLUMN_WIDTH}px`, height: '100%' }}
+                  >
+                    <span style={{ fontSize: '0.7rem', color: '#999' }}>···</span>
+                  </div>
+                );
+              }
+
+              const { bar } = column;
+              const value = metric === 'places' ? bar.places : bar.apartments;
+              const heightPct = maxValue > 0 ? (value / maxValue) * 100 : 0;
+
+              return (
+                <div
+                  key={`${bar.key}-${idx}`}
+                  title={
+                    bar.district
+                      ? `Núm ${bar.key}: ${value} ${METRIC_LABELS[metric]} · ${bar.district} · ${bar.neighborhood}`
+                      : `Núm ${bar.key}`
+                  }
+                  style={{
+                    flex: `0 0 ${BAR_COLUMN_WIDTH}px`,
+                    height: `${heightPct}%`,
+                    background: bar.district ? colorFor(bar.district, bar.neighborhood) : 'transparent',
+                    borderRadius: invertY ? '0 0 2px 2px' : '2px 2px 0 0',
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      {titlePlacement === 'bottom' && titleEl}
+    </div>
+  );
+}
+
+function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) {
+  const [metric, setMetric] = useState<DistributionMetric>('apartments');
+
+  const bars: DistributionBar[] = groups
+    .filter((group) => group.num1 !== undefined && group.num1 !== null)
+    .map((group) => ({
+      key: `${group.num1}${group.lletra1 || ''}`,
+      num: group.num1 as number,
+      apartments: group.apartments_count,
+      places: group.total_places,
+      district: group.nom_districte || 'Sense districte',
+      neighborhood: group.nom_barri || 'Sense barri',
+    }));
+
+  if (bars.length < 2) return null;
+
+  const { districtHues, neighborhoodsByDistrict, colorFor } = buildDistrictColorScale(groups);
+  // Same shared column layout (numbers + ellipsis breaks) for both charts, so numbers line up on one axis.
+  const sharedColumns = buildSharedColumns(bars.map((bar) => bar.num), 1);
+  const oddColumns = fillColumns(sharedColumns, new Map(bars.filter((bar) => bar.num % 2 !== 0).map((bar) => [bar.num, bar])));
+  const evenColumns = fillColumns(sharedColumns, new Map(bars.filter((bar) => bar.num % 2 === 0).map((bar) => [bar.num, bar])));
+  // Shared across both charts so the two sides of the street stay proportionally comparable.
+  const maxValue = Math.max(...bars.map((bar) => (metric === 'places' ? bar.places : bar.apartments)), 1);
+
+  return (
+    <div className="mb-3 p-2 rounded border border-gray-200 bg-gray-50">
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <div className="text-sm text-gray-600">Distribució per número de carrer (color = districte, degradat = barri)</div>
+        <div className="btn-group btn-group-sm" role="group" aria-label="Mètrica de la distribució">
+          <button
+            type="button"
+            className={`btn ${metric === 'apartments' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setMetric('apartments')}
+          >
+            Apartaments
+          </button>
+          <button
+            type="button"
+            className={`btn ${metric === 'places' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            onClick={() => setMetric('places')}
+          >
+            Places
+          </button>
+        </div>
+      </div>
+      {/* Single shared horizontal scrollbar for all three rows, so they always stay in sync and use the full available width before scrolling. */}
+      <div style={{ overflowX: 'auto' }}>
+        <DistributionChart title="Números senars" columns={oddColumns} colorFor={colorFor} maxValue={maxValue} metric={metric} />
+        <NumberAxisLabels columns={sharedColumns} />
+        <DistributionChart
+          title="Números parells"
+          titlePlacement="bottom"
+          columns={evenColumns}
+          colorFor={colorFor}
+          maxValue={maxValue}
+          metric={metric}
+          invertY
+        />
+      </div>
+
+      {/* Legend: district = master color swatch, neighbourhood swatches = gradient within that district */}
+      <div className="mt-3 d-flex flex-column gap-2">
+        {Array.from(neighborhoodsByDistrict.entries()).map(([district, neighborhoods]) => (
+          <div key={district} className="d-flex align-items-center flex-wrap gap-2">
+            <span
+              className="d-inline-block rounded-sm"
+              style={{ width: '10px', height: '10px', background: `hsl(${districtHues.get(district)}, 60%, 45%)`, flexShrink: 0 }}
+            />
+            <span className="text-sm text-gray-700 fw-semibold">{district}</span>
+            <span className="d-flex align-items-center flex-wrap gap-2 ms-2">
+              {neighborhoods.map((neighborhood) => (
+                <span key={neighborhood} className="d-flex align-items-center gap-1">
+                  <span
+                    className="d-inline-block rounded-sm"
+                    style={{ width: '8px', height: '8px', background: colorFor(district, neighborhood) }}
+                  />
+                  <span className="text-gray-600" style={{ fontSize: '0.7rem' }}>{neighborhood}</span>
+                </span>
+              ))}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ApartmentResults({
   title,
   addressGroups,
@@ -112,7 +446,10 @@ export function ApartmentResults({
 }: ApartmentResultsProps) {
   const shouldOpenFirstItem = !!onResetSearch;
   const showCollapsibleHeader = !shouldOpenFirstItem;
-  const displayGroups = useMemo(() => dedupeAddressGroups(addressGroups), [addressGroups]);
+  const displayGroups = useMemo(
+    () => dedupeAddressGroups(addressGroups).sort(compareByStreetNumber),
+    [addressGroups]
+  );
   const resultSignature = useMemo(
     () => `${shouldOpenFirstItem ? 'reset' : 'plain'}:${displayGroups.map(getAddressGroupKey).join('||')}`,
     [displayGroups, shouldOpenFirstItem]
@@ -144,7 +481,7 @@ export function ApartmentResults({
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
+      <div className="container rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
         <div className="d-flex justify-content-between align-items-start gap-3">
           <h4 className="font-semibold text-gray-800 mb-0">{title}</h4>
           {onResetSearch && (
@@ -164,7 +501,7 @@ export function ApartmentResults({
 
   if (!displayGroups.length) {
     return (
-      <div className="rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
+      <div className="container rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
         <div className="d-flex justify-content-between align-items-start gap-3">
           <h4 className="font-semibold text-gray-800 mb-0">{title}</h4>
           {onResetSearch && (
@@ -177,7 +514,7 @@ export function ApartmentResults({
             </button>
           )}
         </div>
-        <p className="mt-2 text-gray-600">No s&apos;han trobat habitatges d&apos;us turistic.</p>
+        <p className="mt-2 text-gray-600">No s&apos;han trobat habitatges d&apos;us turistic, el pis que busques és il·legal.</p>
       </div>
     );
   }
@@ -198,6 +535,7 @@ export function ApartmentResults({
           </button>
         )}
       </div>
+      <AddressNumberDistributionChart groups={displayGroups} />
       <div className="mt-4 space-y-4">
         {displayGroups.map((group, idx) => {
           const isPriorityResult = shouldOpenFirstItem && idx === 0;
@@ -266,15 +604,21 @@ export function ApartmentResults({
                   <h5 className="">
                     {group.total_places} places across {group.apartments_count} apartment(s)
                   </h5>
+                  {district && (
+                    <div className="text-sm text-gray-600">{district}</div>
+                  )}
                   <div className="position-absolute end-0 top-0 d-flex align-items-center gap-3">
                     <span style={{ fontSize: '0.8rem', transition: 'transform 0.2s', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
                   </div>
                 </div>
               ) : (
-                <div className="d-flex align-items-center gap-3 mb-1">
+                <div className="d-flex flex-column gap-1 mb-1">
                   <h5 className="mb-0">
                     {group.total_places} places across {group.apartments_count} apartment(s)
                   </h5>
+                  {district && (
+                    <div className="text-sm text-gray-600">{district}</div>
+                  )}
                 </div>
               )}
               {isOpen && (
