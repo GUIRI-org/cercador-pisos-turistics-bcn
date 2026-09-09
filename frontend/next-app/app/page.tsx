@@ -6,8 +6,8 @@ const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const versions = [
   {
     href: '/search-v1',
-    title: 'Search v1',
-    description: 'Current production search — stable address lookup and results.',
+    title: 'Search revamp',
+    description: 'It corresponds to the last iteration search implementation.',
   },
   {
     href: '/search-v2',
@@ -23,14 +23,6 @@ const versions = [
 
 export default function Home() {
   return (
-    <ParallaxContainer>
-      <nav className="navbar">
-        <div className="container">
-          <Link className="navbar-brand fw-semibold text-primary" href="/">
-            <img src={`${BASE}/guiri-gamba.svg`} alt="Guiri Gamba" width="32" height="32" className="d-inline-block" /> El Guiri
-          </Link>
-        </div>
-      </nav>
       <main className="container" style={{ maxWidth: '640px', minHeight: '100vh', paddingTop: '1rem', paddingBottom: '1rem' }}>
         <h1 className="text-3xl font-bold text-gray-900">
           Barcelona Tourist Apartments
@@ -45,6 +37,7 @@ export default function Home() {
               key={version.href}
               href={version.href}
               className="card text-decoration-none p-3 border rounded"
+              target='_blank'
             >
               <div className="fw-semibold text-gray-900">{version.title}</div>
               <div className="text-sm text-gray-600 mt-1">{version.description}</div>
@@ -52,6 +45,5 @@ export default function Home() {
           ))}
         </div>
       </main>
-    </ParallaxContainer>
   );
 }
