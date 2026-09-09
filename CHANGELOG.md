@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Added
+- **Fix conditional frontend proxy in Nginx**: Optional frontend deployment support
+  - `ENABLE_FRONTEND` environment variable (default: `false`) to control frontend proxy configuration
+  - Dynamic Nginx entrypoint script that only renders frontend proxy config when frontend is enabled
+  - Prevents Nginx startup failures when frontend containers are not running
 
 ## v0.0.5 - Sep 3, 2026
 - Fix mage issue with permissions for good

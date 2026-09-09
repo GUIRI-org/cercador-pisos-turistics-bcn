@@ -3,8 +3,13 @@
 # Copy and process core configuration
 envsubst "$(env | sed -e 's/=.*//' -e 's/^/\$/g' | tr '\n' ' ')" < /etc/nginx/templates/conf.d/01-core.conf.template > /etc/nginx/conf.d/01-core.conf
 
-# Copy and process frontend configuration (Next.js dev proxy)
-envsubst "$(env | sed -e 's/=.*//' -e 's/^/\$/g' | tr '\n' ' ')" < /etc/nginx/templates/conf.d/02-frontend.conf.template > /etc/nginx/conf.d/02-frontend.conf
+# Only render the frontend proxy config when the frontend containers are actually running,
+# otherwise nginx fails to start because the upstream host cannot be resolved.
+if [ "$ENABLE_FRONTEND" = "true" ]; then
+    envsubst "$(env | sed -e 's/=.*//' -e 's/^/\$/g' | tr '\n' ' ')" < /etc/nginx/templates/conf.d/02-frontend.conf.template > /etc/nginx/conf.d/02-frontend.conf
+else
+    rm -f /etc/nginx/conf.d/02-frontend.conf
+fi
 
 # Start nginx
 exec nginx -g 'daemon off;'
