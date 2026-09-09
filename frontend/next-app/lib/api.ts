@@ -149,8 +149,9 @@ const mergeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
 export async function fetchTipusVies(): Promise<TipusVia[]> {
   try {
     const res = await fetch(`${BASE}/tipusvies`);
-    const json = (await res.json()) as TerritoriResponse;
-    return (json.resultats?.tipusvies || []).sort((a, b) =>
+    // Unlike the other territori endpoints, /tipusvies returns `resultats` as a flat array.
+    const json = (await res.json()) as { resultats?: TipusVia[] };
+    return (json.resultats || []).sort((a, b) =>
       a.nom.localeCompare(b.nom, 'ca')
     );
   } catch {
