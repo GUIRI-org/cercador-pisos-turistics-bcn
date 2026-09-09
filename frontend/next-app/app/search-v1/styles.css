@@ -1,0 +1,140 @@
+h1,
+h2,
+h3,
+h4,
+p,
+a,
+li,
+label,
+select,
+td,
+nav,
+input[type=button],
+input[type=text] {
+    font-family: "Source Sans 3", sans-serif
+}
+
+h1 {
+    text-align: left;
+    font-size: 30px;
+    font-weight: 400;
+    opacity: 1;
+}
+
+h2 {
+    text-align: left;
+    font-size: 1.375em;
+    font-weight: 600;
+    opacity: 1;
+}
+
+p {
+    font-size: 1em;
+    line-height: 20px;
+}
+
+.label,
+label {
+    margin-bottom: 6px;
+    font-size: 18px;
+    font-weight: 400;
+}
+
+
+.caracteristicas-form {
+    padding-left: 2.5em;
+}
+
+.caracteristicas-form .container {
+    border: 1px solid #e5e5e5;
+}
+
+@media (min-width: 768px) {
+
+    .caracteristicas-form .tipus-via-carrer>div {
+        background: #f4f6f8;
+    }
+}
+
+
+.caracteristicas-form .input {
+    position: relative;
+}
+
+.caracteristicas-form .input select,
+.caracteristicas-form .input input {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-bottom: 1px solid #ccc;
+    border-radius: 0;
+    width: 100%;
+    padding: 6px;
+    font-size: 16px;
+    color: #334155;
+}
+
+.caracteristicas-form .input select {
+    padding: 8px;
+}
+
+.caracteristicas-form .input select:focus,
+.caracteristicas-form .input input:focus {
+    outline: none;
+    border-color: #0057a3;
+    box-shadow: 0 0 0 2px rgba(0, 87, 163, 0.2);
+}
+
+.caracteristicas-form .input select:disabled,
+.caracteristicas-form .input input:disabled {
+    background: #eceff1;
+    cursor: not-allowed;
+}
+
+.caracteristicas-form .carrer-suggestions {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 20;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #b7c0c7;
+    border-radius: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem 0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.caracteristicas-form .carrer-suggestions li {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.caracteristicas-form .carrer-suggestions li:hover {
+    background: #eef4fa;
+}
+
+.caracteristicas-form .error-msg {
+    display: block;
+    color: #b3261e;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.caracteristicas-form .linkGuiaBcn {
+    font-size: 0.9rem;
+    color: #444;
+}
+
+.caracteristicas-form .linkGuiaBcn a {
+    color: #0057a3;
+    text-decoration: underline;
+}
+
+.search-results {
+    padding-left: 2.5em;
+}
