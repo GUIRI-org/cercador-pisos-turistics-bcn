@@ -87,12 +87,12 @@ Then visit http://localhost:3000
 
 Run `make help` to see all available commands. Quick reference:
 
-| Command | Purpose |
-|---------|---------|
-| `make infra-deploy` | Start local development environment |
-| `make infra-undeploy` | Stop all containers |
-| `make infra-logs-follow` | Stream container logs |
-| `make cicd-deploy` | Full deployment (for CI/CD pipelines) |
+| Command                  | Purpose                               |
+| ------------------------ | ------------------------------------- |
+| `make infra-deploy`      | Start local development environment   |
+| `make infra-undeploy`    | Stop all containers                   |
+| `make infra-logs-follow` | Stream container logs                 |
+| `make cicd-deploy`       | Full deployment (for CI/CD pipelines) |
 
 **Naming convention:**
 - `infra-*` → Local development (quick start/stop)
@@ -198,10 +198,10 @@ The `api-collection/` directory contains HTTP request examples:
 Collection format: [Bruno](https://www.usebruno.com/) — a git-friendly HTTP client
 
 **Environments:**
-| Environment | Base URL | Notes |
-|-------------|----------|-------|
-| `local` | `http://api.guiripisos.local:8888` | Via Nginx (requires `/etc/hosts` setup) |
-| `localhost` | `http://127.0.0.1:9092` | Direct API access (no domain needed) |
+| Environment | Base URL                           | Notes                                   |
+| ----------- | ---------------------------------- | --------------------------------------- |
+| `local`     | `http://api.guiripisos.local:8888` | Via Nginx (requires `/etc/hosts` setup) |
+| `localhost` | `http://127.0.0.1:9092`            | Direct API access (no domain needed)    |
 
 
 ## Documentation
