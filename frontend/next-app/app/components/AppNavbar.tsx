@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+import { versions } from '../config/versions';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
@@ -11,30 +13,80 @@ interface AppNavbarProps {
   compact?: boolean;
 }
 
-export function AppNavbar({ secondaryHref, secondaryLabel, compact = false }: AppNavbarProps) {
+export function AppNavbar({
+  secondaryHref,
+  secondaryLabel,
+  compact = false,
+}: AppNavbarProps) {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
+
   const isMainActive = pathname === '/';
 
-  return (
+  const closeMenu = () => {
+    setIsOpen(false);
+  };
 
-    <nav className="navbar navbar-expand-lg bg-body-tertiary">
+  return (
+    <nav className={`navbar navbar-expand-lg`} style={{ backgroundColor: '#F7D400' }}>
       <div className="container">
         <Link
           className={`navbar-brand ${isMainActive ? 'fw-semibold text-primary' : ''}`}
           href="/"
           aria-current={isMainActive ? 'page' : undefined}
+          onClick={closeMenu}
         >
-          <img src={`${BASE}/guiri-gamba.svg`} alt="Guiri Gamba" width="32" height="32" className="d-inline-block" /> El Guiri
+          <img
+            src={`${BASE}/guiri-gamba-cabeza.svg`}
+            alt="Guiri Gamba"
+            width="48"
+            height="48"
+            className="d-inline-block"
+          />{' '}
+          El Guiri
         </Link>
-        <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-          <span className="navbar-toggler-icon"></span>
+
+        <button
+          className="navbar-toggler border-0"
+          type="button"
+          aria-controls="navbarNavAltMarkup"
+          aria-expanded={isOpen}
+          aria-label="Toggle navigation"
+          onClick={() => setIsOpen((current) => !current)}
+        >
+          <span className="navbar-toggler-icon" />
         </button>
-        <div className="collapse navbar-collapse" id="navbarNavAltMarkup">
-          <div className="navbar-nav">
-            <a className="nav-link active" aria-current="page" href="#">Home</a>
-            <a className="nav-link" href="#">Features</a>
-            <a className="nav-link" href="#">Pricing</a>
-            <a className="nav-link disabled" aria-disabled="true">Disabled</a>
+
+        {/* Avoid the bare `collapse` class: Tailwind emits `visibility: collapse` for it. */}
+        <div
+          className={`navbar-collapse ${isOpen ? '' : 'd-none'}`}
+          id="navbarNavAltMarkup"
+        >
+          <div className="navbar-nav ms-auto">
+            <Link
+              className={`nav-link ${isMainActive ? 'active fw-semibold' : ''}`}
+              href="/"
+              aria-current={isMainActive ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              Home
+            </Link>
+
+            {versions.map((version) => {
+              const isActive = pathname === version.href;
+
+              return (
+                <Link
+                  key={version.href}
+                  className={`nav-link ${isActive ? 'active fw-semibold' : ''}`}
+                  href={version.href}
+                  aria-current={isActive ? 'page' : undefined}
+                  onClick={closeMenu}
+                >
+                  {version.title}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
