@@ -24,7 +24,7 @@ export function StreetDetailContent() {
           )}
         </div>
 
-        <Link href="/search-v1" className="btn btn-outline-secondary btn-sm">
+        <Link href="/" className="btn btn-outline-secondary btn-sm">
           Tornar al cercador
         </Link>
       </div>

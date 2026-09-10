@@ -466,18 +466,6 @@ export function ApartmentResults({
   if (loading) {
     return (
       <div className="container rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
-        <div className="d-flex justify-content-between align-items-start gap-3">
-          <h4 className="font-semibold text-gray-800 mb-0">{title}</h4>
-          {onResetSearch && (
-            <button
-              type="button"
-              onClick={onResetSearch}
-              className="btn btn-outline-danger btn-sm flex-shrink-0"
-            >
-              Reset search
-            </button>
-          )}
-        </div>
         <p className="mt-2 text-gray-600">Cercant habitatges turístics...</p>
       </div>
     );
@@ -489,16 +477,7 @@ export function ApartmentResults({
         <h4 className="font-semibold text-danger">El pis que busques és il·legal</h4>
         <p className="mt-2 text-black">No s&apos;han trobat habitatges d&apos;us turistic en la adreça indicada: <strong>{title}</strong></p>
         <div className="d-flex align-items-start gap-3">
-          {onResetSearch && (
-            <button
-              type="button"
-              onClick={onResetSearch}
-              className="btn btn-outline-danger btn-sm flex-shrink-0"
-            >
-              Reset search
-            </button>
-          )}
-          <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-danger btn-sm flex-shrink-0">
+          <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary">
             Avisa'ns
           </a>
         </div>

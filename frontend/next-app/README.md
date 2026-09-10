@@ -7,7 +7,8 @@ Frontend for searching Barcelona tourist apartment licenses by address. Built wi
 | Route | Description |
 |---|---|
 | `/` | Main search — queries the internal GUIRI API |
-| `/opendata-search` | Alternative search — queries Open Data BCN datastore directly |
+| `/search-v1` | Experimental iteration — same data layer, evolving UI |
+| `/search-v2` | Alternative search — queries Open Data BCN datastore directly |
 
 ## Development
 
