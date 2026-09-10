@@ -1,14 +1,15 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { AddressGroup, ApartmentDetail } from '@/lib/types';
-import { AddressMiniMap } from './AddressMiniMap';
+import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
+import { ApartmentDetail } from './StreetDetail';
 
 interface ApartmentResultsProps {
   title: string;
   addressGroups: AddressGroup[];
   loading?: boolean;
   onResetSearch?: () => void;
+  singleResult?: boolean;
 }
 
 const normalizePart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
@@ -38,7 +39,7 @@ const getAddressGroupKey = (group: AddressGroup) => {
   ].join('|');
 };
 
-const getApartmentKey = (apt: ApartmentDetail) => {
+const getApartmentKey = (apt: ApartmentDetailType) => {
   return [
     normalizePart(apt.expedient),
     normalizePart(apt.registre_generalitat),
@@ -67,7 +68,7 @@ const dedupeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
       return;
     }
 
-    const apartmentsByKey = new Map<string, ApartmentDetail>();
+    const apartmentsByKey = new Map<string, ApartmentDetailType>();
     [...existing.apartments, ...group.apartments].forEach((apt) => {
       apartmentsByKey.set(getApartmentKey(apt), apt);
     });
@@ -443,13 +444,14 @@ export function ApartmentResults({
   addressGroups,
   loading,
   onResetSearch,
+  singleResult,
 }: ApartmentResultsProps) {
   const shouldOpenFirstItem = !!onResetSearch;
-  const showCollapsibleHeader = !shouldOpenFirstItem;
   const displayGroups = useMemo(
     () => dedupeAddressGroups(addressGroups).sort(compareByStreetNumber),
     [addressGroups]
   );
+
   const resultSignature = useMemo(
     () => `${shouldOpenFirstItem ? 'reset' : 'plain'}:${displayGroups.map(getAddressGroupKey).join('||')}`,
     [displayGroups, shouldOpenFirstItem]
@@ -459,25 +461,7 @@ export function ApartmentResults({
     signature: resultSignature,
     openItems: defaultOpenItems,
   });
-  const openItems = openState.signature === resultSignature ? openState.openItems : defaultOpenItems;
 
-  const toggleItem = (idx: number) => {
-    setOpenState((prev) => {
-      const baseItems = prev.signature === resultSignature ? prev.openItems : defaultOpenItems;
-      const next = new Set(baseItems);
-
-      if (next.has(idx)) {
-        next.delete(idx);
-      } else {
-        next.add(idx);
-      }
-
-      return {
-        signature: resultSignature,
-        openItems: next,
-      };
-    });
-  };
 
   if (loading) {
     return (
@@ -501,7 +485,7 @@ export function ApartmentResults({
 
   if (!displayGroups.length) {
     return (
-      <div className="container border border-danger p-5 bg-white">
+      <div className="container">
         <h4 className="font-semibold text-danger">El pis que busques és il·legal</h4>
         <p className="mt-2 text-black">No s&apos;han trobat habitatges d&apos;us turistic en la adreça indicada: <strong>{title}</strong></p>
         <div className="d-flex align-items-start gap-3">
@@ -523,179 +507,75 @@ export function ApartmentResults({
   }
 
   return (
-    <div className="border p-5">
-      <div className="d-flex justify-content-between align-items-start gap-3">
-        <h4 className="font-semibold text-gray-800">
-          {title}
-        </h4>
-      </div>
-      <AddressNumberDistributionChart groups={displayGroups} />
-      <div className="mt-4 space-y-4">
-        {displayGroups.map((group, idx) => {
-          const isPriorityResult = shouldOpenFirstItem && idx === 0;
-          const district = [group.nom_districte, group.nom_barri]
-            .filter(Boolean)
-            .join(' · ');
-          const streetLabel = [group.tipus_carrer, group.carrer]
-            .filter(Boolean)
-            .join(' ');
-          const numberLabel = [
-            group.num1 !== undefined && group.num1 !== null ? `${group.num1}${group.lletra1 || ''}` : null,
-            group.num2 !== undefined && group.num2 !== null ? `${group.num2}${group.lletra2 || ''}` : null,
-          ]
-            .filter(Boolean)
-            .join(' - ');
-          const hasCoordinates = group.longitud_x !== undefined && group.longitud_x !== null
-            && group.latitud_y !== undefined && group.latitud_y !== null;
-          const otherStreetMarkers = displayGroups
-            .filter((other, otherIdx) => {
-              const otherHasCoordinates = other.longitud_x !== undefined && other.longitud_x !== null
-                && other.latitud_y !== undefined && other.latitud_y !== null;
-              return otherIdx !== idx
-                && otherHasCoordinates
-                && !!group.carrer
-                && !!other.carrer
-                && other.carrer === group.carrer;
-            })
-            .map((other) => ({
-              lat: other.latitud_y as number,
-              lng: other.longitud_x as number,
-              label: other.address || undefined,
-            }));
-          const pisosGrouped = group.apartments.reduce<
-            Record<string, { totalPlaces: number; portes: Record<string, number> }>
-          >((acc, apt) => {
-            const pisKey = normalizePis(apt.pis);
-            const portaKey = apt.porta || '-';
-            const places = apt.num_places || 0;
+    <div className={``}>
 
-            if (!acc[pisKey]) {
-              acc[pisKey] = { totalPlaces: 0, portes: {} };
-            }
+      {!singleResult &&
+        <AddressNumberDistributionChart groups={displayGroups} />
+      }
 
-            acc[pisKey].totalPlaces += places;
-            acc[pisKey].portes[portaKey] = (acc[pisKey].portes[portaKey] || 0) + places;
-            return acc;
-          }, {});
+      {displayGroups.map((group, idx) => {
+        return (
+          <div
+            key={idx}
+            className="d-flex flex-column gap-1"
+          >
+            {singleResult && (
+              <h4 className="">
+                Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
+              </h4>
+            )}
 
-          const isOpen = showCollapsibleHeader ? openItems.has(idx) : true;
+            {singleResult && (
+              <p className="mb-0">
+                S'han trobat&nbsp;
+                <strong>
+                  {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
+              </p>
+            )}
 
-          return (
-            <div
-              key={idx}
-              className={`bg-white p-3 d-flex flex-column gap-1 ${isPriorityResult ? 'rounded-3 border border-success-subtle bg-success-subtle' : 'bg-white'}`}
-            >
-              {showCollapsibleHeader ? (
-                <div
-                  className="collapsible-item-header position-relative"
-                  role="button"
-                  onClick={() => toggleItem(idx)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <h4 className="font-semibold text-gray-900 d-flex align-items-center gap-2 mb-0">
-                    <span>{group.address || 'Address not available'}</span>
-                  </h4>
-                  <h5 className="">
-                    {group.total_places} places across {group.apartments_count} apartment(s)
-                  </h5>
-                  {district && (
-                    <div className="text-sm text-gray-600">{district}</div>
-                  )}
-                  <div className="position-absolute end-0 top-0 d-flex align-items-center gap-3">
-                    <span style={{ fontSize: '0.8rem', transition: 'transform 0.2s', display: 'inline-block', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="d-flex flex-column gap-1 mb-1">
-                  <h5 className="mb-0">
-                    {group.total_places} places across {group.apartments_count} apartment(s)
-                  </h5>
-                  {district && (
-                    <div className="text-sm text-gray-600">{district}</div>
-                  )}
-                </div>
-              )}
-              {isOpen && (
-                <div className="collapsible-content">
-                  <div className="mb-3 d-flex flex-column flex-md-row gap-3 align-items-start">
-                    {hasCoordinates && (
-                      <AddressMiniMap
-                        lat={group.latitud_y as number}
-                        lng={group.longitud_x as number}
-                        label={group.address || 'Adreça'}
-                        otherMarkers={otherStreetMarkers}
-                      />
-                    )}
-                    <div className="text-sm text-gray-700 d-grid gap-1">
-                      {streetLabel && (
-                        <div className="text-sm text-gray-600">Street: {streetLabel}</div>
-                      )}
-                      {numberLabel && (
-                        <div className="text-sm text-gray-600">Number: {numberLabel}</div>
-                      )}
-                      {district && (
-                        <div className="text-sm text-gray-600">District and neighborhood: {district}</div>
-                      )}
-                      {(group.codi_districte !== undefined || group.codi_barri !== undefined) && (
-                        <div className="text-sm text-gray-600">
-                          District code: {group.codi_districte ?? '-'} · Neighborhood code: {group.codi_barri ?? '-'}
-                        </div>
-                      )}
-                      {hasCoordinates && (
-                        <div className="text-sm text-gray-600">
-                          Longitud: {group.longitud_x} · Latitud: {group.latitud_y}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <ul className="list-group list-group-flush">
-                    {Object.entries(pisosGrouped)
-                      .sort(([pisA], [pisB]) => {
-                        const aNum = Number.parseInt(pisA, 10);
-                        const bNum = Number.parseInt(pisB, 10);
-                        const aIsNum = !Number.isNaN(aNum);
-                        const bIsNum = !Number.isNaN(bNum);
 
-                        if (aIsNum && bIsNum) return bNum - aNum;
-                        if (aIsNum) return -1;
-                        if (bIsNum) return 1;
-                        return pisB.localeCompare(pisA, 'ca');
-                      })
-                      .map(([pis, pisData]) => (
-                        <li key={pis} className="list-group-item">
-                          <div className="d-flex justify-content-between align-items-center py-2">
-                            <span>Floor: {pis}</span>
-                            <span className="badge text-bg-primary rounded-pill">{pisData.totalPlaces}</span>
-                          </div>
-                          <ul className="list-group list-group-horizontal my-2">
-                            {Object.entries(pisData.portes)
-                              .sort(([portaA], [portaB]) => portaA.localeCompare(portaB, 'ca'))
-                              .map(([porta, portaPlaces]) => (
-                                <li key={`${pis}-${porta}`} className="list-group-item " style={{ width: '12%' }}>
-                                  <small className="me-2">door {porta}</small><br></br>
-                                  <span className="d-inline-flex align-items-center flex-wrap gap-1">
-                                    {Array.from({ length: Math.max(0, Math.round(portaPlaces)) }).map((_, index) => (
-                                      <span
-                                        key={`${pis}-${porta}-place-${index}`}
-                                        className="d-inline-block rounded-sm border border-blue-200 bg-blue-100"
-                                        style={{ width: '8px', height: '8px' }}
-                                        title={`1 plaça de porta ${porta}`}
-                                      />
-                                    ))}
-                                  </span>
-                                </li>
-                              ))}
-                          </ul>
+            <div className="my-3">
+              <ul className="list-group list-group-flush">
+                {group.apartments.map((apt, aptIdx) => (
+                  <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
+                    <p className="mb-0">
+                      {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
+                      {group.carrer && <span>{group.carrer} </span>}
+                      {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
+                      {apt.pis && <span>{normalizePis(apt.pis)} </span>}
+                      {apt.porta && <span>{apt.porta}</span>}</p>
 
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              )}
+                  </li>
+                ))}
+              </ul>
             </div>
-          );
-        })}
+            <a
+              href={`/street-detail?address=${encodeURIComponent(group.address || title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline-primary btn-sm flex-shrink-0"
+            >
+              Veure detall del carrer
+            </a>
+
+          </div>
+        );
+      })}
+      <div className="d-flex align-items-start gap-3">
+        {onResetSearch && (
+          <button
+            type="button"
+            onClick={onResetSearch}
+            className="btn btn-outline-danger btn-sm flex-shrink-0"
+          >
+            Reset search
+          </button>
+        )}
+        <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-danger btn-sm flex-shrink-0">
+          Avisa'ns
+        </a>
       </div>
+      
     </div>
   );
 }

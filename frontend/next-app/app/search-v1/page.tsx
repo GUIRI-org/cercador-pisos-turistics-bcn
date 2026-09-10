@@ -6,7 +6,6 @@ import { fetchTipusVies, searchApartments, searchCarrers } from '@/lib/api';
 import { AddressGroup, CarrerVia, TipusVia } from '@/lib/types';
 import { AppNavbar } from '../components/AppNavbar';
 import { ApartmentResults } from '../components/ApartmentResults';
-import { ParallaxContainer } from '../components/ParallaxContainer';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
 
@@ -43,9 +42,6 @@ export default function SearchV1Page() {
   const [selectedCarrer, setSelectedCarrer] = useState<CarrerVia | null>(null);
   const [numOptions, setNumOptions] = useState<string[]>([]);
   const [num, setNum] = useState('');
-  const [floor, setFloor] = useState('');
-  const [stair, setStair] = useState('');
-  const [door, setDoor] = useState('');
 
   const [touched, setTouched] = useState<{ carrer?: boolean; num?: boolean }>({});
   const [results, setResults] = useState<AddressGroup[]>([]);
@@ -144,165 +140,151 @@ export default function SearchV1Page() {
     setCarrerSuggestions([]);
     setNumOptions([]);
     setNum('');
-    setFloor('');
-    setStair('');
-    setDoor('');
     setResults([]);
     setStreetResults([]);
     setShowResults(false);
     setLoading(false);
   }, []);
 
-  const filteredStreetResults = useMemo(() => {
-    if (!results.length) return streetResults;
-
-    const exactAddressKeys = new Set(results.map(getAddressGroupKey));
-    return streetResults.filter((group) => !exactAddressKeys.has(getAddressGroupKey(group)));
-  }, [results, streetResults]);
-
-  const streetTotalNumbers = useMemo(
-    () => new Set(streetResults.map((group) => group.num1).filter((n) => n !== undefined && n !== null)).size,
-    [streetResults]
-  );
-
   return (
 
-    <main className="container" style={{ minHeight: '100vh', paddingTop: '1rem', paddingBottom: '1rem' }}>
+    <main className="" style={{ minHeight: '100vh' }}>
 
       <AppNavbar secondaryHref="/search-v2" secondaryLabel="Search v2" />
-      <h1 className="">Habitatges d'ús turístic</h1>
-      <h2 className="">Consulta els habitatges que tenen llicència</h2>
-      <p className="mt-2">
-        Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
-      </p>
 
-      <div className="search-form mt-3 ps-5">
-        <p className="text-gray-600 italic">
-          Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
+      <div className="container pt-5">
+        <h1 className="">Habitatges d'ús turístic</h1>
+        <p className="fs-4 text-gray-600 lh-base">
+          Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
         </p>
-        <div className="p-5 border">
-          <div className="row">
-            <div className="col col-auto tipusVia1">
-              <div className="label">
-                <label htmlFor="tipusViaInp">Tipus Via:</label>
-              </div>
-              <div className="input">
-                <select
-                  id="tipusViaInp"
-                  className="w-full"
-                  value={tipusVia}
-                  onChange={(e) => setTipusVia(e.target.value)}
-                >
-                  <option value="">Qualsevol</option>
-                  {tipusVies.map((tv, e) => (
-                    <option key={e + "-" + tv.codi} value={tv.abreviatura}>
-                      {tv.nom}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+      </div>
+      <div className="bg-light py-5">
+        <div className="container">
+          <div className="search-form">
+            <h2 className="">Consulta els habitatges que tenen llicència</h2>
+            <p className="text-gray-600 italic">
+              Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
+            </p>
+            <div className="p-5 border bg-white">
+              <div className="row">
+                <div className="col col-auto tipusVia1">
+                  <div className="label">
+                    <label htmlFor="tipusViaInp">Tipus Via:</label>
+                  </div>
+                  <div className="input">
+                    <select
+                      id="tipusViaInp"
+                      className="w-full"
+                      value={tipusVia}
+                      onChange={(e) => setTipusVia(e.target.value)}
+                    >
+                      <option value="">Qualsevol</option>
+                      {tipusVies.map((tv, e) => (
+                        <option key={e + "-" + tv.codi} value={tv.abreviatura}>
+                          {tv.nom}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-            <div className="col carrer">
-              <div className="label">
-                <label htmlFor="carrerInp">Carrer: *</label>
-              </div>
-              <div className="input relative">
-                <input
-                  id="carrerInp"
-                  type="text"
-                  className="w-full"
-                  autoComplete="off"
-                  placeholder="Seleccioneu una opció"
-                  value={carrerInput}
-                  aria-required="true"
-                  aria-invalid={carrerError}
-                  aria-describedby="error-address"
-                  onChange={(e) => handleCarrerInput(e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
-                />
-                {carrerInput.trim().length >= 2 && !selectedCarrer && carrerSuggestions.length > 0 && (
-                  <ul className="carrer-suggestions">
-                    {carrerSuggestions.map((via) => (
-                      <li key={via.codi} onMouseDown={() => handleSelectCarrer(via.codi)}>
-                        {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {carrerError && (
-                  <span id="error-address" className="error-msg" role="status">
-                    Aquest camp és obligatori
-                  </span>
-                )}
-              </div>
-            </div>
+                <div className="col carrer">
+                  <div className="label">
+                    <label htmlFor="carrerInp">Carrer: *</label>
+                  </div>
+                  <div className="input relative">
+                    <input
+                      id="carrerInp"
+                      type="text"
+                      className="w-full"
+                      autoComplete="off"
+                      placeholder="Seleccioneu una opció"
+                      value={carrerInput}
+                      aria-required="true"
+                      aria-invalid={carrerError}
+                      aria-describedby="error-address"
+                      onChange={(e) => handleCarrerInput(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
+                    />
+                    {carrerInput.trim().length >= 2 && !selectedCarrer && carrerSuggestions.length > 0 && (
+                      <ul className="carrer-suggestions">
+                        {carrerSuggestions.map((via) => (
+                          <li key={via.codi} onMouseDown={() => handleSelectCarrer(via.codi)}>
+                            {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {carrerError && (
+                      <span id="error-address" className="error-msg" role="status">
+                        Aquest camp és obligatori
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-            <div className="col col-auto numero">
-              <div className="label">
-                <label htmlFor="numInp">Núm: *</label>
-              </div>
+                <div className="col col-auto numero">
+                  <div className="label">
+                    <label htmlFor="numInp">Núm: *</label>
+                  </div>
 
-              <div className="input">
-                {/* Geoportal's search endpoint caps results at 25 matches, so it can't reliably
+                  <div className="input">
+                    {/* Geoportal's search endpoint caps results at 25 matches, so it can't reliably
                     preload every number for a street — a free-text field lets users enter any number. */}
-                <input
-                  id="numInp"
-                  type="text"
-                  className="w-full"
-                  list="num-list"
-                  autoComplete="off"
-                  value={num}
-                  disabled={!selectedCarrer}
-                  aria-required="true"
-                  aria-invalid={numError}
-                  aria-describedby="error-number"
-                  onChange={(e) => setNum(e.target.value)}
-                  onBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
-                />
-                <datalist id="num-list">
-                  {numOptions.map((n) => (
-                    <option key={n} value={n} />
-                  ))}
-                </datalist>
-                {numError && (
-                  <span id="error-number" className="error-msg" role="status">
-                    Aquest camp és obligatori
-                  </span>
-                )}
+                    <input
+                      id="numInp"
+                      type="text"
+                      className="w-full"
+                      list="num-list"
+                      autoComplete="off"
+                      value={num}
+                      disabled={!selectedCarrer}
+                      aria-required="true"
+                      aria-invalid={numError}
+                      aria-describedby="error-number"
+                      onChange={(e) => setNum(e.target.value)}
+                      onBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
+                    />
+                    <datalist id="num-list">
+                      {numOptions.map((n) => (
+                        <option key={n} value={n} />
+                      ))}
+                    </datalist>
+                    {numError && (
+                      <span id="error-number" className="error-msg" role="status">
+                        Aquest camp és obligatori
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="col justify-content-end col-auto">
+                  <div className="label">
+                    <label>&nbsp;</label>
+                  </div>
+                  <button type="button" className="btn btn-primary" onClick={handleSearch}>
+                    Cerca
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="col justify-content-end col-auto">
-              <div className="label">
-                <label>&nbsp;</label>
-              </div>
-              <button type="button" className="btn btn-primary" onClick={handleSearch}>
-                Cerca
-              </button>
             </div>
           </div>
+          {/* <!-- end of the search form --> */}
         </div>
       </div>
-      {/* <!-- end of the search form --> */}
-      {showResults && (
-        <div className="mt-6 search-results ps-5" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <ApartmentResults
-            title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
-            addressGroups={results}
-            loading={loading}
-            onResetSearch={handleResetSearch}
-          />
-
-          {(loading || filteredStreetResults.length > 0) && (
+      <div className="container-fluid search-results-container">
+        {showResults && (
+          <div className="container search-results py-5" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <ApartmentResults
-              title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''} ${selectedCarrer?.nom || ''} (${filteredStreetResults.length} adreces · ${streetTotalNumbers} números)`}
-              addressGroups={filteredStreetResults}
+              title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
+              addressGroups={results}
               loading={loading}
               onResetSearch={handleResetSearch}
+              singleResult={results.length === 1}
             />
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
+
     </main>
   );
 }
