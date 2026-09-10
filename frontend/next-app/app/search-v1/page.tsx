@@ -152,14 +152,12 @@ export default function SearchV1Page() {
 
       <AppNavbar secondaryHref="/search-v2" secondaryLabel="Search v2" />
 
-      <div className="container pt-5">
-        <h1 className="">Habitatges d'ús turístic</h1>
-        <p className="fs-4 text-gray-600 lh-base">
-          Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
-        </p>
-      </div>
       <div className="bg-light py-5">
         <div className="container">
+          <h1 className="">Habitatges d'ús turístic</h1>
+          <p className="fs-4 text-gray-600 lh-base">
+            Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
+          </p>
           <div className="search-form">
             <h2 className="">Consulta els habitatges que tenen llicència</h2>
             <p className="text-gray-600 italic">

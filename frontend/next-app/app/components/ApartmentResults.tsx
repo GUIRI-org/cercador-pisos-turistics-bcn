@@ -519,21 +519,26 @@ export function ApartmentResults({
             key={idx}
             className="d-flex flex-column gap-1"
           >
+            <a
+              href={`/street-detail?address=${encodeURIComponent(group.address || title)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline-primary btn-sm flex-shrink-0"
+            >
+              Veure detall del carrer
+            </a>
             {singleResult && (
-              <h4 className="">
-                Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
-              </h4>
-            )}
-
-            {singleResult && (
-              <p className="mb-0">
+              <h4>
                 S'han trobat&nbsp;
                 <strong>
                   {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
+              </h4>
+            )}
+            {singleResult && (
+              <p className="mb-0">
+                Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
               </p>
             )}
-
-
             <div className="my-3">
               <ul className="list-group list-group-flush">
                 {group.apartments.map((apt, aptIdx) => (
@@ -549,15 +554,6 @@ export function ApartmentResults({
                 ))}
               </ul>
             </div>
-            <a
-              href={`/street-detail?address=${encodeURIComponent(group.address || title)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-outline-primary btn-sm flex-shrink-0"
-            >
-              Veure detall del carrer
-            </a>
-
           </div>
         );
       })}
@@ -575,7 +571,7 @@ export function ApartmentResults({
           Avisa'ns
         </a>
       </div>
-      
+
     </div>
   );
 }
