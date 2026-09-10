@@ -33,6 +33,36 @@ const normalizeCarrerForApi = (carrer: string): string => {
   return CARRER_NAME_OVERRIDES[upper] ?? carrer;
 };
 
+type UnitFilters = { escala: string; pis: string; porta: string };
+
+const matchesUnitField = (value: string | undefined, filter: string) => {
+  if (!filter.trim()) return true;
+  return normalizeAddressPart(value) === normalizeAddressPart(filter);
+};
+
+// The GUIRI search endpoint only filters by street and number, so narrow down the units here.
+const filterGroupsByUnit = (groups: AddressGroup[], filters: UnitFilters): AddressGroup[] => {
+  if (!filters.escala.trim() && !filters.pis.trim() && !filters.porta.trim()) return groups;
+
+  return groups
+    .map((group) => {
+      const apartments = group.apartments.filter(
+        (apt) =>
+          matchesUnitField(apt.escala, filters.escala) &&
+          matchesUnitField(apt.pis, filters.pis) &&
+          matchesUnitField(apt.porta, filters.porta)
+      );
+
+      return {
+        ...group,
+        apartments,
+        apartments_count: apartments.length,
+        total_places: apartments.reduce((acc, apt) => acc + (apt.num_places || 0), 0),
+      };
+    })
+    .filter((group) => group.apartments.length > 0);
+};
+
 export default function Home() {
   const [tipusVies, setTipusVies] = useState<TipusVia[]>([]);
   const [tipusVia, setTipusVia] = useState('');
@@ -42,6 +72,9 @@ export default function Home() {
   const [selectedCarrer, setSelectedCarrer] = useState<CarrerVia | null>(null);
   const [numOptions, setNumOptions] = useState<string[]>([]);
   const [num, setNum] = useState('');
+  const [escala, setEscala] = useState('');
+  const [pis, setPis] = useState('');
+  const [porta, setPorta] = useState('');
 
   const [touched, setTouched] = useState<{ carrer?: boolean; num?: boolean }>({});
   const [results, setResults] = useState<AddressGroup[]>([]);
@@ -123,7 +156,7 @@ export default function Home() {
       searchApartments({ carrer, tipus_carrer: tipusCarrer }),
     ])
       .then(([exact, street]) => {
-        setResults(exact);
+        setResults(filterGroupsByUnit(exact, { escala, pis, porta }));
         setStreetResults(street);
       })
       .catch(() => {
@@ -131,7 +164,7 @@ export default function Home() {
         setStreetResults([]);
       })
       .finally(() => setLoading(false));
-  }, [selectedCarrer, num]);
+  }, [selectedCarrer, num, escala, pis, porta]);
 
   const handleResetSearch = useCallback(() => {
     setTouched({});
@@ -140,6 +173,9 @@ export default function Home() {
     setCarrerSuggestions([]);
     setNumOptions([]);
     setNum('');
+    setEscala('');
+    setPis('');
+    setPorta('');
     setResults([]);
     setStreetResults([]);
     setShowResults(false);
@@ -162,10 +198,10 @@ export default function Home() {
             <p className="text-gray-600 italic">
               Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
             </p>
-            <h2 className="">Consulta els habitatges que tenen llicència</h2>
+            <h2 className="mb-3 fw-semibold">Consulta els habitatges que tenen llicència</h2>
             <div className="p-5 border bg-white">
               <div className="row">
-                <div className="col-12 col-md-3 tipusVia1">
+                <div className="col-12 col-md-4 tipusVia1">
                   <div className="label">
                     <label htmlFor="tipusViaInp">Tipus Via:</label>
                   </div>
@@ -186,7 +222,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="col-12 col-md-7 carrer">
+                <div className="col-12 col-md-8 carrer">
                   <div className="label">
                     <label htmlFor="carrerInp">Carrer: *</label>
                   </div>
@@ -221,7 +257,9 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="col-12 col-md-2 numero">
+              </div>
+              <div className="row pt-4">
+                <div className="col-12 col-md-3 numero">
                   <div className="label">
                     <label htmlFor="numInp">Núm: *</label>
                   </div>
@@ -255,9 +293,61 @@ export default function Home() {
                     )}
                   </div>
                 </div>
+
+                <div className="col-12 col-md-3 escala">
+                  <div className="label">
+                    <label htmlFor="escalaInp">Escala:</label>
+                  </div>
+                  <div className="input">
+                    <input
+                      id="escalaInp"
+                      type="text"
+                      className="w-full"
+                      autoComplete="off"
+                      value={escala}
+                      disabled={!selectedCarrer}
+                      onChange={(e) => setEscala(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-12 col-md-3 pis">
+                  <div className="label">
+                    <label htmlFor="pisInp">Pis:</label>
+                  </div>
+                  <div className="input">
+                    <input
+                      id="pisInp"
+                      type="text"
+                      className="w-full"
+                      autoComplete="off"
+                      value={pis}
+                      disabled={!selectedCarrer}
+                      onChange={(e) => setPis(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-12 col-md-3 porta">
+                  <div className="label">
+                    <label htmlFor="portaInp">Porta:</label>
+                  </div>
+                  <div className="input">
+                    <input
+                      id="portaInp"
+                      type="text"
+                      className="w-full"
+                      autoComplete="off"
+                      value={porta}
+                      disabled={!selectedCarrer}
+                      onChange={(e) => setPorta(e.target.value)}
+                    />
+                  </div>
+                </div>
+
               </div>
             </div>
-            <div className="d-flex justify-content-start gap-2 mt-3">
+            <div className="d-flex justify-content-start gap-2 mt-4">
              <button type="button" className="btn btn-outline-danger" onClick={handleResetSearch}>
                 Esborrar
               </button>
@@ -275,6 +365,7 @@ export default function Home() {
             <ApartmentResults
               title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
               addressGroups={results}
+              streetGroups={streetResults}
               loading={loading}
               onResetSearch={handleResetSearch}
               singleResult={results.length === 1}
