@@ -7,6 +7,7 @@ import { ApartmentDetail } from './StreetDetail';
 interface ApartmentResultsProps {
   title: string;
   addressGroups: AddressGroup[];
+  streetGroups?: AddressGroup[];
   loading?: boolean;
   onResetSearch?: () => void;
   singleResult?: boolean;
@@ -442,6 +443,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
 export function ApartmentResults({
   title,
   addressGroups,
+  streetGroups,
   loading,
   onResetSearch,
   singleResult,
@@ -450,6 +452,12 @@ export function ApartmentResults({
   const displayGroups = useMemo(
     () => dedupeAddressGroups(addressGroups).sort(compareByStreetNumber),
     [addressGroups]
+  );
+
+  // The chart needs every number on the street; the result list only holds the searched address.
+  const chartGroups = useMemo(
+    () => dedupeAddressGroups(streetGroups?.length ? streetGroups : addressGroups).sort(compareByStreetNumber),
+    [streetGroups, addressGroups]
   );
 
   const resultSignature = useMemo(
@@ -461,6 +469,7 @@ export function ApartmentResults({
     signature: resultSignature,
     openItems: defaultOpenItems,
   });
+  const [activeTab, setActiveTab] = useState<'resultats' | 'street-detail'>('resultats');
 
 
   if (loading) {
@@ -471,84 +480,104 @@ export function ApartmentResults({
     );
   }
 
-  if (!displayGroups.length) {
-    return (
-      <div className="container">
-        <h4 className="font-semibold text-danger">El pis que busques és il·legal</h4>
-        <p className="mt-2 text-black">No s&apos;han trobat habitatges d&apos;us turistic en la adreça indicada: <strong>{title}</strong></p>
-        <div className="d-flex align-items-start gap-3">
-          <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary">
-            Avisa'ns
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={``}>
 
-      {!singleResult &&
-        <AddressNumberDistributionChart groups={displayGroups} />
-      }
-
-      {displayGroups.map((group, idx) => {
-        return (
-          <div
-            key={idx}
-            className="d-flex flex-column gap-1"
-          >
-            <a
-              href={`/street-detail?address=${encodeURIComponent(group.address || title)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-outline-primary btn-sm flex-shrink-0"
-            >
-              Veure detall del carrer
-            </a>
-            {singleResult && (
-              <h4>
-                S'han trobat&nbsp;
-                <strong>
-                  {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
-              </h4>
-            )}
-            {singleResult && (
-              <p className="mb-0">
-                Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
-              </p>
-            )}
-            <div className="my-3">
-              <ul className="list-group list-group-flush">
-                {group.apartments.map((apt, aptIdx) => (
-                  <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
-                    <p className="mb-0">
-                      {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
-                      {group.carrer && <span>{group.carrer} </span>}
-                      {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
-                      {apt.pis && <span>{normalizePis(apt.pis)} </span>}
-                      {apt.porta && <span>{apt.porta}</span>}</p>
-
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        );
-      })}
-      <div className="d-flex align-items-start gap-3">
-        {onResetSearch && (
+      <ul className="nav nav-tabs" role="tablist">
+        <li className="nav-item" role="presentation">
           <button
+            className={`nav-link ${activeTab === 'resultats' ? 'active' : ''}`}
+            id="resultats-tab"
             type="button"
-            onClick={onResetSearch}
-            className="btn btn-outline-danger btn-sm flex-shrink-0"
+            role="tab"
+            aria-controls="resultats"
+            aria-selected={activeTab === 'resultats'}
+            onClick={() => setActiveTab('resultats')}
           >
-            Reset search
+            Resultats
           </button>
-        )}
-        <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-danger btn-sm flex-shrink-0">
-          Avisa'ns
-        </a>
+        </li>
+        <li className="nav-item" role="presentation">
+          <button
+            className={`nav-link ${activeTab === 'street-detail' ? 'active' : ''}`}
+            id="street-detail-tab"
+            type="button"
+            role="tab"
+            aria-controls="street-detail"
+            aria-selected={activeTab === 'street-detail'}
+            onClick={() => setActiveTab('street-detail')}
+          >
+            Detall del carrer
+          </button>
+        </li>
+      </ul>
+
+      <div className="tab-content py-5">
+        <div
+          className={`tab-pane ${activeTab === 'resultats' ? 'active' : ''}`}
+          id="resultats"
+          role="tabpanel"
+          aria-labelledby="resultats-tab"
+          tabIndex={0}
+        >
+
+          {!displayGroups.length && (
+            <div className="container">
+              <h4 className="font-semibold text-danger">Probablement el pis que busques és il·legal</h4>
+              <p className="mt-2 text-black">No s&apos;han trobat habitatges d&apos;us turistic en la adreça indicada: <strong>{title}</strong></p>
+              <div className="d-flex align-items-start gap-3">
+                <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary">
+                  Avisa'ns
+                </a>
+              </div>
+            </div>
+          )}
+
+          {displayGroups.map((group, idx) => {
+            return (
+              <div
+                key={idx}
+                className="d-flex flex-column gap-1"
+              >
+                {singleResult && (
+                  <h4>
+                    S'han trobat&nbsp;
+                    <strong>
+                      {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
+                  </h4>
+                )}
+                {singleResult && (
+                  <p className="mb-0">
+                    Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
+                  </p>
+                )}
+                <div className="my-3">
+                  <ul className="list-group list-group-flush">
+                    {group.apartments.map((apt, aptIdx) => (
+                      <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
+                        <p className="mb-0">
+                          {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
+                          {group.carrer && <span>{group.carrer} </span>}
+                          {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
+                          {apt.pis && <span>{normalizePis(apt.pis)} </span>}
+                          {apt.porta && <span>{apt.porta}</span>}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div
+          className={`tab-pane ${activeTab === 'street-detail' ? 'active' : ''}`}
+          id="street-detail"
+          role="tabpanel"
+          aria-labelledby="street-detail-tab"
+          tabIndex={0}
+        >
+          <AddressNumberDistributionChart groups={chartGroups} />
+        </div>
       </div>
 
     </div>
