@@ -41,28 +41,26 @@ label {
 }
 
 
-.caracteristicas-form {
-    padding-left: 2.5em;
-}
+.search-form {}
 
-.caracteristicas-form .container {
+.search-form .container {
     border: 1px solid #e5e5e5;
 }
 
 @media (min-width: 768px) {
 
-    .caracteristicas-form .tipus-via-carrer>div {
+    .search-form .tipus-via-carrer>div {
         background: #f4f6f8;
     }
 }
 
 
-.caracteristicas-form .input {
+.search-form .input {
     position: relative;
 }
 
-.caracteristicas-form .input select,
-.caracteristicas-form .input input {
+.search-form .input select,
+.search-form .input input {
     border: none;
     background: transparent;
     box-shadow: none;
@@ -74,24 +72,24 @@ label {
     color: #334155;
 }
 
-.caracteristicas-form .input select {
+.search-form .input select {
     padding: 8px;
 }
 
-.caracteristicas-form .input select:focus,
-.caracteristicas-form .input input:focus {
+.search-form .input select:focus,
+.search-form .input input:focus {
     outline: none;
     border-color: #0057a3;
     box-shadow: 0 0 0 2px rgba(0, 87, 163, 0.2);
 }
 
-.caracteristicas-form .input select:disabled,
-.caracteristicas-form .input input:disabled {
+.search-form .input select:disabled,
+.search-form .input input:disabled {
     background: #eceff1;
     cursor: not-allowed;
 }
 
-.caracteristicas-form .carrer-suggestions {
+.search-form .carrer-suggestions {
     position: absolute;
     top: calc(100% + 2px);
     left: 0;
@@ -108,33 +106,33 @@ label {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.caracteristicas-form .carrer-suggestions li {
+.search-form .carrer-suggestions li {
     padding: 0.5rem 0.75rem;
     font-size: 0.9rem;
     cursor: pointer;
 }
 
-.caracteristicas-form .carrer-suggestions li:hover {
+.search-form .carrer-suggestions li:hover {
     background: #eef4fa;
 }
 
-.caracteristicas-form .error-msg {
+.search-form .error-msg {
     display: block;
     color: #b3261e;
     font-size: 0.8rem;
     margin-top: 0.25rem;
 }
 
-.caracteristicas-form .linkGuiaBcn {
+.search-form .linkGuiaBcn {
     font-size: 0.9rem;
     color: #444;
 }
 
-.caracteristicas-form .linkGuiaBcn a {
+.search-form .linkGuiaBcn a {
     color: #0057a3;
     text-decoration: underline;
 }
 
 .search-results {
-    padding-left: 2.5em;
+    margin-top: 1.5rem;
 }

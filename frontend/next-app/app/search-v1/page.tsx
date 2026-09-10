@@ -137,6 +137,22 @@ export default function SearchV1Page() {
       .finally(() => setLoading(false));
   }, [selectedCarrer, num]);
 
+  const handleResetSearch = useCallback(() => {
+    setTouched({});
+    setSelectedCarrer(null);
+    setCarrerInput('');
+    setCarrerSuggestions([]);
+    setNumOptions([]);
+    setNum('');
+    setFloor('');
+    setStair('');
+    setDoor('');
+    setResults([]);
+    setStreetResults([]);
+    setShowResults(false);
+    setLoading(false);
+  }, []);
+
   const filteredStreetResults = useMemo(() => {
     if (!results.length) return streetResults;
 
@@ -151,136 +167,138 @@ export default function SearchV1Page() {
 
   return (
 
-    <main className="container-fluid" style={{ minHeight: '100vh', paddingTop: '1rem', paddingBottom: '1rem' }}>
-      <div className="container">
-        <AppNavbar secondaryHref="/search-v2" secondaryLabel="Search v2" />
-        <h1 className="">Habitatges d'ús turístic</h1>
-        <h2 className="">Consulta els habitatges que tenen llicència</h2>
-        <p className="mt-2">
-          Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
+    <main className="container" style={{ minHeight: '100vh', paddingTop: '1rem', paddingBottom: '1rem' }}>
+
+      <AppNavbar secondaryHref="/search-v2" secondaryLabel="Search v2" />
+      <h1 className="">Habitatges d'ús turístic</h1>
+      <h2 className="">Consulta els habitatges que tenen llicència</h2>
+      <p className="mt-2">
+        Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
+      </p>
+
+      <div className="search-form mt-3 ps-5">
+        <p className="text-gray-600 italic">
+          Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
         </p>
+        <div className="p-5 border">
+          <div className="row">
+            <div className="col col-auto tipusVia1">
+              <div className="label">
+                <label htmlFor="tipusViaInp">Tipus Via:</label>
+              </div>
+              <div className="input">
+                <select
+                  id="tipusViaInp"
+                  className="w-full"
+                  value={tipusVia}
+                  onChange={(e) => setTipusVia(e.target.value)}
+                >
+                  <option value="">Qualsevol</option>
+                  {tipusVies.map((tv, e) => (
+                    <option key={e + "-" + tv.codi} value={tv.abreviatura}>
+                      {tv.nom}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-        <div className="caracteristicas-form mt-3">
-          <p className="text-gray-600 italic">
-            Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
-          </p>
-          <div className="p-5">
-            <div className="row">
-              <div className="col col-auto tipusVia1">
-                <div className="label">
-                  <label htmlFor="tipusViaInp">Tipus Via:</label>
-                </div>
-                <div className="input">
-                  <select
-                    id="tipusViaInp"
-                    className="w-full"
-                    value={tipusVia}
-                    onChange={(e) => setTipusVia(e.target.value)}
-                  >
-                    <option value="">Qualsevol</option>
-                    {tipusVies.map((tv, e) => (
-                      <option key={e + "-" + tv.codi} value={tv.abreviatura}>
-                        {tv.nom}
-                      </option>
+            <div className="col carrer">
+              <div className="label">
+                <label htmlFor="carrerInp">Carrer: *</label>
+              </div>
+              <div className="input relative">
+                <input
+                  id="carrerInp"
+                  type="text"
+                  className="w-full"
+                  autoComplete="off"
+                  placeholder="Seleccioneu una opció"
+                  value={carrerInput}
+                  aria-required="true"
+                  aria-invalid={carrerError}
+                  aria-describedby="error-address"
+                  onChange={(e) => handleCarrerInput(e.target.value)}
+                  onBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
+                />
+                {carrerInput.trim().length >= 2 && !selectedCarrer && carrerSuggestions.length > 0 && (
+                  <ul className="carrer-suggestions">
+                    {carrerSuggestions.map((via) => (
+                      <li key={via.codi} onMouseDown={() => handleSelectCarrer(via.codi)}>
+                        {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
+                      </li>
                     ))}
-                  </select>
-                </div>
+                  </ul>
+                )}
+                {carrerError && (
+                  <span id="error-address" className="error-msg" role="status">
+                    Aquest camp és obligatori
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="col col-auto numero">
+              <div className="label">
+                <label htmlFor="numInp">Núm: *</label>
               </div>
 
-              <div className="col carrer">
-                <div className="label">
-                  <label htmlFor="carrerInp">Carrer: *</label>
-                </div>
-                <div className="input relative">
-                  <input
-                    id="carrerInp"
-                    type="text"
-                    className="w-full"
-                    autoComplete="off"
-                    placeholder="Seleccioneu una opció"
-                    value={carrerInput}
-                    aria-required="true"
-                    aria-invalid={carrerError}
-                    aria-describedby="error-address"
-                    onChange={(e) => handleCarrerInput(e.target.value)}
-                    onBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
-                  />
-                  {carrerInput.trim().length >= 2 && !selectedCarrer && carrerSuggestions.length > 0 && (
-                    <ul className="carrer-suggestions">
-                      {carrerSuggestions.map((via) => (
-                        <li key={via.codi} onMouseDown={() => handleSelectCarrer(via.codi)}>
-                          {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {carrerError && (
-                    <span id="error-address" className="error-msg" role="status">
-                      Aquest camp és obligatori
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="col col-auto numero">
-                <div className="label">
-                  <label htmlFor="numInp">Núm: *</label>
-                </div>
-
-                <div className="input">
-                  {/* Geoportal's search endpoint caps results at 25 matches, so it can't reliably
+              <div className="input">
+                {/* Geoportal's search endpoint caps results at 25 matches, so it can't reliably
                     preload every number for a street — a free-text field lets users enter any number. */}
-                  <input
-                    id="numInp"
-                    type="text"
-                    className="w-full"
-                    list="num-list"
-                    autoComplete="off"
-                    value={num}
-                    disabled={!selectedCarrer}
-                    aria-required="true"
-                    aria-invalid={numError}
-                    aria-describedby="error-number"
-                    onChange={(e) => setNum(e.target.value)}
-                    onBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
-                  />
-                  <datalist id="num-list">
-                    {numOptions.map((n) => (
-                      <option key={n} value={n} />
-                    ))}
-                  </datalist>
-                  {numError && (
-                    <span id="error-number" className="error-msg" role="status">
-                      Aquest camp és obligatori
-                    </span>
-                  )}
-                </div>
+                <input
+                  id="numInp"
+                  type="text"
+                  className="w-full"
+                  list="num-list"
+                  autoComplete="off"
+                  value={num}
+                  disabled={!selectedCarrer}
+                  aria-required="true"
+                  aria-invalid={numError}
+                  aria-describedby="error-number"
+                  onChange={(e) => setNum(e.target.value)}
+                  onBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
+                />
+                <datalist id="num-list">
+                  {numOptions.map((n) => (
+                    <option key={n} value={n} />
+                  ))}
+                </datalist>
+                {numError && (
+                  <span id="error-number" className="error-msg" role="status">
+                    Aquest camp és obligatori
+                  </span>
+                )}
               </div>
-              <div className="col justify-content-end col-auto">
-                <div className="label">
-                  <label>&nbsp;</label>
-                </div>
-                <button type="button" className="btn btn-primary" onClick={handleSearch}>
-                  Cerca
-                </button>
+            </div>
+            <div className="col justify-content-end col-auto">
+              <div className="label">
+                <label>&nbsp;</label>
               </div>
+              <button type="button" className="btn btn-primary" onClick={handleSearch}>
+                Cerca
+              </button>
             </div>
           </div>
         </div>
       </div>
+      {/* <!-- end of the search form --> */}
       {showResults && (
-        <div className="mt-6 search-results" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="mt-6 search-results ps-5" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <ApartmentResults
             title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
             addressGroups={results}
             loading={loading}
+            onResetSearch={handleResetSearch}
           />
 
           {(loading || filteredStreetResults.length > 0) && (
             <ApartmentResults
-              title={`Mateix carrer (${filteredStreetResults.length} adreces · ${streetTotalNumbers} números)`}
+              title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''} ${selectedCarrer?.nom || ''} (${filteredStreetResults.length} adreces · ${streetTotalNumbers} números)`}
               addressGroups={filteredStreetResults}
               loading={loading}
+              onResetSearch={handleResetSearch}
             />
           )}
         </div>
