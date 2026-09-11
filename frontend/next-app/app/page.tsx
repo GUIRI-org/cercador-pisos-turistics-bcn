@@ -143,6 +143,7 @@ export default function Home() {
 
   const carrerError = touched.carrer && !selectedCarrer;
   const numError = touched.num && !num;
+  const canSearch = Boolean(selectedCarrer) && num.trim().length > 0;
 
   const handleSearch = useCallback(() => {
     setTouched({ carrer: true, num: true });
@@ -205,7 +206,9 @@ export default function Home() {
               <p className="fs-4 text-gray-600 lh-base">
                 Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
               </p>
-              <p>Introdiu la adreça de la finca que voleu consultar. Una vagada aparegui, podreu veure si el apartament en el pis y la porta té llicència turístic.</p>
+              <p className="text-gray-600 italic">
+                Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
+              </p> 
             </div>
             <div className="d-none d-md-block col-12 col-md-4 text-center">
               <img
@@ -222,34 +225,9 @@ export default function Home() {
       <div ref={searchSectionRef} className={`bg-white py-5 ${showResults ? ' search-section--sticky' : ''}`}>
         <div className="container d-flex flex-column gap-3">
           <div className="search-form">
-            <p className="text-gray-600 italic">
-              Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
-            </p>
-            <h2 className="mb-3 fw-semibold">Consulta els habitatges que tenen llicència</h2>
+            <h2 className="mb-3 fw-semibold">Consulta els habitatges que tenen llicència a la teva finca</h2>
             <div className="p-5 border bg-white">
               <div className="d-flex flex-wrap gap-3 align-items-end">
-
-                {/* <div className="tipusVia1">
-                
-                  <div className="label">
-                    <label htmlFor="tipusViaInp">Tipus Via:</label>
-                  </div>
-                  <div className="input">
-                    <select
-                      id="tipusViaInp"
-                      className="w-full"
-                      value={tipusVia}
-                      onChange={(e) => setTipusVia(e.target.value)}
-                    >
-                      <option value="">Qualsevol</option>
-                      {tipusVies.map((tv, e) => (
-                        <option key={e + "-" + tv.codi} value={tv.abreviatura}>
-                          {tv.nom}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div> */}
 
                 <div className="carrer flex-fill">
                   <div className="label">
@@ -321,7 +299,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="search-button">
-                  <button type="button" className="btn btn-secondary" onClick={handleSearch}>
+                  <button type="button" className="btn btn-primary" onClick={handleSearch} disabled={!canSearch}>
                     Cerca
                   </button>
                 </div>
