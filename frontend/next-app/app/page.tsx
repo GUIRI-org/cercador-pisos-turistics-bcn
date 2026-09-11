@@ -200,8 +200,10 @@ export default function Home() {
             </p>
             <h2 className="mb-3 fw-semibold">Consulta els habitatges que tenen llicència</h2>
             <div className="p-5 border bg-white">
-              <div className="row">
-                <div className="col-12 col-md-4 tipusVia1">
+              <div className="d-flex flex-wrap gap-5 align-items-end">
+
+                <div className="tipusVia1">
+                
                   <div className="label">
                     <label htmlFor="tipusViaInp">Tipus Via:</label>
                   </div>
@@ -222,7 +224,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="col-12 col-md-8 carrer">
+                <div className="carrer flex-fill">
                   <div className="label">
                     <label htmlFor="carrerInp">Carrer: *</label>
                   </div>
@@ -257,9 +259,7 @@ export default function Home() {
                   </div>
                 </div>
 
-              </div>
-              <div className="row pt-4">
-                <div className="col-12 col-md-3 numero">
+                <div className="numero" style={{maxWidth: '100px'}}>
                   <div className="label">
                     <label htmlFor="numInp">Núm: *</label>
                   </div>
@@ -293,67 +293,19 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-
-                <div className="col-12 col-md-3 escala">
-                  <div className="label">
-                    <label htmlFor="escalaInp">Escala:</label>
-                  </div>
-                  <div className="input">
-                    <input
-                      id="escalaInp"
-                      type="text"
-                      className="w-full"
-                      autoComplete="off"
-                      value={escala}
-                      disabled={!selectedCarrer}
-                      onChange={(e) => setEscala(e.target.value)}
-                    />
-                  </div>
+                <div className="search-button">
+                  <button type="button" className="btn btn-danger" onClick={handleSearch}>
+                    Cerca
+                  </button>
                 </div>
-
-                <div className="col-12 col-md-3 pis">
-                  <div className="label">
-                    <label htmlFor="pisInp">Pis:</label>
-                  </div>
-                  <div className="input">
-                    <input
-                      id="pisInp"
-                      type="text"
-                      className="w-full"
-                      autoComplete="off"
-                      value={pis}
-                      disabled={!selectedCarrer}
-                      onChange={(e) => setPis(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="col-12 col-md-3 porta">
-                  <div className="label">
-                    <label htmlFor="portaInp">Porta:</label>
-                  </div>
-                  <div className="input">
-                    <input
-                      id="portaInp"
-                      type="text"
-                      className="w-full"
-                      autoComplete="off"
-                      value={porta}
-                      disabled={!selectedCarrer}
-                      onChange={(e) => setPorta(e.target.value)}
-                    />
-                  </div>
-                </div>
-
               </div>
+
             </div>
             <div className="d-flex justify-content-start gap-2 mt-4">
-             <button type="button" className="btn btn-outline-danger" onClick={handleResetSearch}>
+              <button type="button" className="btn btn-outline-danger" onClick={handleResetSearch}>
                 Esborrar
               </button>
-              <button type="button" className="btn btn-danger" onClick={handleSearch}>
-                Cerca
-              </button>
+
             </div>
           </div>
           {/* <!-- end of the search form --> */}
