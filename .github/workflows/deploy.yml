@@ -105,10 +105,13 @@ jobs:
               - 'frontend/next-app/**'
             workflow:
               - '.github/workflows/deploy.yml'
-            api:
-              - 'api/**'
             database:
               - 'database/**'
+            backend:
+              - 'api/**'
+              - 'magic/**'
+              - 'infra/**'
+              - 'Makefile'
 
 
       - name: Setup Node.js
@@ -165,19 +168,27 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Detect Changed Paths
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: changes
         with:
           filters: |
+            workflow:
+              - '.github/workflows/deploy.yml'
             database:
               - 'database/**'
+            backend:
+              - 'api/**'
+              - 'magic/**'
+              - 'infra/**'
+              - 'Makefile'
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
         env:
+          BACKEND_CHANGED: ${{ steps.changes.outputs.backend }}
           DATABASE_CHANGED: ${{ steps.changes.outputs.database }}
         with:
           host: ${{ vars.SERVER_URL }}
@@ -200,11 +211,12 @@ jobs:
             # Run deployment using Make
             if [ "$DATABASE_CHANGED" == "true" ]; then
               echo "🗄️ Database changes detected - running full purge and recreate..."
-              # make infra-undeploy-purge
+              make infra-undeploy-purge
               make cicd-deploy-recreate
             else
               echo "🐳 Starting standard Docker deployment..."
-              make cicd-deploy
+              # make cicd-deploy
+              make cicd-deploy-full
             fi
             
             echo "✅ Deployment complete!"
