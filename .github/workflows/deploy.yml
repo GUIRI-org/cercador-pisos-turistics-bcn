@@ -3,7 +3,7 @@
 # Branch convention:
 #   - `production` branch → deploys to production environment (required)
 #   - `staging` branch → deploys to staging environment (OPTIONAL)
-#   - `main` branch → default development branch (no auto-deploy)
+#   - `main` branch → default development branch (no auto-deploy), temporary deploys to production environment
 #
 # If your project does NOT have a staging environment:
 #   1. Remove `staging` from the push branches list
@@ -31,7 +31,7 @@ on:
     branches:
       - production
       - staging  # Optional: remove if project has no staging environment
-      # - main # TEMP
+      - main 
   workflow_dispatch:
     inputs:
       environment:
@@ -42,7 +42,7 @@ on:
         options:
           - production
           - staging  # Optional: remove if project has no staging environment
-          # - main  # TEMP
+          - main 
 
 env:
   PROJECT_NAME: guiripisos
@@ -66,6 +66,8 @@ jobs:
             ENV="${{ inputs.environment }}"
           elif [ "${{ github.ref }}" == "refs/heads/production" ]; then
             ENV="production"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then ## TEMP
+            ENV="production"                                      ## TEMP
           else
             ENV="staging" 
           fi
