@@ -28,7 +28,7 @@ export function AppNavbar({
   };
 
   return (
-    <nav className={`navbar navbar-expand-lg`} style={{ backgroundColor: '#F7D400' }}>
+    <nav className={`navbar navbar-expand-lg`} style={{ backgroundColor: '#FFF' }}>
       <div className="container">
         <Link
           className={`navbar-brand ${isMainActive ? 'fw-semibold text-primary' : ''}`}

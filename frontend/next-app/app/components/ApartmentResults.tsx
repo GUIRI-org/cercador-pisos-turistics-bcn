@@ -481,9 +481,54 @@ export function ApartmentResults({
   }
 
   return (
-    <div className={``}>
+    <div className={`d-flex flex-column gap-4`}>
+
+      {!displayGroups.length && (
+        <div className="alert alert-warning p-5 rounded-0">
+          <h4 className="alert-heading">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
+          <p className="">Probablement el pis que busques és il·legal</p>
+          <hr></hr>
+          <div className="d-flex align-items-start gap-3">
+            <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary">
+              Avisa'ns
+            </a>
+          </div>
+        </div>
+      )}
+
+      {displayGroups.map((group, idx) => {
+        return (
+          <div
+            key={idx}
+            className="alert alert-info rounded-0 p-5"
+          >
+            <h4 className="alert-heading">
+              S'han trobat&nbsp;
+              <strong>
+                {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
+            </h4>
+            <p className="mb-0">
+              Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
+            </p>
+            <hr className='mb-0'></hr>
+            <ul className="list-group list-group-flush">
+              {group.apartments.map((apt, aptIdx) => (
+                <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
+                  <p className="mb-0">
+                    {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
+                    {group.carrer && <span>{group.carrer} </span>}
+                    {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
+                    {apt.pis && <span>{normalizePis(apt.pis)} </span>}
+                    {apt.porta && <span>{apt.porta}</span>}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
 
       <ul className="nav nav-tabs" role="tablist">
+
         <li className="nav-item" role="presentation">
           <button
             className={`nav-link ${activeTab === 'resultats' ? 'active' : ''}`}
@@ -512,7 +557,8 @@ export function ApartmentResults({
         </li>
       </ul>
 
-      <div className="tab-content py-5">
+      <div className="tab-content">
+        {/* Address results tab */}
         <div
           className={`tab-pane ${activeTab === 'resultats' ? 'active' : ''}`}
           id="resultats"
@@ -521,36 +567,20 @@ export function ApartmentResults({
           tabIndex={0}
         >
 
-          {!displayGroups.length && (
-            <div className="container">
-              <h4 className="font-semibold text-danger">Probablement el pis que busques és il·legal</h4>
-              <p className="mt-2 text-black">No s&apos;han trobat habitatges d&apos;us turistic en la adreça indicada: <strong>{title}</strong></p>
-              <div className="d-flex align-items-start gap-3">
-                <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary">
-                  Avisa'ns
-                </a>
-              </div>
-            </div>
-          )}
-
           {displayGroups.map((group, idx) => {
             return (
               <div
                 key={idx}
                 className="d-flex flex-column gap-1"
               >
-                {singleResult && (
-                  <h4>
-                    S'han trobat&nbsp;
-                    <strong>
-                      {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
-                  </h4>
-                )}
-                {singleResult && (
-                  <p className="mb-0">
-                    Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
-                  </p>
-                )}
+                <h4>
+                  S'han trobat&nbsp;
+                  <strong>
+                    {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
+                </h4>
+                <p className="mb-0">
+                  Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
+                </p>
                 <div className="my-3">
                   <ul className="list-group list-group-flush">
                     {group.apartments.map((apt, aptIdx) => (
@@ -569,6 +599,7 @@ export function ApartmentResults({
             );
           })}
         </div>
+        {/* Street detail tab */}
         <div
           className={`tab-pane ${activeTab === 'street-detail' ? 'active' : ''}`}
           id="street-detail"

@@ -128,6 +128,29 @@ label {
     color: #444;
 }
 
+/* Compact, pinned version of the search block shown while results are on screen. */
+.search-section--sticky {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    /* padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important; */
+    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); */
+}
+
+.search-section--sticky .search-form {
+    /* padding-top: 0 !important; */
+}
+
+.search-section--sticky .search-form>h2,
+.search-section--sticky .search-form>p {
+    /* display: none; */
+}
+
+.search-section--sticky .search-form>.p-5 {
+    /* padding: 1rem !important; */
+}
+
 .search-form .linkGuiaBcn a {
     color: #0057a3;
     text-decoration: underline;

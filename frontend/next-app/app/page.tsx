@@ -9,6 +9,8 @@ import { ApartmentResults } from './components/ApartmentResults';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 const getAddressGroupKey = (group: AddressGroup) => {
   return [
     normalizeAddressPart(group.tipus_carrer),
@@ -84,6 +86,7 @@ export default function Home() {
 
   const carrerTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const storedAdrecesRef = useRef<{ carrerCodi: string; numeracioPostal: string }[]>([]);
+  const searchSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchTipusVies().then(setTipusVies);
@@ -148,6 +151,12 @@ export default function Home() {
     setLoading(true);
     setShowResults(true);
 
+    // Wait for the results block to render so its position accounts for the sticky form.
+    requestAnimationFrame(() => {
+      const sectionTop = searchSectionRef.current?.getBoundingClientRect().top ?? 0;
+      window.scrollTo({ top: window.scrollY + sectionTop, behavior: 'smooth' });
+    });
+
     const tipusCarrer = selectedCarrer.tipusVia?.nom || null;
     const carrer = normalizeCarrerForApi(selectedCarrer.nom);
 
@@ -188,21 +197,39 @@ export default function Home() {
 
       <AppNavbar secondaryHref="/search-v1" secondaryLabel="Search v1" />
 
-      <div className="bg-light py-5">
-        <div className="container">
-          <h1 className="">Habitatges d'ús turístic</h1>
-          <p className="fs-4 text-gray-600 lh-base">
-            Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
-          </p>
-          <div className="search-form pt-4">
+      <div className="bg-light">
+        <div className="container d-flex flex-column gap-3 py-5">
+          <div className="row">
+            <div className="col-12 col-md-8">
+              <h1 className="">Habitatges d'ús turístic</h1>
+              <p className="fs-4 text-gray-600 lh-base">
+                Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
+              </p>
+              <p>Introdiu la adreça de la finca que voleu consultar. Una vagada aparegui, podreu veure si el apartament en el pis y la porta té llicència turístic.</p>
+            </div>
+            <div className="d-none d-md-block col-12 col-md-4 text-center">
+              <img
+                src={`${BASE}/guiri-gamba.svg`}
+                alt="Guiri Gamba"
+                width="240"
+                height="240"
+                className="d-inline-block"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div ref={searchSectionRef} className={`bg-white py-5 ${showResults ? ' search-section--sticky' : ''}`}>
+        <div className="container d-flex flex-column gap-3">
+          <div className="search-form">
             <p className="text-gray-600 italic">
               Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
             </p>
             <h2 className="mb-3 fw-semibold">Consulta els habitatges que tenen llicència</h2>
             <div className="p-5 border bg-white">
-              <div className="d-flex flex-wrap gap-5 align-items-end">
+              <div className="d-flex flex-wrap gap-3 align-items-end">
 
-                <div className="tipusVia1">
+                {/* <div className="tipusVia1">
                 
                   <div className="label">
                     <label htmlFor="tipusViaInp">Tipus Via:</label>
@@ -222,7 +249,7 @@ export default function Home() {
                       ))}
                     </select>
                   </div>
-                </div>
+                </div> */}
 
                 <div className="carrer flex-fill">
                   <div className="label">
@@ -259,7 +286,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="numero" style={{maxWidth: '100px'}}>
+                <div className="numero" style={{ maxWidth: '100px' }}>
                   <div className="label">
                     <label htmlFor="numInp">Núm: *</label>
                   </div>
@@ -294,35 +321,32 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="search-button">
-                  <button type="button" className="btn btn-danger" onClick={handleSearch}>
+                  <button type="button" className="btn btn-secondary" onClick={handleSearch}>
                     Cerca
                   </button>
                 </div>
               </div>
 
             </div>
-            <div className="d-flex justify-content-start gap-2 mt-4">
-              <button type="button" className="btn btn-outline-danger" onClick={handleResetSearch}>
-                Esborrar
-              </button>
-
-            </div>
           </div>
           {/* <!-- end of the search form --> */}
+          {showResults && (
+            <button type="button" className="btn btn-outline-secondary ms-auto" onClick={handleResetSearch}>
+              Esborrar
+            </button>
+          )}
         </div>
       </div>
-      <div className="container-fluid search-results-container">
+      <div className="container search-results-container py-5">
         {showResults && (
-          <div className="container search-results py-5" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <ApartmentResults
-              title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
-              addressGroups={results}
-              streetGroups={streetResults}
-              loading={loading}
-              onResetSearch={handleResetSearch}
-              singleResult={results.length === 1}
-            />
-          </div>
+          <ApartmentResults
+            title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
+            addressGroups={results}
+            streetGroups={streetResults}
+            loading={loading}
+            onResetSearch={handleResetSearch}
+            singleResult={results.length === 1}
+          />
         )}
       </div>
 
