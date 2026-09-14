@@ -182,3 +182,268 @@ label {
 .search-results {
     margin-top: 1.5rem;
 }
+
+/* Floating panel over the choropleth: left sliding column on desktop, in-flow block on mobile. */
+.choropleth-wrapper {
+    overflow: hidden;
+}
+
+.choropleth-panel {
+    position: absolute;
+    top: 0rem;
+    left: 0rem;
+    bottom: 0px;
+    z-index: 2;
+    width: min(33%, calc(100% - 2rem));
+    padding: 2rem;
+    background: #FFF;
+    transition: transform 0.25s ease;
+     border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.choropleth-panel__body {
+    max-height: calc(100% - 2rem);
+    overflow-y: auto;
+}
+
+.choropleth-panel--collapsed {
+    transform: translateX(calc(-100% + 1rem));
+}
+
+/* Sits outside the panel so it stays reachable once the panel slides away. */
+.choropleth-panel__toggle {
+    position: absolute;
+    top: 2rem;
+    right: -1.75rem;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    line-height: 1;
+    background: #FFF;
+    display: none;
+   
+}
+
+.choropleth-panel--collapsed .choropleth-detail {
+    display: none;
+}
+
+.choropleth-panel__label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6c757d;
+}
+
+.choropleth-panel__meta {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Colour scale: floating over the bottom right of the map, in flow below it on mobile. */
+.choropleth-legend {
+    position: absolute;
+    right: 0rem;
+    bottom: 0rem;
+    z-index: 2;
+    width: 240px;
+    padding: 2rem;
+}
+
+.choropleth-legend__scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    color: #6c757d;
+}
+
+.choropleth-legend__tick {
+    position: relative;
+    padding-top: 0.25rem;
+}
+
+.choropleth-legend__tick::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 0.2rem;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.choropleth-legend__tick:first-child::before {
+    left: 0;
+}
+
+.choropleth-legend__tick:last-child::before {
+    left: auto;
+    right: 0;
+}
+
+@media (max-width: 767px) {
+    .choropleth-legend {
+        position: static;
+        width: auto;
+        margin-top: 0.75rem;
+        padding: 0;
+        border: none;
+        background: none;
+    }
+}
+
+.choropleth-panel__summary {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.125rem 0.5rem;
+}
+
+.choropleth-panel__summary dt {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+.choropleth-panel__summary dd {
+    margin: 0;
+    text-align: right;
+}
+
+/* Nested panel sliding out of the right edge of the main one. */
+.choropleth-detail {
+    position: absolute;
+    top: 0;
+    left: 4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 2rem;
+    background: #F2F2F2;
+    animation: choropleth-detail-in 0.25s ease;
+    bottom: 0;
+}
+
+@keyframes choropleth-detail-in {
+    from {
+        opacity: 0;
+        transform: translateX(-0.75rem);
+    }
+}
+
+.choropleth-detail__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.choropleth-detail__list li {
+    display: flex;
+    flex-direction: column;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.choropleth-detail__list li:last-child {
+    border-bottom: none;
+}
+
+.choropleth-detail__item {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    text-align: left;
+    color: inherit;
+}
+
+.choropleth-detail__item:hover .choropleth-detail__address,
+.choropleth-detail__item[aria-pressed='true'] .choropleth-detail__address {
+    color: #0057a3;
+}
+
+.choropleth-detail__address {
+    font-weight: 500;
+}
+
+/* Third level, sliding out of the address list panel. */
+.choropleth-subdetail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+    background: #CFCFCF;
+    overflow-y: auto;
+    position: absolute;
+    top: 0;
+    left: 4rem;
+    animation: choropleth-detail-in 0.25s ease;
+    padding: 2rem;
+    position: absolute;
+    bottom: 0px;
+}
+
+/* Not enough room for three side-by-side panels, so stack the last one. */
+@media (max-width: 1199px) {
+    .choropleth-subdetail {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        animation: none;
+    }
+
+    .choropleth-subdetail .choropleth-detail__list {
+        max-height: 30vh;
+    }
+}
+
+@media (max-width: 767px) {
+
+    .choropleth-panel,
+    .choropleth-detail {
+        position: static;
+        width: auto;
+        max-height: none;
+        overflow: visible;
+        box-shadow: none;
+    }
+
+    .choropleth-panel__body {
+        max-height: none;
+        overflow: visible;
+    }
+
+    .choropleth-panel--collapsed {
+        transform: none;
+    }
+
+    .choropleth-panel__toggle {
+        position: static;
+        float: right;
+    }
+
+    .choropleth-panel--collapsed .choropleth-panel__body,
+    .choropleth-panel--collapsed .choropleth-detail {
+        display: none;
+    }
+
+    .choropleth-detail {
+        margin-top: 0.75rem;
+        border: none;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 0;
+        animation: none;
+    }
+
+    .choropleth-detail__list {
+        max-height: 40vh;
+        overflow-y: auto;
+    }
+}

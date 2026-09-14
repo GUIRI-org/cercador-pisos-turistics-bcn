@@ -236,6 +236,17 @@ export async function searchApartmentsOpenData(query: string): Promise<AddressGr
   }
 }
 
+// One row per street+number, so counting rows gives the number of addresses in an area.
+export async function fetchApartmentMap(): Promise<AddressGroup[]> {
+  try {
+    const res = await fetch(`${GUIRI_API_BASE}/api/v1/apartments/map`);
+    const json = (await res.json()) as ApartmentSearchResponse;
+    return json?.data || [];
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchDistrictStats(): Promise<DistrictStat[]> {
   try {
     const res = await fetch(`${GUIRI_API_BASE}/api/v1/apartments/districts`);
