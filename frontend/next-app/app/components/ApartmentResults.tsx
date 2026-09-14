@@ -469,7 +469,6 @@ export function ApartmentResults({
     signature: resultSignature,
     openItems: defaultOpenItems,
   });
-  const [activeTab, setActiveTab] = useState<'resultats' | 'street-detail'>('resultats');
 
 
   if (loading) {
@@ -527,89 +526,38 @@ export function ApartmentResults({
         );
       })}
 
-      <ul className="nav nav-tabs" role="tablist">
-
-        <li className="nav-item" role="presentation">
-          <button
-            className={`nav-link ${activeTab === 'resultats' ? 'active' : ''}`}
-            id="resultats-tab"
-            type="button"
-            role="tab"
-            aria-controls="resultats"
-            aria-selected={activeTab === 'resultats'}
-            onClick={() => setActiveTab('resultats')}
-          >
-            Resultats
-          </button>
-        </li>
-        <li className="nav-item" role="presentation">
-          <button
-            className={`nav-link ${activeTab === 'street-detail' ? 'active' : ''}`}
-            id="street-detail-tab"
-            type="button"
-            role="tab"
-            aria-controls="street-detail"
-            aria-selected={activeTab === 'street-detail'}
-            onClick={() => setActiveTab('street-detail')}
-          >
-            Detall del carrer
-          </button>
-        </li>
-      </ul>
-
-      <div className="tab-content">
-        {/* Address results tab */}
-        <div
-          className={`tab-pane ${activeTab === 'resultats' ? 'active' : ''}`}
-          id="resultats"
-          role="tabpanel"
-          aria-labelledby="resultats-tab"
-          tabIndex={0}
-        >
-
-          {displayGroups.map((group, idx) => {
-            return (
-              <div
-                key={idx}
-                className="d-flex flex-column gap-1"
-              >
-                <h4>
-                  S'han trobat&nbsp;
-                  <strong>
-                    {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
-                </h4>
-                <p className="mb-0">
-                  Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
-                </p>
-                <div className="my-3">
-                  <ul className="list-group list-group-flush">
-                    {group.apartments.map((apt, aptIdx) => (
-                      <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
-                        <p className="mb-0">
-                          {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
-                          {group.carrer && <span>{group.carrer} </span>}
-                          {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
-                          {apt.pis && <span>{normalizePis(apt.pis)} </span>}
-                          {apt.porta && <span>{apt.porta}</span>}</p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {/* Street detail tab */}
-        <div
-          className={`tab-pane ${activeTab === 'street-detail' ? 'active' : ''}`}
-          id="street-detail"
-          role="tabpanel"
-          aria-labelledby="street-detail-tab"
-          tabIndex={0}
-        >
-          <AddressNumberDistributionChart groups={chartGroups} />
-        </div>
+      <div
+        className="d-flex flex-column gap-1"
+      >
+        {displayGroups.map((group, idx) => (
+          <div key={idx} className="d-flex flex-column gap-1">
+            <h4>
+              S'han trobat&nbsp;
+              <strong>
+                {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
+            </h4>
+            <p className="mb-0">
+              Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
+            </p>
+            <div className="my-3">
+              <ul className="list-group list-group-flush">
+                {group.apartments.map((apt, aptIdx) => (
+                  <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
+                    <p className="mb-0">
+                      {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
+                      {group.carrer && <span>{group.carrer} </span>}
+                      {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
+                      {apt.pis && <span>{normalizePis(apt.pis)} </span>}
+                      {apt.porta && <span>{apt.porta}</span>}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))}
       </div>
+
+      <AddressNumberDistributionChart groups={chartGroups} />
 
     </div>
   );

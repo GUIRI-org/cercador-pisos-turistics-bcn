@@ -198,34 +198,22 @@ export default function Home() {
 
       <AppNavbar secondaryHref="/search-v1" secondaryLabel="Search v1" />
 
-      <div className="bg-light">
-        <div className="container d-flex flex-column gap-3 py-5">
-          <div className="row">
-            <div className="col-12 col-md-8">
-              <h1 className="">Habitatges d'ús turístic</h1>
-              <p className="fs-4 text-gray-600 lh-base">
-                Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
-              </p>
-              <p className="text-gray-600 italic">
-                Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
-              </p> 
-            </div>
-            <div className="d-none d-md-block col-12 col-md-4 text-center">
-              <img
-                src={`${BASE}/guiri-gamba.svg`}
-                alt="Guiri Gamba"
-                width="240"
-                height="240"
-                className="d-inline-block"
-              />
-            </div>
+      <div className="container d-flex flex-column mt-5 px-5">
+        <div className="row">
+          <div className="col-12 col-md-9">
+            <h1 className="">Consulta els habitatges que tenen llicència</h1>
+            <p className="fs-4 text-gray-600 lh-base">
+              Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
+            </p>
+            <p className="text-gray-600 italic">
+              Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
+            </p>
           </div>
         </div>
       </div>
-      <div ref={searchSectionRef} className={`bg-white py-5 ${showResults ? ' search-section--sticky' : ''}`}>
+      <div ref={searchSectionRef} className={`mt-5 bg-white ${showResults ? ' search-section--sticky' : ''}`}>
         <div className="container d-flex flex-column gap-3">
           <div className="search-form">
-            <h2 className="mb-3 fw-semibold">Consulta els habitatges que tenen llicència a la teva finca</h2>
             <div className="p-5 border bg-white">
               <div className="d-flex flex-wrap gap-3 align-items-end">
 
@@ -264,7 +252,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="numero" style={{ maxWidth: '100px' }}>
+                <div className="numero">
                   <div className="label">
                     <label htmlFor="numInp">Núm: *</label>
                   </div>
@@ -298,11 +286,13 @@ export default function Home() {
                     )}
                   </div>
                 </div>
+
                 <div className="search-button">
                   <button type="button" className="btn btn-primary" onClick={handleSearch} disabled={!canSearch}>
                     Cerca
                   </button>
                 </div>
+
               </div>
 
             </div>

@@ -131,7 +131,12 @@ jobs:
         if: steps.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cp ${{ env.FRONTEND_PATH }}/.env.sample ${{ env.FRONTEND_PATH }}/.env
-          sed -i "s#NEXT_PUBLIC_GUIRI_API_BASE=.*#NEXT_PUBLIC_GUIRI_API_BASE=${{ vars.NEXT_PUBLIC_GUIRI_API_BASE }}#" ${{ env.FRONTEND_PATH }}/.env
+          API_BASE="${{ vars.NEXT_PUBLIC_GUIRI_API_BASE }}"
+          ## TEMP: main branch deploys temporarily point at the new apartamento.danielca.net API domain
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            API_BASE="https://api.apartamento.danielca.net"
+          fi
+          sed -i "s#NEXT_PUBLIC_GUIRI_API_BASE=.*#NEXT_PUBLIC_GUIRI_API_BASE=$API_BASE#" ${{ env.FRONTEND_PATH }}/.env
           sed -i "s#NEXT_PUBLIC_SITE_URL=.*#NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}#" ${{ env.FRONTEND_PATH }}/.env
 
       - name: Build frontend
