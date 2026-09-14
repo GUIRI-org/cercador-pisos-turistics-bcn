@@ -6,6 +6,8 @@ import { fetchTipusVies, searchApartments, searchCarrers } from '@/lib/api';
 import { AddressGroup, CarrerVia, TipusVia } from '@/lib/types';
 import { AppNavbar } from './components/AppNavbar';
 import { ApartmentResults } from './components/ApartmentResults';
+import { MapComponent } from './components/MapComponent';
+import type { ChoroplethPoint } from './components/ChoroplethMap';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
 
@@ -198,7 +200,7 @@ export default function Home() {
 
       <AppNavbar secondaryHref="/search-v1" secondaryLabel="Search v1" />
 
-      <div className="container d-flex flex-column mt-5 px-5">
+      <div className="container d-flex flex-column p-5">
         <div className="row">
           <div className="col-12 col-md-9">
             <h1 className="">Consulta els habitatges que tenen llicència</h1>
@@ -211,113 +213,118 @@ export default function Home() {
           </div>
         </div>
       </div>
-      <div ref={searchSectionRef} className={`mt-5 bg-white ${showResults ? ' search-section--sticky' : ''}`}>
-        <div className="container d-flex flex-column gap-3">
+      <div ref={searchSectionRef} className={`mb-5 bg-white ${showResults ? ' search-section--sticky' : ''}`}>
+        <div className="container d-flex flex-column gap-3 p-5 border bg-white">
           <div className="search-form">
-            <div className="p-5 border bg-white">
-              <div className="d-flex flex-wrap gap-3 align-items-end">
+            <div className="d-flex flex-wrap gap-3 align-items-end">
 
-                <div className="carrer flex-fill">
-                  <div className="label">
-                    <label htmlFor="carrerInp">Carrer: *</label>
-                  </div>
-                  <div className="input relative">
-                    <input
-                      id="carrerInp"
-                      type="text"
-                      className="w-full"
-                      autoComplete="off"
-                      placeholder="Seleccioneu una opció"
-                      value={carrerInput}
-                      aria-required="true"
-                      aria-invalid={carrerError}
-                      aria-describedby="error-address"
-                      onChange={(e) => handleCarrerInput(e.target.value)}
-                      onBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
-                    />
-                    {carrerInput.trim().length >= 2 && !selectedCarrer && carrerSuggestions.length > 0 && (
-                      <ul className="carrer-suggestions">
-                        {carrerSuggestions.map((via) => (
-                          <li key={via.codi} onMouseDown={() => handleSelectCarrer(via.codi)}>
-                            {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {carrerError && (
-                      <span id="error-address" className="error-msg" role="status">
-                        Aquest camp és obligatori
-                      </span>
-                    )}
-                  </div>
+              <div className="carrer flex-fill">
+                <div className="label">
+                  <label htmlFor="carrerInp">Carrer: *</label>
                 </div>
-
-                <div className="numero">
-                  <div className="label">
-                    <label htmlFor="numInp">Núm: *</label>
-                  </div>
-
-                  <div className="input">
-                    {/* Geoportal's search endpoint caps results at 25 matches, so it can't reliably
-                    preload every number for a street — a free-text field lets users enter any number. */}
-                    <input
-                      id="numInp"
-                      type="text"
-                      className="w-full"
-                      list="num-list"
-                      autoComplete="off"
-                      value={num}
-                      disabled={!selectedCarrer}
-                      aria-required="true"
-                      aria-invalid={numError}
-                      aria-describedby="error-number"
-                      onChange={(e) => setNum(e.target.value)}
-                      onBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
-                    />
-                    <datalist id="num-list">
-                      {numOptions.map((n) => (
-                        <option key={n} value={n} />
+                <div className="input relative">
+                  <input
+                    id="carrerInp"
+                    type="text"
+                    className="w-full"
+                    autoComplete="off"
+                    placeholder="Seleccioneu una opció"
+                    value={carrerInput}
+                    aria-required="true"
+                    aria-invalid={carrerError}
+                    aria-describedby="error-address"
+                    onChange={(e) => handleCarrerInput(e.target.value)}
+                    onBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
+                  />
+                  {carrerInput.trim().length >= 2 && !selectedCarrer && carrerSuggestions.length > 0 && (
+                    <ul className="carrer-suggestions">
+                      {carrerSuggestions.map((via) => (
+                        <li key={via.codi} onMouseDown={() => handleSelectCarrer(via.codi)}>
+                          {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
+                        </li>
                       ))}
-                    </datalist>
-                    {numError && (
-                      <span id="error-number" className="error-msg" role="status">
-                        Aquest camp és obligatori
-                      </span>
-                    )}
-                  </div>
+                    </ul>
+                  )}
+                  {carrerError && (
+                    <span id="error-address" className="error-msg" role="status">
+                      Aquest camp és obligatori
+                    </span>
+                  )}
                 </div>
-
-                <div className="search-button">
-                  <button type="button" className="btn btn-primary" onClick={handleSearch} disabled={!canSearch}>
-                    Cerca
-                  </button>
-                </div>
-
               </div>
+
+              <div className="numero">
+                <div className="label">
+                  <label htmlFor="numInp">Núm: *</label>
+                </div>
+
+                <div className="input">
+                  {/* Geoportal's search endpoint caps results at 25 matches, so it can't reliably
+                    preload every number for a street — a free-text field lets users enter any number. */}
+                  <input
+                    id="numInp"
+                    type="text"
+                    className="w-full"
+                    list="num-list"
+                    autoComplete="off"
+                    value={num}
+                    disabled={!selectedCarrer}
+                    aria-required="true"
+                    aria-invalid={numError}
+                    aria-describedby="error-number"
+                    onChange={(e) => setNum(e.target.value)}
+                    onBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
+                  />
+                  <datalist id="num-list">
+                    {numOptions.map((n) => (
+                      <option key={n} value={n} />
+                    ))}
+                  </datalist>
+                  {numError && (
+                    <span id="error-number" className="error-msg" role="status">
+                      Aquest camp és obligatori
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="search-button">
+                <button type="button" className="btn btn-primary" onClick={handleSearch} disabled={!canSearch}>
+                  Cerca
+                </button>
+              </div>
+
 
             </div>
           </div>
-          {/* <!-- end of the search form --> */}
-          {showResults && (
+        </div>
+      </div>
+      {showResults && (
+        <div className="bg-light mt-5">
+          <div className="container search-results-container d-flex flex-column gap-4 p-5">
             <button type="button" className="btn btn-outline-secondary ms-auto" onClick={handleResetSearch}>
               Esborrar
             </button>
-          )}
+            <ApartmentResults
+              title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
+              addressGroups={results}
+              streetGroups={streetResults}
+              loading={loading}
+              onResetSearch={handleResetSearch}
+              singleResult={results.length === 1}
+            />
+          </div>
         </div>
+      )}
+      {/* <!-- end of the search form --> */}
+      <div className='map-container'>
+        <MapComponent
+          points={results.flatMap((group): ChoroplethPoint[] => {
+            if (group.longitud_x === undefined || group.latitud_y === undefined) return [];
+            return [{ longitude: group.longitud_x, latitude: group.latitud_y, label: group.address }];
+          })}
+        />
       </div>
-      <div className="container search-results-container py-5">
-        {showResults && (
-          <ApartmentResults
-            title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
-            addressGroups={results}
-            streetGroups={streetResults}
-            loading={loading}
-            onResetSearch={handleResetSearch}
-            singleResult={results.length === 1}
-          />
-        )}
-      </div>
-
     </main>
   );
 }

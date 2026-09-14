@@ -6,6 +6,10 @@ import {
   ApartmentSearchResponse,
   AddressGroup,
   ApartmentDetail,
+  DistrictListResponse,
+  DistrictStat,
+  NeighborhoodListResponse,
+  NeighborhoodStat,
 } from './types';
 
 const BASE = 'https://geoportal.barcelona.cat/geoBCN/serveis/territori';
@@ -227,6 +231,26 @@ export async function searchApartmentsOpenData(query: string): Promise<AddressGr
     } while (offset < total);
 
     return mergeAddressGroups(records.map(mapOpenDataRecordToGroup));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchDistrictStats(): Promise<DistrictStat[]> {
+  try {
+    const res = await fetch(`${GUIRI_API_BASE}/api/v1/apartments/districts`);
+    const json = (await res.json()) as DistrictListResponse;
+    return json?.data || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchNeighborhoodStats(): Promise<NeighborhoodStat[]> {
+  try {
+    const res = await fetch(`${GUIRI_API_BASE}/api/v1/apartments/neighborhoods`);
+    const json = (await res.json()) as NeighborhoodListResponse;
+    return json?.data || [];
   } catch {
     return [];
   }

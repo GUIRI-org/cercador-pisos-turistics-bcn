@@ -68,3 +68,29 @@ export interface ApartmentSearchResponse {
     total: number;
   };
 }
+
+export interface DistrictStat {
+  codi_districte: number;
+  nom_districte: string;
+  apartments_count: number;
+  total_places: number;
+}
+
+export interface DistrictListResponse {
+  data: DistrictStat[];
+  meta: { total: number };
+}
+
+export interface NeighborhoodStat {
+  codi_barri: number;
+  nom_barri: string;
+  codi_districte: number;
+  nom_districte: string;
+  apartments_count: number;
+  total_places: number;
+}
+
+export interface NeighborhoodListResponse {
+  data: NeighborhoodStat[];
+  meta: { total: number };
+}

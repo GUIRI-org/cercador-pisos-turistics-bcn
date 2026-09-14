@@ -499,17 +499,16 @@ export function ApartmentResults({
         return (
           <div
             key={idx}
-            className="alert alert-info rounded-0 p-5"
+            className="results"
           >
             <h4 className="alert-heading">
               S'han trobat&nbsp;
               <strong>
                 {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
             </h4>
-            <p className="mb-0">
+            <p className="">
               Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
             </p>
-            <hr className='mb-0'></hr>
             <ul className="list-group list-group-flush">
               {group.apartments.map((apt, aptIdx) => (
                 <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
@@ -526,38 +525,7 @@ export function ApartmentResults({
         );
       })}
 
-      <div
-        className="d-flex flex-column gap-1"
-      >
-        {displayGroups.map((group, idx) => (
-          <div key={idx} className="d-flex flex-column gap-1">
-            <h4>
-              S'han trobat&nbsp;
-              <strong>
-                {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
-            </h4>
-            <p className="mb-0">
-              Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
-            </p>
-            <div className="my-3">
-              <ul className="list-group list-group-flush">
-                {group.apartments.map((apt, aptIdx) => (
-                  <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
-                    <p className="mb-0">
-                      {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
-                      {group.carrer && <span>{group.carrer} </span>}
-                      {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
-                      {apt.pis && <span>{normalizePis(apt.pis)} </span>}
-                      {apt.porta && <span>{apt.porta}</span>}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <AddressNumberDistributionChart groups={chartGroups} />
+      {/* <AddressNumberDistributionChart groups={chartGroups} /> */}
 
     </div>
   );
