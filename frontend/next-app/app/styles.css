@@ -243,6 +243,24 @@ label {
     color: #6c757d;
 }
 
+/* Tile basemap behind the choropleth; the SVG keeps all the interaction. */
+.choropleth-basemap {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Greyscale keeps the standard OSM tiles from competing with the choropleth colours. */
+.choropleth-basemap .leaflet-tile-pane {
+    filter: grayscale(1) contrast(0.85) brightness(1.08);
+}
+
+.choropleth-basemap .leaflet-control-attribution {
+    pointer-events: auto;
+    font-size: 0.625rem;
+}
+
 /* Colour scale: floating over the bottom right of the map, in flow below it on mobile. */
 .choropleth-legend {
     position: absolute;

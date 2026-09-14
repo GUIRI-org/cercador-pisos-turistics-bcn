@@ -5,6 +5,8 @@ import { scaleSequential } from 'd3-scale';
 import { interpolateBlues } from 'd3-scale-chromatic';
 import { geoPath, geoMercator } from 'd3-geo';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
+import type { Map as LeafletMap } from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { filterFeaturesByProperty, prepareLayer, summarizeFeaturesByProperty, toFeatureCollection } from '../lib/geoUtils';
 
 export interface ChoroplethDatum {
@@ -58,6 +60,8 @@ interface ChoroplethMapProps {
     labelProperty?: string;
     data: ChoroplethDatum[];
     points?: ChoroplethPoint[];
+    /** [longitude, latitude] pairs the view zooms to, taking priority over `focusCode`. */
+    focusPoints?: [number, number][];
     /** Unit shown in tooltips, e.g. "apartaments". */
     metricLabel?: string;
     height?: number | string;
@@ -143,6 +147,7 @@ export function ChoroplethMap({
     labelProperty,
     data,
     points = [],
+    focusPoints = [],
     metricLabel = 'valor',
     height = 420,
     width = 800,
@@ -172,7 +177,12 @@ export function ChoroplethMap({
     const [panelCollapsed, setPanelCollapsed] = useState(false);
     const [alignRight, setAlignRight] = useState(false);
     const [viewport, setViewport] = useState({ width: 0, height: 0 });
+    const [basemapReady, setBasemapReady] = useState(false);
     const mapRef = useRef<HTMLDivElement | null>(null);
+    const basemapRef = useRef<HTMLDivElement | null>(null);
+    const basemapMapRef = useRef<LeafletMap | null>(null);
+
+    const isZoomed = focusCode !== undefined && focusCode !== null;
 
     const numericHeight = typeof height === 'number' ? height : 420;
 
@@ -280,10 +290,25 @@ export function ChoroplethMap({
             focusCode === undefined || focusCode === null
                 ? undefined
                 : geoData.features.find((feature) => normalizeCode(feature.properties?.[codeProperty]) === normalizeCode(focusCode));
-        const [[x0, y0], [x1, y1]] = path.bounds((focus ?? geoData) as Feature<Geometry>);
-        const pad = focus ? 12 : 4;
-        const targetWidth = x1 - x0 + pad * 2;
-        const targetHeight = y1 - y0 + pad * 2;
+
+        // The focus points win the framing: they are the connected addresses the user just picked.
+        const linePoints = focusPoints
+            .map((point) => projection(point))
+            .filter((point): point is [number, number] => Array.isArray(point));
+        const lineBounds =
+            linePoints.length > 1
+                ? ([
+                      [Math.min(...linePoints.map((p) => p[0])), Math.min(...linePoints.map((p) => p[1]))],
+                      [Math.max(...linePoints.map((p) => p[0])), Math.max(...linePoints.map((p) => p[1]))],
+                  ] as [[number, number], [number, number]])
+                : null;
+
+        const [[x0, y0], [x1, y1]] = lineBounds ?? path.bounds((focus ?? geoData) as Feature<Geometry>);
+        const pad = lineBounds ? 16 : focus ? 8 : 4;
+        // Keeps a short street from zooming past any useful context.
+        const minExtent = lineBounds ? 60 : 0;
+        const targetWidth = Math.max(x1 - x0 + pad * 2, minExtent);
+        const targetHeight = Math.max(y1 - y0 + pad * 2, minExtent);
         const targetCenterX = (x0 + x1) / 2;
         const targetCenterY = (y0 + y1) / 2;
 
@@ -293,21 +318,70 @@ export function ChoroplethMap({
         const viewBoxWidth = boxAspect >= targetAspect ? targetHeight * boxAspect : targetWidth;
         const viewBoxHeight = boxAspect >= targetAspect ? targetHeight : targetWidth / boxAspect;
 
-        // Two thirds across normally, centred on the last third while zoomed; clamped so nothing gets cropped.
-        const desiredFraction = alignRight ? (focus ? 5 / 6 : 0.66) : 0.5;
+        // Two thirds across normally, a bit right of centre while zoomed; clamped so nothing gets cropped.
+        const desiredFraction = alignRight ? (focus || lineBounds ? 0.7 : 0.66) : 0.5;
         const centerFraction = Math.min(desiredFraction, 1 - targetWidth / 2 / viewBoxWidth);
+        const viewBoxX = targetCenterX - centerFraction * viewBoxWidth;
+        const viewBoxY = targetCenterY - viewBoxHeight / 2;
 
         return {
             path,
             projection,
-            viewBox: `${targetCenterX - centerFraction * viewBoxWidth} ${targetCenterY - viewBoxHeight / 2} ${viewBoxWidth} ${viewBoxHeight}`,
+            viewBox: `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`,
+            center: [viewBoxX + viewBoxWidth / 2, viewBoxY + viewBoxHeight / 2] as [number, number],
             unitsPerPixel: viewBoxWidth / (viewport.width || width),
         };
-    }, [geoData, width, numericHeight, viewport, alignRight, focusCode, codeProperty]);
+    }, [geoData, width, numericHeight, viewport, alignRight, focusCode, codeProperty, focusPoints]);
 
     const pathGenerator = projected?.path ?? null;
     // Strokes, labels and dots are sized in pixels and converted, so they stay constant while zooming.
     const unit = projected?.unitsPerPixel ?? 1;
+
+    // Tiles are only worth loading once the view is zoomed into a single area.
+    useEffect(() => {
+        if (!isZoomed) return;
+        let cancelled = false;
+
+        import('leaflet').then((L) => {
+            if (cancelled || !basemapRef.current || basemapMapRef.current) return;
+            const map = L.map(basemapRef.current, {
+                zoomControl: false,
+                zoomSnap: 0,
+                dragging: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                touchZoom: false,
+                boxZoom: false,
+                keyboard: false,
+            }).setView([41.39, 2.17], 12);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            }).addTo(map);
+            basemapMapRef.current = map;
+            setBasemapReady(true);
+        });
+
+        return () => {
+            cancelled = true;
+            basemapMapRef.current?.remove();
+            basemapMapRef.current = null;
+            setBasemapReady(false);
+        };
+    }, [isZoomed]);
+
+    // Leaflet and d3 share the spherical Mercator, so the SVG viewBox can be converted into a centre and a fractional zoom.
+    useEffect(() => {
+        const map = basemapMapRef.current;
+        if (!map || !basemapReady || !projected) return;
+
+        const center = projected.projection.invert?.(projected.center);
+        if (!center) return;
+        // d3 spans the world in 2*PI*scale units, Leaflet in 256*2^zoom pixels.
+        const pixelScale = projected.projection.scale() / projected.unitsPerPixel;
+        map.invalidateSize({ animate: false });
+        map.setView([center[1], center[0]], Math.log2((2 * Math.PI * pixelScale) / 256), { animate: false });
+    }, [basemapReady, projected, viewport]);
 
     // Names of the outline areas (districts): the boundary layer when one exists, otherwise the main layer itself.
     const areaLabels = useMemo<AreaLabel[]>(() => {
@@ -393,9 +467,9 @@ export function ChoroplethMap({
                         <h2>Barcelona</h2>
                         {summary && (
                             <dl className="choropleth-panel__summary mb-0">
-                                <dt>Total</dt>
+                                {/* <dt>Total</dt> */}
                                 <dd>
-                                    {formatNumber(summary.total)} {metricLabel}
+                                    <h2 className="fw-normal">{formatNumber(summary.total)} {metricLabel}</h2>
                                 </dd>
                                 {/* <dt>Mitjana</dt>
                                 <dd>
@@ -420,17 +494,19 @@ export function ChoroplethMap({
 
                     {detail && <div className="choropleth-detail">{detail}</div>}
                 </div>
-            )}
+            )
+            }
 
             <div ref={mapRef} className="overflow-hidden position-relative bg-light" style={{ height }}>
+                {isZoomed && <div ref={basemapRef} className="choropleth-basemap" />}
                 {geoData && pathGenerator ? (
-                    <svg viewBox={projected?.viewBox} style={{ width: '100%', height: '100%' }}>
+                    <svg viewBox={projected?.viewBox} style={{ width: '100%', height: '100%', position: 'relative', zIndex: 1 }}>
                         {contextData &&
                             contextData.features.map((feature, idx) => (
                                 <path
                                     key={`context-${idx}`}
                                     d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
-                                    fill="#FFF"
+                                    fill={isZoomed ? 'none' : '#FFF'}
                                     stroke={contextLayer?.stroke ?? '#94a3b8'}
                                     strokeWidth={2 * unit}
                                     strokeOpacity={0.4}
@@ -451,16 +527,17 @@ export function ChoroplethMap({
                                 'Sense dades';
                             const value = datum?.value ?? 0;
                             const isHovered = hoveredCode === code;
+                            const isFocused = isZoomed && focusCode !== undefined && focusCode !== null && code === normalizeCode(focusCode);
 
                             return (
                                 <path
                                     key={idx}
                                     d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
                                     fill={datum ? colorScale(datum.value) : '#e5e7eb'}
-                                    fillOpacity={0.85}
-                                    stroke={isHovered ? '#111827' : '#4b5563'}
-                                    strokeWidth={(isHovered ? 2 : 1) * unit}
-                                    strokeOpacity={isHovered ? 0.6 : 0.25}
+                                    fillOpacity={isFocused ? 0 : isZoomed ? 0.45 : 0.85}
+                                    stroke={isFocused || isHovered ? '#111827' : '#4b5563'}
+                                    strokeWidth={(isFocused ? 4 : isHovered ? 2 : 1) * unit}
+                                    strokeOpacity={isFocused ? 0.9 : isHovered ? 0.6 : 0.25}
                                     onMouseEnter={(e) => {
                                         setHoveredCode(code);
                                         setTooltip({ x: e.clientX, y: e.clientY, text: `${label}: ${value} ${metricLabel}` });
@@ -498,8 +575,6 @@ export function ChoroplethMap({
                                         cy={projectedPoint[1]}
                                         r={radius}
                                         fill={point.color ?? '#dc2626'}
-                                        stroke="#ffffff"
-                                        strokeWidth={Math.max(1, (point.radius ?? 5) / 2.5) * unit}
                                         onMouseEnter={(e) => point.label && setTooltip({ x: e.clientX, y: e.clientY, text: point.label })}
                                         onMouseMove={(e) => setTooltip((t) => (t ? { ...t, x: e.clientX, y: e.clientY } : t))}
                                         onMouseLeave={() => setTooltip(null)}
@@ -573,28 +648,30 @@ export function ChoroplethMap({
                 )}
             </div>
 
-            {showLegend && (
-                <div className="choropleth-legend d-flex flex-column gap-1">
-                    <svg width="100%" height={12} preserveAspectRatio="none" aria-hidden>
-                        <defs>
-                            <linearGradient id="choropleth-legend-gradient" x1="0" x2="1" y1="0" y2="0">
-                                {[0, 0.25, 0.5, 0.75, 1].map((stop) => (
-                                    <stop key={stop} offset={`${stop * 100}%`} stopColor={colorScale(stop * (maxValue || 1))} />
-                                ))}
-                            </linearGradient>
-                        </defs>
-                        <rect width="100%" height={12} fill="url(#choropleth-legend-gradient)" />
-                    </svg>
-                    <div className="choropleth-legend__scale">
-                        {[0, 0.25, 0.5, 0.75, 1].map((stop) => (
-                            <span key={stop} className="choropleth-legend__tick">
-                                {formatNumber(stop * maxValue)}
-                            </span>
-                        ))}
+            {
+                showLegend && !isZoomed && (
+                    <div className="choropleth-legend d-flex flex-column gap-1">
+                        <svg width="100%" height={12} preserveAspectRatio="none" aria-hidden>
+                            <defs>
+                                <linearGradient id="choropleth-legend-gradient" x1="0" x2="1" y1="0" y2="0">
+                                    {[0, 0.25, 0.5, 0.75, 1].map((stop) => (
+                                        <stop key={stop} offset={`${stop * 100}%`} stopColor={colorScale(stop * (maxValue || 1))} />
+                                    ))}
+                                </linearGradient>
+                            </defs>
+                            <rect width="100%" height={12} fill="url(#choropleth-legend-gradient)" />
+                        </svg>
+                        <div className="choropleth-legend__scale">
+                            {[0, 0.25, 0.5, 0.75, 1].map((stop) => (
+                                <span key={stop} className="choropleth-legend__tick">
+                                    {formatNumber(stop * maxValue)}
+                                </span>
+                            ))}
+                        </div>
+                        <span className="choropleth-panel__meta">{metricLabel}</span>
                     </div>
-                    <span className="choropleth-panel__meta">{metricLabel}</span>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
