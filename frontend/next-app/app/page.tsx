@@ -317,7 +317,7 @@ export default function Home() {
         </div>
       )}
       {/* <!-- end of the search form --> */}
-      <div className='map-container'>
+      <div className='map-container bg-light border-top'>
         <MapComponent
           points={results.flatMap((group): ChoroplethPoint[] => {
             if (group.longitud_x === undefined || group.latitud_y === undefined) return [];
