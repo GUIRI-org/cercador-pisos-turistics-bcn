@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { FaChevronRight, FaRegBuilding } from 'react-icons/fa6';
 import { ChoroplethMap, ChoroplethDatum, ChoroplethPoint, ChoroplethSelection, ContextLayer } from './ChoroplethMap';
+import { ApartmentDetail } from './StreetDetail';
 import { SAMPLE_DISTRICT_DATA, SAMPLE_NEIGHBOURHOOD_DATA } from '../data/sampleChoroplethData';
 import { EPSG_25831 } from '../lib/geoUtils';
 import { fetchApartmentMap, fetchDistrictStats, fetchNeighborhoodStats } from '@/lib/api';
@@ -118,7 +120,7 @@ export function MapComponent({
     data,
     points = [],
     height = 480,
-    defaultLevel = 'neighbourhood',
+    defaultLevel = 'district',
     defaultMetric = 'apartments',
 }: MapComponentProps) {
     const [level, setLevel] = useState<ChoroplethLevel>(defaultLevel);
@@ -209,14 +211,10 @@ export function MapComponent({
         }));
     }, [data, metric, addressGroups, level, stats, config.sampleData]);
 
-    const selectedApartments = useMemo(() => {
-        if (!selectedAddress) return [];
-        return [...selectedAddress.apartments].sort(
-            (a, b) =>
-                (a.pis ?? '').localeCompare(b.pis ?? '', 'ca', { numeric: true }) ||
-                (a.porta ?? '').localeCompare(b.porta ?? '', 'ca', { numeric: true })
-        );
-    }, [selectedAddress]);
+    const selectedAreaValue = useMemo(() => {
+        if (!selection) return null;
+        return resolvedData.find((datum) => sameCode(datum.code, selection.code))?.value ?? null;
+    }, [selection, resolvedData]);
 
     // Small dots for every street+number of the selected area, on top of the search result markers.
     const mapPoints = useMemo(() => {
@@ -287,6 +285,7 @@ export function MapComponent({
                             aria-pressed={level === option.value}
                             onClick={() => setLevel(option.value)}
                         >
+                            {option.value === 'district'}
                             {option.label}
                         </button>
                     ))}
@@ -297,9 +296,9 @@ export function MapComponent({
 
     const detail = selection ? (
         <>
-            <div className="d-flex justify-content-between align-items-start gap-2">
+            <div className="d-flex justify-content-between align-items-start gap-1">
                 <div>
-                    <span className="choropleth-panel__label">Adreces</span>
+                    {/* <span className="choropleth-panel__label">Adreces</span> */}
                     <strong>{selection.label}</strong>
                 </div>
                 <button
@@ -312,65 +311,71 @@ export function MapComponent({
                     }}
                 />
             </div>
+            {selectedAreaValue !== null && (
+                <p className="choropleth-panel__meta mt-1">
+                    {formatNumber(selectedAreaValue)} {metricUnit}
+                </p>
+            )}
             {selectedAddresses === null ? (
                 <span className="choropleth-panel__meta">Carregant adreces&hellip;</span>
             ) : selectedAddresses.length === 0 ? (
                 <span className="choropleth-panel__meta">Sense adreces registrades</span>
             ) : (
                 <>
-                    <span className="choropleth-panel__meta">{formatNumber(selectedAddresses.length)} adreces</span>
-                    <ol className="choropleth-detail__list">
+                    <div className="choropleth-detail__list btn-group-vertical">
                         {selectedAddresses.map((group, idx) => (
-                            <li key={`${group.address}-${idx}`}>
-                                <button
-                                    type="button"
+                            <button
+                                key={`${group.address}-${idx}`}
+                                type="button"
+                                aria-pressed={selectedAddress === group}
+                                onClick={() => setSelectedAddress(group)}
+                                className="d-flex flex-row btn btn-outline-primary"
+                            >
+                                <FaRegBuilding className="mt-1 me-2" aria-hidden="true" />
+                                <div
                                     className="choropleth-detail__item"
-                                    aria-pressed={selectedAddress === group}
-                                    onClick={() => setSelectedAddress(group)}
                                 >
                                     <span className="choropleth-detail__address">{group.address}</span>
                                     <span className="choropleth-panel__meta">
                                         {formatNumber(group.apartments_count)} habitatges &middot; {formatNumber(group.total_places)} places
                                     </span>
-                                </button>
-                            </li>
+                                </div>
+                                <FaChevronRight className="align-self-center ms-auto" aria-hidden="true" />
+                            </button>
                         ))}
-                    </ol>
+                    </div>
                 </>
             )}
 
-            {selectedAddress && (
-                <div className="choropleth-subdetail">
-                    <div className="d-flex justify-content-between align-items-start gap-2">
-                        <div>
-                            <span className="choropleth-panel__label">Distribució</span>
-                            <strong>{selectedAddress.address}</strong>
+            {
+                selectedAddress && (
+                    <div className="choropleth-subdetail">
+                        <div className='d-flex flex-row'>
+                            <FaRegBuilding className="mt-1 me-2" aria-hidden="true" />
+                            <div className="d-flex flex-fill justify-content-between align-items-start gap-2">
+                                <div>
+                                    <strong>{selectedAddress.address}</strong>
+                                    <span className="choropleth-panel__meta d-block">
+                                        {formatNumber(selectedAddress.apartments_count)} habitatges &middot; {formatNumber(selectedAddress.total_places)} places
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="btn-close"
+                                    aria-label="Tanca la distribució"
+                                    onClick={() => setSelectedAddress(null)}
+                                />
+                            </div>
                         </div>
-                        <button
-                            type="button"
-                            className="btn-close"
-                            aria-label="Tanca la distribució"
-                            onClick={() => setSelectedAddress(null)}
+                        
+                        <ApartmentDetail
+                            group={selectedAddress}
+                            allGroups={selectedAddresses ?? []}
+                            currentIndex={selectedAddresses?.indexOf(selectedAddress) ?? -1}
                         />
                     </div>
-                    <span className="choropleth-panel__meta">
-                        {formatNumber(selectedAddress.apartments_count)} habitatges &middot; {formatNumber(selectedAddress.total_places)} places
-                    </span>
-                    <ul className="choropleth-detail__list">
-                        {selectedApartments.map((apartment, idx) => (
-                            <li key={`${apartment.expedient}-${idx}`}>
-                                <span className="choropleth-detail__address">
-                                    Pis {apartment.pis || '—'} &middot; Porta {apartment.porta || '—'}
-                                </span>
-                                <span className="choropleth-panel__meta">
-                                    {apartment.num_places !== undefined ? `${formatNumber(apartment.num_places)} places` : 'Places desconegudes'}
-                                    {apartment.escala ? ` · Escala ${apartment.escala}` : ''}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            )}
+                )
+            }
         </>
     ) : null;
 

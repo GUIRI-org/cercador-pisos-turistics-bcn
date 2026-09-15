@@ -463,30 +463,14 @@ export function ChoroplethMap({
                         {panelCollapsed ? '\u203a' : '\u2039'}
                     </button>
 
-                    <div className="choropleth-panel__body d-flex flex-column gap-3">
-                        <h2>Barcelona</h2>
+                    <div className="choropleth-panel__body d-flex flex-column gap-2">
+                        <h2 className='mb-0'>Barcelona</h2>
                         {summary && (
-                            <dl className="choropleth-panel__summary mb-0">
+                            <dl className="mb-0">
                                 {/* <dt>Total</dt> */}
                                 <dd>
-                                    <h2 className="fw-normal">{formatNumber(summary.total)} {metricLabel}</h2>
+                                    <span className="choropleth-panel__meta">{formatNumber(summary.total)} {metricLabel}</span>
                                 </dd>
-                                {/* <dt>Mitjana</dt>
-                                <dd>
-                                    {formatNumber(summary.average)} {metricLabel}
-                                </dd>
-                                <dt>Amb dades</dt>
-                                <dd>
-                                    {summary.areasWithData}/{summary.areasTotal}
-                                </dd>
-                                {summary.top.label && (
-                                    <>
-                                        <dt>Màxim</dt>
-                                        <dd>
-                                            {summary.top.label} ({formatNumber(summary.top.value)})
-                                        </dd>
-                                    </>
-                                )} */}
                             </dl>
                         )}
                         {controls}
@@ -534,7 +518,7 @@ export function ChoroplethMap({
                                     key={idx}
                                     d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
                                     fill={datum ? colorScale(datum.value) : '#e5e7eb'}
-                                    fillOpacity={isFocused ? 0 : isZoomed ? 0.45 : 0.85}
+                                    fillOpacity={isFocused ? 0 : isZoomed ? 0.25 : 0.85}
                                     stroke={isFocused || isHovered ? '#111827' : '#4b5563'}
                                     strokeWidth={(isFocused ? 4 : isHovered ? 2 : 1) * unit}
                                     strokeOpacity={isFocused ? 0.9 : isHovered ? 0.6 : 0.25}
@@ -600,17 +584,23 @@ export function ChoroplethMap({
                             );
                         })}
                         {zoomLabels.map((label) => (
-                            <AreaLabelText key={`zoom-label-${label.name}`} label={label} fontSize={11 * unit} fill="#334155" />
+                            <AreaLabelText
+                                key={`zoom-label-${label.name}`}
+                                label={label}
+                                fontSize={(normalizeCode(focusCode) === label.code ? 15 : 11) * unit}
+                                fill="#334155"
+                            />
                         ))}
                         {areaLabels.map((label) => {
                             // The darkest end of the scale needs a light label to stay readable.
                             const value = label.code ? valueByCode.get(label.code)?.value ?? 0 : 0;
                             const onDarkFill = maxValue > 0 && value / maxValue >= 0.7;
+                            const isFocused = normalizeCode(focusCode) === label.code;
                             return (
                                 <AreaLabelText
                                     key={`area-label-${label.name}`}
                                     label={label}
-                                    fontSize={13 * unit}
+                                    fontSize={(isFocused ? 17 : 13) * unit}
                                     fill={onDarkFill ? '#ffffff' : '#1f2937'}
                                     halo={onDarkFill ? '#0f172a' : '#ffffff'}
                                 />
