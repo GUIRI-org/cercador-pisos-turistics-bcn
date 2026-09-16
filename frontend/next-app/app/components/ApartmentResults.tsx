@@ -460,6 +460,8 @@ export function ApartmentResults({
     [streetGroups, addressGroups]
   );
 
+  const searchedKeys = useMemo(() => new Set(displayGroups.map(getAddressGroupKey)), [displayGroups]);
+
   const resultSignature = useMemo(
     () => `${shouldOpenFirstItem ? 'reset' : 'plain'}:${displayGroups.map(getAddressGroupKey).join('||')}`,
     [displayGroups, shouldOpenFirstItem]
@@ -524,6 +526,30 @@ export function ApartmentResults({
           </div>
         );
       })}
+
+      {chartGroups.length > 0 && (
+        <section className="street-addresses">
+          <h4>Adreces del mateix carrer amb llicència</h4>
+          <p className="text-gray-600">Ordenades per número.</p>
+          <ul className="list-group list-group-flush">
+            {chartGroups.map((group) => {
+              const isSearched = searchedKeys.has(getAddressGroupKey(group));
+              return (
+                <li
+                  key={getAddressGroupKey(group)}
+                  className={`list-group-item d-flex justify-content-between align-items-center gap-3${isSearched ? ' fw-semibold' : ''}`}
+                  aria-current={isSearched ? 'true' : undefined}
+                >
+                  <span>{group.address || `${group.tipus_carrer || ''} ${group.carrer || ''} ${group.num1 ?? ''}${group.lletra1 || ''}`.trim()}</span>
+                  <span className="badge bg-secondary rounded-pill">
+                    {group.apartments_count} habitatges · {group.total_places} places
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       {/* <AddressNumberDistributionChart groups={chartGroups} /> */}
 

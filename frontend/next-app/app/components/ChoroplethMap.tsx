@@ -451,7 +451,7 @@ export function ChoroplethMap({
 
     return (
         <div className="container choropleth-wrapper d-flex flex-column gap-2 position-relative">
-            {(controls || showLegend) && (
+            {(showLegend || detail) && (
                 <div className={`choropleth-panel${panelCollapsed ? ' choropleth-panel--collapsed' : ''}`}>
                     <button
                         type="button"
@@ -473,7 +473,6 @@ export function ChoroplethMap({
                                 </dd>
                             </dl>
                         )}
-                        {controls}
                     </div>
 
                     {detail && <div className="choropleth-detail">{detail}</div>}
@@ -482,6 +481,11 @@ export function ChoroplethMap({
             }
 
             <div ref={mapRef} className="overflow-hidden position-relative bg-light" style={{ height }}>
+                {controls && (
+                    <div className="position-absolute top-0 end-0 p-2" style={{ zIndex: 3 }}>
+                        {controls}
+                    </div>
+                )}
                 {isZoomed && <div ref={basemapRef} className="choropleth-basemap" />}
                 {geoData && pathGenerator ? (
                     <svg viewBox={projected?.viewBox} style={{ width: '100%', height: '100%', position: 'relative', zIndex: 1 }}>

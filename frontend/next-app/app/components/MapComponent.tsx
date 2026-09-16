@@ -10,14 +10,14 @@ import { fetchApartmentMap, fetchDistrictStats, fetchNeighborhoodStats } from '@
 import type { AddressGroup } from '@/lib/types';
 
 type ChoroplethLevel = 'district' | 'neighbourhood';
-type ChoroplethMetric = 'apartments' | 'addresses' | 'places';
 
 interface MapComponentProps {
     data?: ChoroplethDatum[];
     points?: ChoroplethPoint[];
     height?: number | string;
     defaultLevel?: ChoroplethLevel;
-    defaultMetric?: ChoroplethMetric;
+    /** Address coming from the search, used to open the area and address panels. */
+    focusAddress?: AddressGroup | null;
 }
 
 // One official GeoJSON holds every administrative level (TERME/DISTRICTE/BARRI/AEB) —
@@ -73,11 +73,7 @@ const LEVEL_OPTIONS: { value: ChoroplethLevel; label: string }[] = [
     { value: 'neighbourhood', label: 'Barris' },
 ];
 
-const METRIC_OPTIONS: { value: ChoroplethMetric; label: string; unit: string }[] = [
-    { value: 'apartments', label: 'Habitatges', unit: 'habitatges' },
-    { value: 'addresses', label: 'Adreces', unit: 'adreces' },
-    { value: 'places', label: 'Places', unit: 'places' },
-];
+const METRIC_UNIT = 'habitatges';
 
 interface AreaStat {
     code: number;
@@ -87,22 +83,6 @@ interface AreaStat {
 }
 
 // Counts one entry per street+number, which is what the address metric aggregates.
-const countAddressesByArea = (groups: AddressGroup[], level: ChoroplethLevel): ChoroplethDatum[] => {
-    const counts = new Map<number, { value: number; label?: string }>();
-
-    groups.forEach((group) => {
-        const code = level === 'district' ? group.codi_districte : group.codi_barri;
-        if (code === undefined || code === null) return;
-        const label = level === 'district' ? group.nom_districte : group.nom_barri;
-        const entry = counts.get(code) ?? { value: 0, label };
-        entry.value += 1;
-        entry.label = entry.label ?? label;
-        counts.set(code, entry);
-    });
-
-    return Array.from(counts, ([code, entry]) => ({ code, value: entry.value, label: entry.label }));
-};
-
 const formatNumber = (value: number) => new Intl.NumberFormat('ca-ES').format(value);
 
 // Codes like "01" in the GeoJSON must match the plain numeric codes coming from the API.
@@ -116,22 +96,27 @@ const streetKey = (group?: AddressGroup | null) => {
     return key || null;
 };
 
+const addressKey = (group?: AddressGroup | null) => {
+    const key = `${group?.tipus_carrer ?? ''} ${group?.carrer ?? ''} ${group?.num1 ?? ''}${group?.lletra1 ?? ''}`
+        .trim()
+        .toLowerCase();
+    return key || null;
+};
+
 export function MapComponent({
     data,
     points = [],
     height = 480,
     defaultLevel = 'district',
-    defaultMetric = 'apartments',
+    focusAddress = null,
 }: MapComponentProps) {
     const [level, setLevel] = useState<ChoroplethLevel>(defaultLevel);
-    const [metric, setMetric] = useState<ChoroplethMetric>(defaultMetric);
     const [stats, setStats] = useState<{ level: ChoroplethLevel; rows: AreaStat[] } | null>(null);
     const [addressGroups, setAddressGroups] = useState<AddressGroup[] | null>(null);
     const [selection, setSelection] = useState<ChoroplethSelection | null>(null);
     const [selectedAddress, setSelectedAddress] = useState<AddressGroup | null>(null);
 
     const config = LEVEL_CONFIG[level];
-    const metricUnit = METRIC_OPTIONS.find((option) => option.value === metric)?.unit ?? '';
 
     useEffect(() => {
         let cancelled = false;
@@ -165,7 +150,7 @@ export function MapComponent({
     }, [level]);
 
     useEffect(() => {
-        if ((metric !== 'addresses' && !selection) || addressGroups) return;
+        if (!selection || addressGroups) return;
         let cancelled = false;
 
         fetchApartmentMap().then((groups) => {
@@ -175,7 +160,21 @@ export function MapComponent({
         return () => {
             cancelled = true;
         };
-    }, [metric, selection, addressGroups]);
+    }, [selection, addressGroups]);
+
+    // A searched address needs its own area addresses, which are only fetched once a selection exists.
+    useEffect(() => {
+        if (!focusAddress || addressGroups) return;
+        let cancelled = false;
+
+        fetchApartmentMap().then((groups) => {
+            if (!cancelled) setAddressGroups(groups);
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [focusAddress, addressGroups]);
 
     // Switching the division invalidates the selected code, so close the detail panel.
     useEffect(() => {
@@ -194,22 +193,34 @@ export function MapComponent({
         setSelectedAddress(null);
     }, [selection]);
 
+    // Keeps the map panels in sync with the search: open the area, then its address.
+    useEffect(() => {
+        if (!focusAddress) return;
+        const code = level === 'district' ? focusAddress.codi_districte : focusAddress.codi_barri;
+        const label = level === 'district' ? focusAddress.nom_districte : focusAddress.nom_barri;
+        if (code === undefined || code === null) return;
+        setSelection((current) => (current && sameCode(current.code, code) ? current : { code, label: label ?? '' }));
+    }, [focusAddress, level]);
+
+    useEffect(() => {
+        if (!focusAddress || !selectedAddresses) return;
+        const key = addressKey(focusAddress);
+        const match = selectedAddresses.find((group) => addressKey(group) === key);
+        if (match) setSelectedAddress(match);
+    }, [focusAddress, selectedAddresses]);
+
     const resolvedData = useMemo(() => {
         if (data) return data;
 
-        if (metric === 'addresses') {
-            return addressGroups ? countAddressesByArea(addressGroups, level) : [];
-        }
-
         const rows = stats?.level === level ? stats.rows : null;
-        if (!rows || rows.length === 0) return metric === 'apartments' ? config.sampleData : [];
+        if (!rows || rows.length === 0) return config.sampleData;
 
         return rows.map((row): ChoroplethDatum => ({
             code: row.code,
-            value: metric === 'places' ? row.places : row.apartments,
+            value: row.apartments,
             label: row.label,
         }));
-    }, [data, metric, addressGroups, level, stats, config.sampleData]);
+    }, [data, level, stats, config.sampleData]);
 
     const selectedAreaValue = useMemo(() => {
         if (!selection) return null;
@@ -254,42 +265,19 @@ export function MapComponent({
     }, [selectedAddress, selectedAddresses]);
 
     const controls = (
-        <div className="d-flex flex-column gap-2">
-
-            <div>
-                <label className="choropleth-panel__label" htmlFor="choropleth-metric">
-                    Suma per
-                </label>
-                <select
-                    id="choropleth-metric"
-                    className="form-select form-select-sm"
-                    value={metric}
-                    onChange={(event) => setMetric(event.target.value as ChoroplethMetric)}
-                >
-                    {METRIC_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </select>
-            </div>
-
-            <div className="mt-5 pt-5 border-top">
-                <span className="choropleth-panel__label">Divisió</span>
-                <div className="btn-group btn-group-sm w-100" role="group" aria-label="Divisió territorial">
-                    {LEVEL_OPTIONS.map((option) => (
-                        <button
-                            key={option.value}
-                            type="button"
-                            className={`btn ${level === option.value ? 'btn-primary' : 'btn-outline-primary'}`}
-                            aria-pressed={level === option.value}
-                            onClick={() => setLevel(option.value)}
-                        >
-                            {option.value === 'district'}
-                            {option.label}
-                        </button>
-                    ))}
-                </div>
+        <div className="choropleth-controls">
+            <div className="btn-group btn-group-sm d-flex" role="group" aria-label="Divisió territorial">
+                {LEVEL_OPTIONS.map((option) => (
+                    <button
+                        key={option.value}
+                        type="button"
+                        className={`btn ${level === option.value ? 'btn-primary' : 'btn-outline-primary'}`}
+                        aria-pressed={level === option.value}
+                        onClick={() => setLevel(option.value)}
+                    >
+                        {option.label}
+                    </button>
+                ))}
             </div>
         </div>
     );
@@ -313,7 +301,7 @@ export function MapComponent({
             </div>
             {selectedAreaValue !== null && (
                 <p className="choropleth-panel__meta mt-1">
-                    {formatNumber(selectedAreaValue)} {metricUnit}
+                    {formatNumber(selectedAreaValue)} {METRIC_UNIT}
                 </p>
             )}
             {selectedAddresses === null ? (
@@ -393,7 +381,7 @@ export function MapComponent({
             points={mapPoints}
             focusPoints={streetFocusPoints}
             focusCode={selection?.code ?? null}
-            metricLabel={metricUnit}
+            metricLabel={METRIC_UNIT}
             height={height}
             controls={controls}
             detail={detail}

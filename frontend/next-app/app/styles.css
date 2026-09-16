@@ -252,6 +252,12 @@ label {
     font-weight: normal;
 }
 
+/* Division switch floating over the top-right corner of the map. */
+.choropleth-controls {
+    padding: 0.5rem 0.75rem;
+    background-color: #fff;
+}
+
 /* Tile basemap behind the choropleth; the SVG keeps all the interaction. */
 .choropleth-basemap {
     position: absolute;
