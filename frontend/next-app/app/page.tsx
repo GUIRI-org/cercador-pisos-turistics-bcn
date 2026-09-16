@@ -164,15 +164,6 @@ function HomeSearch() {
     };
   }, [queryTipusVia, queryCarrer, queryNum, queryEscala, queryPis, queryPorta]);
 
-  // Deep links, refreshes and new searches all land on the results block.
-  useEffect(() => {
-    if (!queryCarrer || !queryNum) return;
-    const frame = requestAnimationFrame(() => {
-      document.getElementById(RESULTS_ANCHOR_ID)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [queryTipusVia, queryCarrer, queryNum]);
-
   const handleCarrerInput = (value: string) => {
     setCarrerInput(value);
     setSelectedCarrer(null);
@@ -231,7 +222,7 @@ function HomeSearch() {
     if (!selectedCarrer && first) {
       e.preventDefault();
       handleSelectCarrer(first.codi);
-    } else if (e.key === 'Enter' && carrerName) {
+    } else if (e.key === 'Enter' && selectedCarrer) {
       e.preventDefault();
       numInputRef.current?.focus();
     }
@@ -244,30 +235,46 @@ function HomeSearch() {
     if (num.trim()) searchButtonRef.current?.focus();
   };
 
-  // While the user hasn't edited the street input, the street from the URL is still the active one.
-  const urlCarrerLabel = `${queryTipusVia} ${queryCarrer}`.trim();
-  const urlCarrerActive = Boolean(queryCarrer) && !selectedCarrer && carrerInput.trim() === urlCarrerLabel;
-  const carrerName = selectedCarrer?.nom ?? (urlCarrerActive ? queryCarrer : '');
-  const tipusViaName = selectedCarrer?.tipusVia?.nom ?? (urlCarrerActive ? queryTipusVia : '');
+  const carrerName = selectedCarrer?.nom ?? queryCarrer;
+  const tipusViaName = selectedCarrer?.tipusVia?.nom ?? queryTipusVia;
   const carrerError = touched.carrer && !carrerName;
   const numError = touched.num && !num;
   const canSearch = Boolean(carrerName) && num.trim().length > 0;
 
+  const pushSearch = useCallback(
+    (values: { tipusVia?: string; carrer: string; num: string; escala?: string; pis?: string; porta?: string }) => {
+      if (!values.carrer || !values.num.trim()) return;
+
+      const params = new URLSearchParams();
+      if (values.tipusVia?.trim()) params.set('tipus_via', values.tipusVia.trim());
+      params.set('carrer', values.carrer.trim());
+      params.set('num', values.num.trim());
+      // Optional unit filters are omitted when empty to keep the URL clean.
+      if (values.escala?.trim()) params.set('escala', values.escala.trim());
+      if (values.pis?.trim()) params.set('pis', values.pis.trim());
+      if (values.porta?.trim()) params.set('porta', values.porta.trim());
+
+      router.push(`/?${params.toString()}#${RESULTS_ANCHOR_ID}`, { scroll: false });
+    },
+    [router]
+  );
+
   const handleSearch = useCallback(() => {
     setTouched({ carrer: true, num: true });
-    if (!carrerName || !num.trim()) return;
+    pushSearch({ tipusVia: tipusViaName, carrer: carrerName, num, escala, pis, porta });
+  }, [pushSearch, carrerName, tipusViaName, num, escala, pis, porta]);
 
-    const params = new URLSearchParams();
-    if (tipusViaName) params.set('tipus_via', tipusViaName);
-    params.set('carrer', carrerName);
-    params.set('num', num.trim());
-    // Optional unit filters are omitted when empty to keep the URL clean.
-    if (escala.trim()) params.set('escala', escala.trim());
-    if (pis.trim()) params.set('pis', pis.trim());
-    if (porta.trim()) params.set('porta', porta.trim());
-
-    router.push(`/?${params.toString()}#${RESULTS_ANCHOR_ID}`, { scroll: false });
-  }, [carrerName, tipusViaName, num, escala, pis, porta, router]);
+  const handleSelectAddress = useCallback(
+    (group: AddressGroup) => {
+      setSelectedCarrer(null);
+      pushSearch({
+        tipusVia: group.tipus_carrer ?? '',
+        carrer: group.carrer ?? '',
+        num: `${group.num1 ?? ''}`,
+      });
+    },
+    [pushSearch]
+  );
 
   const handleResetSearch = useCallback(() => {
     setTouched({});
@@ -322,11 +329,11 @@ function HomeSearch() {
           </div>
           <form className="search-form container p-5 border bg-white" onSubmit={handleSubmit}>
             <fieldset className="d-flex flex-wrap gap-3">
-              <legend>Cerca l'habitatge per adreça</legend>
+              <legend>Adreça</legend>
               <div className="carrer flex-fill">
                 <div className="label">
                   <label htmlFor="carrerInp">
-                    <u>C</u>arrer: * <span className="visually-hidden">(Alt+C)</span>
+                    Nom del <u>C</u>arrer: * <span className="visually-hidden">(Alt+C)</span>
                   </label>
                 </div>
                 <div className="input relative">
@@ -392,7 +399,7 @@ function HomeSearch() {
                     list="num-list"
                     autoComplete="off"
                     value={num}
-                    disabled={!carrerName}
+                    disabled={!selectedCarrer}
                     accessKey="n"
                     aria-required="true"
                     aria-invalid={numError}
@@ -430,9 +437,20 @@ function HomeSearch() {
             </fieldset>
           </form>
         </div>
+      </section>
+      <section id="seccio-resultats">
         {showResults && (
-          <div id="seccio-resultats" className="bg-white border-top search-results-container">
-            <div className="container d-flex flex-column gap-4 p-5">
+          <div className="bg-white border-top search-results-container">
+            <div className="d-flex flex-column gap-4">
+              <ApartmentResults
+                title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
+                addressGroups={results}
+                streetGroups={streetResults}
+                loading={loading}
+                onResetSearch={handleResetSearch}
+                onSelectAddress={handleSelectAddress}
+                singleResult={results.length === 1}
+              />
               <button
                 type="button"
                 className="btn btn-outline-secondary ms-auto"
@@ -442,14 +460,6 @@ function HomeSearch() {
               >
                 Esborrar
               </button>
-              <ApartmentResults
-                title={`${queryTipusVia ? `${queryTipusVia} ` : ''}${queryCarrer}${queryNum ? `, ${queryNum}` : ''}`.trim()}
-                addressGroups={results}
-                streetGroups={streetResults}
-                loading={loading}
-                onResetSearch={handleResetSearch}
-                singleResult={results.length === 1}
-              />
             </div>
           </div>
         )}
@@ -459,7 +469,6 @@ function HomeSearch() {
         <h1 className="container">Secció del mapa</h1>
         <div className='map-container bg-light border-top'>
           <MapComponent
-            focusAddress={results[0] ?? null}
             points={results.flatMap((group): ChoroplethPoint[] => {
               if (group.longitud_x === undefined || group.latitud_y === undefined) return [];
               return [{ longitude: group.longitud_x, latitude: group.latitud_y, label: group.address }];

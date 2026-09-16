@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
 import { ApartmentDetail } from './StreetDetail';
+import { FaRegBuilding } from 'react-icons/fa6';
+
 
 interface ApartmentResultsProps {
   title: string;
@@ -10,6 +12,8 @@ interface ApartmentResultsProps {
   streetGroups?: AddressGroup[];
   loading?: boolean;
   onResetSearch?: () => void;
+  /** Runs a new search for the clicked address of the street. */
+  onSelectAddress?: (group: AddressGroup) => void;
   singleResult?: boolean;
 }
 
@@ -104,6 +108,47 @@ const dedupeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
   });
 
   return Array.from(merged.values());
+};
+
+const formatAddress = (group: AddressGroup) => {
+  const street = `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
+  const number = `${group.num1 ?? ''}${group.lletra1 || ''}`.trim();
+  if (street && number) return `${street}, ${number}`;
+  // Falls back to the raw address, adding the comma before its first number.
+  return (group.address || '').replace(/\s+(\d)/, ', $1');
+};
+
+const formatArea = (group: AddressGroup) =>
+  [group.nom_barri, group.nom_districte].filter(Boolean) as string[];
+
+// Numeric floors/doors come first in ascending order, then the rest alphabetically.
+const compareAscending = (a: string, b: string) => {
+  const aNum = Number.parseInt(a, 10);
+  const bNum = Number.parseInt(b, 10);
+  const aIsNum = !Number.isNaN(aNum);
+  const bIsNum = !Number.isNaN(bNum);
+
+  if (aIsNum && bIsNum) return aNum - bNum;
+  if (aIsNum) return -1;
+  if (bIsNum) return 1;
+  return a.localeCompare(b, 'ca');
+};
+
+const groupApartmentsByFloor = (apartments: ApartmentDetailType[]) => {
+  const floors = new Map<string, Map<string, number>>();
+
+  apartments.forEach((apt) => {
+    const pis = normalizePis(apt.pis);
+    const porta = String(apt.porta ?? '').trim() || '-';
+    const doors = floors.get(pis) ?? new Map<string, number>();
+    doors.set(porta, (doors.get(porta) ?? 0) + 1);
+    floors.set(pis, doors);
+  });
+
+  return Array.from(floors, ([pis, doors]) => ({
+    pis,
+    doors: Array.from(doors, ([porta, count]) => ({ porta, count })).sort((a, b) => compareAscending(a.porta, b.porta)),
+  })).sort((a, b) => compareAscending(a.pis, b.pis));
 };
 
 const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
@@ -446,6 +491,7 @@ export function ApartmentResults({
   streetGroups,
   loading,
   onResetSearch,
+  onSelectAddress,
   singleResult,
 }: ApartmentResultsProps) {
   const shouldOpenFirstItem = !!onResetSearch;
@@ -484,8 +530,9 @@ export function ApartmentResults({
   return (
     <div className={`d-flex flex-column gap-4`}>
 
+
       {!displayGroups.length && (
-        <div className="alert alert-warning p-5 rounded-0">
+        <div className="alert alert-warning p-5 rounded-0 border">
           <h4 className="alert-heading">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
           <p className="">Probablement el pis que busques és il·legal</p>
           <hr></hr>
@@ -501,57 +548,61 @@ export function ApartmentResults({
         return (
           <div
             key={idx}
-            className="results"
+            className="container"
           >
-            <h4 className="alert-heading">
-              S'han trobat&nbsp;
-              <strong>
-                {displayGroups.reduce((acc, g) => acc + (g.apartments_count || 0), 0)}&nbsp;habitatges amb llicencia d&apos;ús turístic</strong> en <strong>{group.address || 'Address not available'}</strong>
-            </h4>
-            <p className="">
-              Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
-            </p>
-            <ul className="list-group list-group-flush">
-              {group.apartments.map((apt, aptIdx) => (
-                <li key={aptIdx} className="list-group-item d-flex justify-content-between align-items-start">
-                  <p className="mb-0">
-                    {group.tipus_carrer && <span>{group.tipus_carrer} </span>}
-                    {group.carrer && <span>{group.carrer} </span>}
-                    {group.num1 && <span>{group.num1}{group.lletra1 || ''}, </span>}
-                    {apt.pis && <span>{normalizePis(apt.pis)} </span>}
-                    {apt.porta && <span>{apt.porta}</span>}</p>
-                </li>
-              ))}
-            </ul>
+            <ApartmentDetail group={group} allGroups={displayGroups} currentIndex={idx} />
+            <button
+              type="button"
+              className="btn btn-outline-secondary ms-auto"
+              accessKey="e"
+              title="Esborrar (Alt+E)"
+              onClick={onResetSearch}
+            >
+              Esborrar
+            </button>
+
           </div>
         );
       })}
 
       {chartGroups.length > 0 && (
-        <section className="street-addresses">
-          <h4>Adreces del mateix carrer amb llicència</h4>
-          <p className="text-gray-600">Ordenades per número.</p>
-          <ul className="list-group list-group-flush">
-            {chartGroups.map((group) => {
-              const isSearched = searchedKeys.has(getAddressGroupKey(group));
-              return (
-                <li
-                  key={getAddressGroupKey(group)}
-                  className={`list-group-item d-flex justify-content-between align-items-center gap-3${isSearched ? ' fw-semibold' : ''}`}
-                  aria-current={isSearched ? 'true' : undefined}
-                >
-                  <span>{group.address || `${group.tipus_carrer || ''} ${group.carrer || ''} ${group.num1 ?? ''}${group.lletra1 || ''}`.trim()}</span>
-                  <span className="badge bg-secondary rounded-pill">
-                    {group.apartments_count} habitatges · {group.total_places} places
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+        <section className="street-addresses bg-dark text-white py-5">
+          <div className='container'>
+            <h4>Adreces del mateix carrer amb llicència</h4>
+            <p className="text-gray-600">Ordenades per número.</p>
+            <div className="row row-cols-1 row-cols-md-4 g-3">
+              {chartGroups.map((group) => {
+                const isSearched = searchedKeys.has(getAddressGroupKey(group));
+                return (
+                  <div key={getAddressGroupKey(group)} className="col">
+                    <button
+                      type="button"
+                      className={`card h-100 w-100 text-start${isSearched ? ' border-primary' : ''}`}
+                      aria-current={isSearched ? 'true' : undefined}
+                      onClick={() => onSelectAddress?.(group)}
+                    >
+                      <div className="card-body d-flex flex-row gap-3">
+                        <FaRegBuilding className="fs-2" />
+                        <div className="d-flex flex-column gap-1">
+                          <h5 className="card-title mb-0">{formatAddress(group)}</h5>
+                          {formatArea(group).map((area) => (
+                            <span key={area} className="card-subtitle text-gray-600">{area}</span>
+                          ))}
+                          <span className="badge bg-secondary rounded-pill align-self-start mt-2">
+                            {group.apartments_count} habitatges · {group.total_places} places
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </section>
       )}
 
-      {/* <AddressNumberDistributionChart groups={chartGroups} /> */}
+      <AddressNumberDistributionChart groups={chartGroups} />
 
     </div>
   );
