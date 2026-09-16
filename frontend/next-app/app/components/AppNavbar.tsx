@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { versions } from '../config/versions';
+import { homeSections } from '../config/sections';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
@@ -28,7 +28,7 @@ export function AppNavbar({
   };
 
   return (
-    <nav className={`navbar navbar-expand-lg`} style={{ backgroundColor: '#FFF' }}>
+    <nav className={`navbar navbar-expand-lg sticky-top shadow-sm`} style={{ backgroundColor: '#FFF' }}>
       <div className="container">
         <Link
           className={`navbar-brand ${isMainActive ? 'fw-semibold text-primary' : ''}`}
@@ -63,30 +63,16 @@ export function AppNavbar({
           id="navbarNavAltMarkup"
         >
           <div className="navbar-nav ms-auto">
-            <Link
-              className={`nav-link ${isMainActive ? 'active fw-semibold' : ''}`}
-              href="/"
-              aria-current={isMainActive ? 'page' : undefined}
-              onClick={closeMenu}
-            >
-              Home
-            </Link>
-
-            {versions.map((version) => {
-              const isActive = pathname === version.href;
-
-              return (
-                <Link
-                  key={version.href}
-                  className={`nav-link ${isActive ? 'active fw-semibold' : ''}`}
-                  href={version.href}
-                  aria-current={isActive ? 'page' : undefined}
-                  onClick={closeMenu}
-                >
-                  {version.title}
-                </Link>
-              );
-            })}
+            {homeSections.map((section) => (
+              <Link
+                key={section.id}
+                className="nav-link"
+                href={isMainActive ? `#${section.id}` : `/#${section.id}`}
+                onClick={closeMenu}
+              >
+                {section.title}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

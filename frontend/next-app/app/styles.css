@@ -1,3 +1,13 @@
+:root {
+    /* Height of the sticky navbar; used to offset pinned blocks and anchor targets. */
+    --app-navbar-height: 80px;
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: var(--app-navbar-height);
+}
+
 h1,
 h2,
 h3,
@@ -154,8 +164,8 @@ label {
 /* Compact, pinned version of the search block shown while results are on screen. */
 .search-section--sticky {
     position: sticky;
-    top: 0;
-    z-index: 1030;
+    top: var(--app-navbar-height);
+    z-index: 1020;
     /* padding-top: 0.75rem !important;
     padding-bottom: 0.75rem !important; */
     /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); */
