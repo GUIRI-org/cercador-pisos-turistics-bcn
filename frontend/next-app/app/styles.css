@@ -267,9 +267,6 @@ label {
     background-color: #f5f6f7;
 }
 
-.floor-list>li {
-    padding: 0.5rem 0.75rem;
-}
 
 /* Division switch floating over the top-right corner of the map. */
 .choropleth-controls {

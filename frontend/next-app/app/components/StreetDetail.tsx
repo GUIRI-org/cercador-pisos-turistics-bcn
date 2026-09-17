@@ -105,105 +105,72 @@ export function ApartmentDetail({
 
   return (
     <div className="row">
-      <div className="max-w-[200px] d-flex flex-column gap-2 col col-md-3 pb-4">
+      <div className="d-flex flex-column gap-2 col-12 col-md-3 pb-4">
         <FaRegBuilding className="fs-1" aria-hidden="true" />
         <h2>{formatAddress(group) || 'Address not available'}</h2>
         {formatArea(group).map((area) => (
           <p key={area} className="text-gray-600 mb-0">{area}</p>
         ))}
-
-        {/* <ul className="list-group list-group-flush mt-auto">
-          <li className="list-group-item d-flex justify-content-between align-items-center gap-3 px-0">
-            <span>Total habitatges turístics</span>
-            <strong>{totalDoors}</strong>
-          </li>
-          <li className="list-group-item d-flex justify-content-between align-items-center gap-3 px-0">
-            <span>% densitat ocupació</span>
-            <strong>{Math.round(occupancyDensity)}%</strong>
-          </li>
-        </ul> */}
       </div>
-      {/* {hasCoordinates && (
-        <div>
-          <AddressMiniMap
-            lat={group.latitud_y as number}
-            lng={group.longitud_x as number}
-            label={group.address || 'Adreça'}
-            otherMarkers={otherStreetMarkers}
-          />
-          <div className="text-sm text-gray-600">
-            Longitud: {group.longitud_x} <br/> Latitud: {group.latitud_y}
-          </div>
-        </div>
-      )} */}
       <div className="col col-md-auto">
-        <div className='alert '>
-          <h4 className="alert-heading">
-            S'han trobat&nbsp;
-            <strong>
-              {totalDoors}&nbsp;habitatges</strong>&nbsp;amb llicencia d&apos;ús turístic
-          </h4>
-          <p className="">
-            Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
-          </p>
-          <ul className="list-group floor-list">
-            {Object.entries(pisosGrouped)
-              .sort(([pisA], [pisB]) => {
-                const aNum = Number.parseInt(pisA, 10);
-                const bNum = Number.parseInt(pisB, 10);
-                const aIsNum = !Number.isNaN(aNum);
-                const bIsNum = !Number.isNaN(bNum);
+        <h4 className="alert-heading">
+          S'han trobat&nbsp;
+          <strong>
+            {totalDoors}&nbsp;habitatges</strong>&nbsp;amb llicencia d&apos;ús turístic
+        </h4>
+        <p className="">
+          Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
+        </p>
+        <ul className="list-group floor-list">
+          {Object.entries(pisosGrouped)
+            .sort(([pisA], [pisB]) => {
+              const aNum = Number.parseInt(pisA, 10);
+              const bNum = Number.parseInt(pisB, 10);
+              const aIsNum = !Number.isNaN(aNum);
+              const bIsNum = !Number.isNaN(bNum);
 
-                if (aIsNum && bIsNum) return aNum - bNum;
-                if (aIsNum) return -1;
-                if (bIsNum) return 1;
+              if (aIsNum && bIsNum) return aNum - bNum;
+              if (aIsNum) return -1;
+              if (bIsNum) return 1;
 
-                return pisA.localeCompare(pisB, 'ca');
-              })
-              .map(([pis, pisData]) => (
-                <li key={pis} className="p-4">
-                  <div className="d-flex justify-content-between align-items-center pb-1">
-                    <small>Planta: {pis}</small>
-                    {/* <span className="badge text-bg-primary rounded-pill">
-                      {pisData.totalPlaces}
-                    </span> */}
-                  </div>
+              return pisA.localeCompare(pisB, 'ca');
+            })
+            .map(([pis, pisData]) => (
+              <li key={pis} className="d-flex align-items-stretch ">
+                <div className="border-end p-2 me-2">
+                  <small><strong>P</strong> {pis}</small>
+                </div>
 
-                  <ul className="list-group list-group-horizontal my-2 flex-wrap">
-                    {Object.entries(pisData.portes)
-                      .sort(([portaA], [portaB]) => portaA.localeCompare(portaB, 'ca'))
-                      .map(([porta, portaPlaces]) => (
-                        <li
-                          key={`${pis}-${porta}`}
-                          className="d-flex me-4"
-                        >
-                          <MdOutlineDoorFront className="inline-block me-2 fs-2" />
-                          <div>
-                            <small className="text-gray-600 d-block">
-                              {formatAddress(group)}
-                            </small>
-                            <small className="text-gray-600 d-block">
-                              {`${pis}${porta !== '-' ? ` - ${porta}` : ''}`}
-                            </small>
-
-                            <span className="d-inline-flex align-items-center flex-wrap gap-1">
-                              {Array.from({ length: Math.max(0, Math.round(portaPlaces)) }).map((_, index) => (
-                                <span
-                                  key={`${pis}-${porta}-place-${index}`}
-                                  className="d-inline-block rounded-sm border border-blue-200 bg-gray-500"
-                                  style={{ width: '8px', height: '8px' }}
-                                  title={`1 plaça de porta ${porta}`}
-                                />
-                              ))}
-                            </span>
-                          </div>
-                        </li>
-                      ))}
-                  </ul>
-                </li>
-              ))}
-          </ul>
-        </div>
+                <ul className="list-group list-group-horizontal flex-wrap p-2">
+                  {Object.entries(pisData.portes)
+                    .sort(([portaA], [portaB]) => portaA.localeCompare(portaB, 'ca'))
+                    .map(([porta, portaPlaces]) => (
+                      <li
+                        key={`${pis}-${porta}`}
+                        className="d-flex me-4"
+                      >
+                        <MdOutlineDoorFront className="inline-block me-2 fs-2" />
+                        <div>
+                          <small className="text-gray-600 d-block">
+                            <strong>{formatAddress(group)}</strong>  {`${pis}${porta !== '-' ? ` - ${porta}` : ''}`}
+                          </small>
+                          <span className="d-inline-flex align-items-center flex-wrap gap-1">
+                            {Array.from({ length: Math.max(0, Math.round(portaPlaces)) }).map((_, index) => (
+                              <span
+                                key={`${pis}-${porta}-place-${index}`}
+                                className="d-inline-block rounded-sm border border-blue-200 bg-gray-500"
+                                style={{ width: '8px', height: '8px' }}
+                                title={`1 plaça de porta ${porta}`}
+                              />
+                            ))}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                </ul>
+              </li>
+            ))}
+        </ul>
       </div>
 
     </div>

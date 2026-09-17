@@ -214,12 +214,28 @@ function AddressLocationMaps({ group }: { group: AddressGroup }) {
       }));
   }, [showOtherApartments, cityGroups]);
 
+  const areaTotals = useMemo(() => {
+    if (!cityGroups) return { district: null, neighborhood: null } as { district: number | null; neighborhood: number | null };
+
+    const sumFor = (matches: (other: AddressGroup) => boolean) =>
+      cityGroups.filter(matches).reduce((acc, other) => acc + (other.apartments_count || 0), 0);
+
+    return {
+      district: hasDistrict ? sumFor((other) => Number(other.codi_districte) === Number(group.codi_districte)) : null,
+      neighborhood: hasNeighborhood ? sumFor((other) => Number(other.codi_barri) === Number(group.codi_barri)) : null,
+    };
+  }, [cityGroups, group, hasDistrict, hasNeighborhood]);
+
   if (!hasDistrict && !hasNeighborhood) return null;
 
   return (
     <div className="row g-3 my-3">
 
-      <div className="col-12 col-md-4 ms-auto">
+      <div className="col-12 col-md-3">
+        <h5 className="mb-1">{group.nom_districte || 'Districte'}</h5>
+        <p className="text-gray-600">
+          {areaTotals.district !== null ? `${areaTotals.district} habitatges turístics` : 'Carregant total…'}
+        </p>
         <div className="choropleth-square">
           <ChoroplethMap
             geoJsonUrl={BARRIS_GEOJSON}
@@ -237,7 +253,11 @@ function AddressLocationMaps({ group }: { group: AddressGroup }) {
           />
         </div>
       </div>
-      <div className="col-12 col-md-8">
+      <div className="col-12 col-md-9">
+        <h5 className="mb-1">{group.nom_barri || 'Barri'}</h5>
+        <p className="text-gray-600">
+          {areaTotals.neighborhood !== null ? `${areaTotals.neighborhood} habitatges turístics` : 'Carregant total…'}
+        </p>
         <div className="choropleth-double">
           <ChoroplethMap
             geoJsonUrl={BARRIS_GEOJSON}
