@@ -136,7 +136,7 @@ export function ApartmentDetail({
           </div>
         </div>
       )} */}
-      <div className="col col-md-8 ps-4">
+      <div className="col col-md-auto">
         <div className='alert '>
           <h4 className="alert-heading">
             S'han trobat&nbsp;
@@ -161,7 +161,7 @@ export function ApartmentDetail({
                 return pisA.localeCompare(pisB, 'ca');
               })
               .map(([pis, pisData]) => (
-                <li key={pis} className="">
+                <li key={pis} className="p-4">
                   <div className="d-flex justify-content-between align-items-center pb-1">
                     <small>Planta: {pis}</small>
                     {/* <span className="badge text-bg-primary rounded-pill">

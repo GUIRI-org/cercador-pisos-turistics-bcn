@@ -22,6 +22,11 @@ export interface ChoroplethPoint {
     /** Radius in screen pixels, so dots keep their size while zooming. */
     radius?: number;
     color?: string;
+    /** Fill opacity, so overlapping markers can read as a density cloud. */
+    opacity?: number;
+    /** Outline colour, useful to keep light markers readable over the shapes. */
+    stroke?: string;
+    shape?: 'circle' | 'square';
     /** Draws the dot larger and pins its label next to it. */
     highlighted?: boolean;
 }
@@ -77,8 +82,12 @@ interface ChoroplethMapProps {
     contextLayer?: ContextLayer;
     /** Draws the `labelProperty` name centred on each outline area and context area. */
     showAreaLabels?: boolean;
+    /** Loads the Leaflet tile basemap behind the shapes while zoomed. */
+    showBasemap?: boolean;
     /** Zooms the viewport onto the area with this code. */
     focusCode?: string | number | null;
+    /** Property used to match `focusCode`; defaults to `codeProperty`. Useful to zoom to a parent area. */
+    focusProperty?: string;
     /** Rendered at the top of the floating panel, above the legend. */
     controls?: ReactNode;
     /** Rendered in the nested panel that slides out of the floating panel; hidden when omitted. */
@@ -157,7 +166,9 @@ export function ChoroplethMap({
     boundaryStrokeWidth = 2.5,
     contextLayer,
     showAreaLabels = true,
+    showBasemap = true,
     focusCode,
+    focusProperty,
     controls,
     detail,
     showLegend = true,
@@ -183,6 +194,9 @@ export function ChoroplethMap({
     const basemapMapRef = useRef<LeafletMap | null>(null);
 
     const isZoomed = focusCode !== undefined && focusCode !== null;
+
+    // With height="100%" the map grows inside a sized parent instead of using a fixed box.
+    const fillsParent = height === '100%';
 
     const numericHeight = typeof height === 'number' ? height : 420;
 
@@ -285,28 +299,33 @@ export function ChoroplethMap({
         const projection = geoMercator().fitSize([width, numericHeight], geoData);
         const path = geoPath(projection);
 
-        // Zooming means framing a single feature instead of the whole layer; the projection itself never changes.
-        const focus =
+        // Zooming means framing the matching features instead of the whole layer; the projection itself never changes.
+        const focusFeatures =
             focusCode === undefined || focusCode === null
-                ? undefined
-                : geoData.features.find((feature) => normalizeCode(feature.properties?.[codeProperty]) === normalizeCode(focusCode));
+                ? []
+                : geoData.features.filter(
+                    (feature) => normalizeCode(feature.properties?.[focusProperty ?? codeProperty]) === normalizeCode(focusCode)
+                );
+        const focus: Feature<Geometry> | FeatureCollection<Geometry> | undefined = focusFeatures.length
+            ? ({ type: 'FeatureCollection', features: focusFeatures } as FeatureCollection<Geometry>)
+            : undefined;
 
         // The focus points win the framing: they are the connected addresses the user just picked.
         const linePoints = focusPoints
             .map((point) => projection(point))
             .filter((point): point is [number, number] => Array.isArray(point));
         const lineBounds =
-            linePoints.length > 1
+            linePoints.length > 0
                 ? ([
                       [Math.min(...linePoints.map((p) => p[0])), Math.min(...linePoints.map((p) => p[1]))],
                       [Math.max(...linePoints.map((p) => p[0])), Math.max(...linePoints.map((p) => p[1]))],
                   ] as [[number, number], [number, number]])
                 : null;
 
-        const [[x0, y0], [x1, y1]] = lineBounds ?? path.bounds((focus ?? geoData) as Feature<Geometry>);
+        const [[x0, y0], [x1, y1]] = lineBounds ?? path.bounds((focus ?? geoData) as FeatureCollection<Geometry>);
         const pad = lineBounds ? 16 : focus ? 8 : 4;
-        // Keeps a short street from zooming past any useful context.
-        const minExtent = lineBounds ? 60 : 0;
+        // Keeps a short street, or a lone address, from zooming past any useful context.
+        const minExtent = lineBounds ? (linePoints.length > 1 ? 60 : 40) : 0;
         const targetWidth = Math.max(x1 - x0 + pad * 2, minExtent);
         const targetHeight = Math.max(y1 - y0 + pad * 2, minExtent);
         const targetCenterX = (x0 + x1) / 2;
@@ -319,7 +338,7 @@ export function ChoroplethMap({
         const viewBoxHeight = boxAspect >= targetAspect ? targetHeight : targetWidth / boxAspect;
 
         // Two thirds across normally, a bit right of centre while zoomed; clamped so nothing gets cropped.
-        const desiredFraction = alignRight ? (focus || lineBounds ? 0.7 : 0.66) : 0.5;
+        const desiredFraction = alignRight && (showLegend || Boolean(detail)) ? (focus || lineBounds ? 0.7 : 0.66) : 0.5;
         const centerFraction = Math.min(desiredFraction, 1 - targetWidth / 2 / viewBoxWidth);
         const viewBoxX = targetCenterX - centerFraction * viewBoxWidth;
         const viewBoxY = targetCenterY - viewBoxHeight / 2;
@@ -331,7 +350,7 @@ export function ChoroplethMap({
             center: [viewBoxX + viewBoxWidth / 2, viewBoxY + viewBoxHeight / 2] as [number, number],
             unitsPerPixel: viewBoxWidth / (viewport.width || width),
         };
-    }, [geoData, width, numericHeight, viewport, alignRight, focusCode, codeProperty, focusPoints]);
+    }, [geoData, width, numericHeight, viewport, alignRight, showLegend, detail, focusCode, focusProperty, codeProperty, focusPoints]);
 
     const pathGenerator = projected?.path ?? null;
     // Strokes, labels and dots are sized in pixels and converted, so they stay constant while zooming.
@@ -339,7 +358,7 @@ export function ChoroplethMap({
 
     // Tiles are only worth loading once the view is zoomed into a single area.
     useEffect(() => {
-        if (!isZoomed) return;
+        if (!isZoomed || !showBasemap) return;
         let cancelled = false;
 
         import('leaflet').then((L) => {
@@ -368,7 +387,7 @@ export function ChoroplethMap({
             basemapMapRef.current = null;
             setBasemapReady(false);
         };
-    }, [isZoomed]);
+    }, [isZoomed, showBasemap]);
 
     // Leaflet and d3 share the spherical Mercator, so the SVG viewBox can be converted into a centre and a fractional zoom.
     useEffect(() => {
@@ -450,7 +469,10 @@ export function ChoroplethMap({
     }, [geoData, valueByCode, codeProperty]);
 
     return (
-        <div className="container choropleth-wrapper d-flex flex-column gap-2 position-relative">
+        <div
+            className={`${fillsParent ? '' : 'container '}choropleth-wrapper d-flex flex-column gap-2 position-relative`}
+            style={fillsParent ? { height: '100%' } : undefined}
+        >
             {(showLegend || detail) && (
                 <div className={`choropleth-panel${panelCollapsed ? ' choropleth-panel--collapsed' : ''}`}>
                     <button
@@ -480,13 +502,17 @@ export function ChoroplethMap({
             )
             }
 
-            <div ref={mapRef} className="overflow-hidden position-relative bg-light" style={{ height }}>
+            <div
+                ref={mapRef}
+                className="overflow-hidden position-relative bg-light"
+                style={fillsParent ? { flex: '1 1 auto', minHeight: 0 } : { height }}
+            >
                 {controls && (
                     <div className="position-absolute top-0 end-0 p-2" style={{ zIndex: 3 }}>
                         {controls}
                     </div>
                 )}
-                {isZoomed && <div ref={basemapRef} className="choropleth-basemap" />}
+                {isZoomed && showBasemap && <div ref={basemapRef} className="choropleth-basemap" />}
                 {geoData && pathGenerator ? (
                     <svg viewBox={projected?.viewBox} style={{ width: '100%', height: '100%', position: 'relative', zIndex: 1 }}>
                         {contextData &&
@@ -515,14 +541,15 @@ export function ChoroplethMap({
                                 'Sense dades';
                             const value = datum?.value ?? 0;
                             const isHovered = hoveredCode === code;
-                            const isFocused = isZoomed && focusCode !== undefined && focusCode !== null && code === normalizeCode(focusCode);
+                            const isFocused =
+                                !focusProperty && isZoomed && focusCode !== undefined && focusCode !== null && code === normalizeCode(focusCode);
 
                             return (
                                 <path
                                     key={idx}
                                     d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
                                     fill={datum ? colorScale(datum.value) : '#e5e7eb'}
-                                    fillOpacity={isFocused ? 0 : isZoomed ? 0.25 : 0.85}
+                                    fillOpacity={isFocused ? 0 : isZoomed && showBasemap ? 0.25 : 0.85}
                                     stroke={isFocused || isHovered ? '#111827' : '#4b5563'}
                                     strokeWidth={(isFocused ? 4 : isHovered ? 2 : 1) * unit}
                                     strokeOpacity={isFocused ? 0.9 : isHovered ? 0.6 : 0.25}
@@ -541,32 +568,63 @@ export function ChoroplethMap({
                             );
                         })}
                         {boundaryData &&
-                            boundaryData.features.map((feature, idx) => (
-                                <path
-                                    key={`boundary-${idx}`}
-                                    d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
-                                    fill="none"
-                                    stroke="#1e293b"
-                                    strokeWidth={boundaryStrokeWidth * unit}
-                                    strokeOpacity={0.4}
-                                    style={{ pointerEvents: 'none' }}
-                                />
-                            ))}
+                            boundaryData.features.map((feature, idx) => {
+                                // The boundary holding the focus (e.g. the district of the address) gets a light tint.
+                                const isFocusedBoundary =
+                                    focusCode !== undefined &&
+                                    focusCode !== null &&
+                                    normalizeCode(feature.properties?.[focusProperty ?? codeProperty]) === normalizeCode(focusCode);
+
+                                return (
+                                    <path
+                                        key={`boundary-${idx}`}
+                                        d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
+                                        fill={isFocusedBoundary ? '#1e293b' : 'none'}
+                                        fillOpacity={isFocusedBoundary ? 0.12 : 0}
+                                        stroke="#1e293b"
+                                        strokeWidth={boundaryStrokeWidth * unit}
+                                        strokeOpacity={0.4}
+                                        style={{ pointerEvents: 'none' }}
+                                    />
+                                );
+                            })}
                         {points.map((point, idx) => {
                             const projectedPoint = projected?.projection([point.longitude, point.latitude]);
                             if (!projectedPoint) return null;
                             const radius = (point.highlighted ? (point.radius ?? 5) * 2 : point.radius ?? 5) * unit;
+                            const pointerHandlers = {
+                                onMouseEnter: (e: React.MouseEvent) =>
+                                    point.label && setTooltip({ x: e.clientX, y: e.clientY, text: point.label }),
+                                onMouseMove: (e: React.MouseEvent) =>
+                                    setTooltip((t) => (t ? { ...t, x: e.clientX, y: e.clientY } : t)),
+                                onMouseLeave: () => setTooltip(null),
+                            };
                             return (
                                 <g key={`result-point-${idx}`}>
-                                    <circle
-                                        cx={projectedPoint[0]}
-                                        cy={projectedPoint[1]}
-                                        r={radius}
-                                        fill={point.color ?? '#dc2626'}
-                                        onMouseEnter={(e) => point.label && setTooltip({ x: e.clientX, y: e.clientY, text: point.label })}
-                                        onMouseMove={(e) => setTooltip((t) => (t ? { ...t, x: e.clientX, y: e.clientY } : t))}
-                                        onMouseLeave={() => setTooltip(null)}
-                                    />
+                                    {point.shape === 'square' ? (
+                                        <rect
+                                            x={projectedPoint[0] - radius}
+                                            y={projectedPoint[1] - radius}
+                                            width={radius * 2}
+                                            height={radius * 2}
+                                            fill={point.color ?? '#dc2626'}
+                                            fillOpacity={point.opacity}
+                                            stroke={point.stroke}
+                                            strokeWidth={point.stroke ? unit : undefined}
+                                            {...pointerHandlers}
+                                        />
+                                    ) : (
+                                        <circle
+                                            cx={projectedPoint[0]}
+                                            cy={projectedPoint[1]}
+                                            r={radius}
+                                            fill={point.color ?? '#dc2626'}
+                                            fillOpacity={point.opacity}
+                                            stroke={point.stroke}
+                                            strokeWidth={point.stroke ? unit : undefined}
+                                            {...pointerHandlers}
+                                        />
+                                    )}
                                     {point.highlighted && point.label && (
                                         <text
                                             x={projectedPoint[0]}

@@ -252,6 +252,16 @@ label {
     font-weight: normal;
 }
 
+/* Square box for the context maps; the map fills it with height: 100%. */
+.choropleth-square {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+}
+.choropleth-double {
+    width: 100%;
+    aspect-ratio: 2 / 1;
+}
+
 /* Alternating soft gray rows for the per-floor list. */
 .floor-list>li:nth-child(odd) {
     background-color: #f5f6f7;

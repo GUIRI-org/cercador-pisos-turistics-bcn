@@ -1,8 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
 import { ApartmentDetail } from './StreetDetail';
+import { ChoroplethMap } from './ChoroplethMap';
+import { EPSG_25831 } from '../lib/geoUtils';
+import { fetchApartmentMap } from '@/lib/api';
 import { FaRegBuilding } from 'react-icons/fa6';
 
 
@@ -157,6 +160,123 @@ const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
   if (aNum !== bNum) return aNum - bNum;
   return (a.lletra1 || '').localeCompare(b.lletra1 || '', 'ca');
 };
+
+// Same file as the main map: every administrative level lives in it, picked through TIPUS_UA.
+const BARRIS_GEOJSON = '/geo/barcelona-barris.geojson';
+
+// Context only: the main layer still drives the zoom, so the view stays on the city shapes.
+const COMARQUES_CONTEXT = {
+  geoJsonUrl: '/geo/dts_comarques_8comarques.geojson',
+  stroke: '#94a3b8',
+  strokeWidth: 1.5,
+};
+
+const streetKeyOf = (group: AddressGroup) =>
+  `${group.tipus_carrer ?? ''} ${group.carrer ?? ''}`.trim().toLowerCase();
+
+// City view with the district of the address coloured, next to a district view highlighting its neighbourhood.
+function AddressLocationMaps({ group }: { group: AddressGroup }) {
+  const [cityGroups, setCityGroups] = useState<AddressGroup[] | null>(null);
+  const [showOtherApartments, setShowOtherApartments] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchApartmentMap().then((groups) => {
+      if (!cancelled) setCityGroups(groups);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasDistrict = group.codi_districte !== undefined && group.codi_districte !== null;
+  const hasNeighborhood = group.codi_barri !== undefined && group.codi_barri !== null;
+
+  const addressPoints =
+    group.longitud_x !== undefined && group.latitud_y !== undefined
+      ? [{ longitude: group.longitud_x, latitude: group.latitud_y, label: group.address, radius: 4, color: '#dc2626' }]
+      : [];
+
+  // Translucent white squares for every other licensed address, so overlaps read as a density cloud.
+  const cityPoints = useMemo(() => {
+    if (!showOtherApartments || !cityGroups) return [];
+
+    return cityGroups
+      .filter((other) => other.longitud_x !== undefined && other.latitud_y !== undefined)
+      .map((other) => ({
+        longitude: other.longitud_x as number,
+        latitude: other.latitud_y as number,
+        label: `${other.address} (${other.apartments_count} habitatges)`,
+        radius: 2,
+        shape: 'square' as const,
+        color: '#ffffff',
+        opacity: 0.4,
+      }));
+  }, [showOtherApartments, cityGroups]);
+
+  if (!hasDistrict && !hasNeighborhood) return null;
+
+  return (
+    <div className="row g-3 my-3">
+
+      <div className="col-12 col-md-4 ms-auto">
+        <div className="choropleth-square">
+          <ChoroplethMap
+            geoJsonUrl={BARRIS_GEOJSON}
+            sourceCrs={EPSG_25831}
+            filterProperty="TIPUS_UA"
+            filterValue="DISTRICTE"
+            codeProperty="DISTRICTE"
+            labelProperty="NOM"
+            contextLayer={COMARQUES_CONTEXT}
+            data={hasDistrict ? [{ code: group.codi_districte as number, value: 1, label: group.nom_districte }] : []}
+            points={[...cityPoints, ...addressPoints]}
+            height="100%"
+            showAreaLabels={false}
+            showLegend={false}
+          />
+        </div>
+      </div>
+      <div className="col-12 col-md-8">
+        <div className="choropleth-double">
+          <ChoroplethMap
+            geoJsonUrl={BARRIS_GEOJSON}
+            sourceCrs={EPSG_25831}
+            filterProperty="TIPUS_UA"
+            filterValue="BARRI"
+            boundaryFilterValue="DISTRICTE"
+            codeProperty="BARRI"
+            labelProperty="NOM"
+            contextLayer={COMARQUES_CONTEXT}
+            data={hasNeighborhood ? [{ code: group.codi_barri as number, value: 1, label: group.nom_barri }] : []}
+            focusProperty="DISTRICTE"
+            focusCode={hasDistrict ? (group.codi_districte as number) : null}
+            points={[...cityPoints, ...addressPoints]}
+            height="100%"
+            showAreaLabels={false}
+            showBasemap={false}
+            showLegend={false}
+          />
+        </div>
+        <div className="form-check mt-2">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id={`show-other-apartments-${group.codi_barri ?? 'x'}-${group.num1 ?? 'x'}`}
+            checked={showOtherApartments}
+            onChange={(e) => setShowOtherApartments(e.target.checked)}
+          />
+          <label
+            className="form-check-label"
+            htmlFor={`show-other-apartments-${group.codi_barri ?? 'x'}-${group.num1 ?? 'x'}`}
+          >
+            Mostra la resta d&apos;habitatges turístics de la ciutat
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Each district gets a fixed hue; neighbourhoods within it are shades (gradient) of that hue.
 const hashStringToHue = (value: string): number => {
@@ -528,11 +648,11 @@ export function ApartmentResults({
   }
 
   return (
-    <div className={`d-flex flex-column gap-4`}>
+    <div className={`d-flex flex-column gap-4 py-5`}>
 
 
       {!displayGroups.length && (
-        <div className="alert alert-warning p-5 rounded-0 border">
+        <div className="alert alert-warning p-5 rounded-0 border container">
           <h4 className="alert-heading">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
           <p className="">Probablement el pis que busques és il·legal</p>
           <hr></hr>
@@ -551,6 +671,8 @@ export function ApartmentResults({
             className="container"
           >
             <ApartmentDetail group={group} allGroups={displayGroups} currentIndex={idx} />
+
+            <AddressLocationMaps group={group} />
             <button
               type="button"
               className="btn btn-outline-secondary ms-auto"
