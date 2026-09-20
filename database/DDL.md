@@ -4,6 +4,14 @@
 - **Source**: https://opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic
 - **Title**: Viviendas de uso turístico de la ciudad de Barcelona
 - **Schema**: barcelona
+- **Licencia**: Creative Commons Attribution 4.0  [Open Data]
+- **File name**: 2026_1T_hut_comunicacio_opendata.csv.zip
+- **Más información**:	http://meet.barcelona.cat/habitatgesturistics/es/
+- **Fuente**:	Ajuntament de Barcelona
+- **Información histórica**:	Sí
+- **Gerencia**:	Direcció de Tecnologia i Transformació Digital d'Infraestructures i Urbanisme
+- **Fecha primera publicación**:	27/07/2016
+- **Frecuencia actualización**:	Semanal
 
 ---
 

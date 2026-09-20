@@ -1,5 +1,6 @@
 -- Load CSV data into barcelona.habitatges_us_turistic table
--- This script imports the hut_comunicacio_opendata.csv file into PostgreSQL
+-- This script imports the quarterly hut_comunicacio_opendata.csv release (e.g. 2026_1T_hut_comunicacio_opendata.csv) into PostgreSQL
+-- Note: releases from 2026 onwards quote LONGITUD_X/LATITUD_Y and use a comma as decimal separator (e.g. "2,17017206787341")
 -- 
 -- Usage:
 --   psql -h <host> -p <port> -U <user> -d <database> -f load-habitatges-csv.sql
@@ -34,8 +35,9 @@ CREATE TEMPORARY TABLE temp_habitatges (
     porta VARCHAR(10),
     numero_registre_generalitat VARCHAR(20),
     numero_places SMALLINT,
-    longitud_x NUMERIC(12, 10),
-    latitud_y NUMERIC(12, 10)
+    -- Loaded as TEXT because recent releases use a comma decimal separator (e.g. "2,17017206787341")
+    longitud_x TEXT,
+    latitud_y TEXT
 );
 
 -- Load CSV file into temporary table
@@ -52,10 +54,12 @@ SELECT
     n_expedient, codi_districte, nom_districte, codi_barri, nom_barri,
     tipus_carrer, carrer, tipus_num, num1, lletra1, num2, lletra2,
     bloc, portal, escala, pis, porta, numero_registre_generalitat,
-    numero_places, longitud_x, latitud_y,
+    numero_places,
+    NULLIF(REPLACE(longitud_x, ',', '.'), '')::NUMERIC(12, 10) AS longitud_x,
+    NULLIF(REPLACE(latitud_y, ',', '.'), '')::NUMERIC(12, 10) AS latitud_y,
     CASE 
         WHEN longitud_x IS NOT NULL AND latitud_y IS NOT NULL
-        THEN ST_GeomFromText('POINT(' || longitud_x || ' ' || latitud_y || ')', 4326)
+        THEN ST_GeomFromText('POINT(' || REPLACE(longitud_x, ',', '.') || ' ' || REPLACE(latitud_y, ',', '.') || ')', 4326)
         ELSE NULL
     END AS geom,
     2026 AS year_updated,

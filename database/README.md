@@ -6,7 +6,7 @@ This folder contains the database schema and initialization scripts.
 
 The database uses a **CSV-based initialization approach**:
 - DDL scripts create the schema and tables
-- CSV data is loaded directly from `data/interim/hut_comunicacio_opendata.csv`
+- CSV data is loaded directly from `data/interim/2026_1T_hut_comunicacio_opendata.csv`
 - Normalization scripts ensure data quality
 
 This approach provides transparency, version control, and eliminates the need for large binary dump files.
@@ -45,8 +45,9 @@ The database is initialized using the following scripts (executed in order):
    - Creates all necessary indexes (geom, coordinates, locations, etc.)
 
 2. **`02-load-data.sql`** (mapped to `load-habitatges-csv.sql`) - Loads CSV data into the database
-   - Imports data from `/data/hut_comunicacio_opendata.csv`
+   - Imports data from `/data/hut_comunicacio_opendata.csv` (mounted from `data/interim/2026_1T_hut_comunicacio_opendata.csv`)
    - Creates temporary staging table
+   - Converts the comma decimal separator used by recent BCN Open Data releases (e.g. `"2,17017206787341"`) before casting coordinates to `NUMERIC`
    - Inserts records with proper geometry calculation
    - Handles conflicts with UPSERT logic
 
@@ -113,11 +114,13 @@ The database uses a **CSV-based initialization approach** instead of binary dump
 
 ### Data Source
 
-**Primary file:** `data/interim/hut_comunicacio_opendata.csv`
+**Primary file:** `data/interim/2026_1T_hut_comunicacio_opendata.csv`
 
 This file contains consolidated tourist housing data for Barcelona from:
 - **Source:** [Open Data BCN - Habitatges d'ús turístic](https://opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic)
 - **Description:** Tourist housing registry for Barcelona city
+
+**Note:** Future quarterly releases follow the `<YEAR>_<QUARTER>_hut_comunicacio_opendata.csv` naming pattern (e.g. `2026_2T_hut_comunicacio_opendata.csv`). To pick up a new release, update the source path in [infra/compose-db.yaml](../infra/compose-db.yaml) and the `year_updated`/`quarter_updated` values in [load-habitatges-csv.sql](load-habitatges-csv.sql).
 
 The CSV file is automatically loaded during database initialization with proper PostGIS geometry calculation
 For more information about the database structure, refer to [DDL.md](DDL.md).
@@ -167,7 +170,7 @@ docker exec $DB_CONTAINER_NAME psql \
   -f /docker-entrypoint-initdb.d/02-load-data.sql
 ```
 
-The script reads from `/data/hut_comunicacio_opendata.csv` (mounted from `data/interim/hut_comunicacio_opendata.csv`) and imports it with geographic points computed from coordinates.
+The script reads from `/data/hut_comunicacio_opendata.csv` (mounted from `data/interim/2026_1T_hut_comunicacio_opendata.csv`) and imports it with geographic points computed from coordinates.
 
 Data source: https://opendata-ajuntament.barcelona.cat/data/es/dataset/habitatges-us-turistic
 

@@ -40,7 +40,7 @@ services:
       - ../database/01-create-schema.sql:/docker-entrypoint-initdb.d/01-create-schema.sql:ro
       - ../database/load-habitatges-csv.sql:/docker-entrypoint-initdb.d/02-load-data.sql:ro
       - ../database/02-normalize-address-coordinates.sql:/docker-entrypoint-initdb.d/03-normalize-address-coordinates.sql:ro
-      - ../data/interim/hut_comunicacio_opendata.csv:/data/hut_comunicacio_opendata.csv:ro
+      - ../data/interim/2026_1T_hut_comunicacio_opendata.csv:/data/hut_comunicacio_opendata.csv:ro
       - ./postgresql/custom-postgresql.conf:/etc/postgresql/postgresql.conf
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     shm_size: "256mb"

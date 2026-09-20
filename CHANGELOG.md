@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dynamic Nginx entrypoint script that only renders frontend proxy config when frontend is enabled
   - Prevents Nginx startup failures when frontend containers are not running
 
+### Changed
+- **Database CSV data source**: Switched initial data load from `data/interim/hut_comunicacio_opendata.csv` to `data/interim/2026_1T_hut_comunicacio_opendata.csv` (2026 Q1 Open Data BCN release)
+  - `load-habitatges-csv.sql` now stages `LONGITUD_X`/`LATITUD_Y` as text and converts the comma decimal separator used by this release (e.g. `"2,17017206787341"`) before casting to `NUMERIC`
+  - Documentation updated to reference the new source file and naming pattern for future quarterly releases
+
 ### Fixed
 - **Next.js HMR cross-origin support**: Fixed websocket upgrade failures for nginx-proxied dev domains
   - Added dynamic `allowedDevOrigins` configuration that includes nginx dev domain (`next.${MAIN_DOMAIN}`) when available

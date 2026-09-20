@@ -73,7 +73,7 @@ This launches:
 - Mage: http://mage.guiripisos.local:8888
 - Database: `localhost:5432` (psql credentials in `infra/.env`)
 
-1. Start frontend dev server (optional):
+5. Start frontend dev server (optional):
 
 ```bash
 cd frontend/observable-framework-app
@@ -100,15 +100,6 @@ Run `make help` to see all available commands. Quick reference:
 
 See [docs/make-commands.md](docs/make-commands.md) for complete documentation.
 
-5. Start frontend dev server (optional):
-
-```bash
-cd frontend/observable-framework-app
-npm install
-npm run dev
-```
-
-Then visit http://localhost:3000
 
 ## Development
 
@@ -122,9 +113,9 @@ Then visit http://localhost:3000
 
 Manage the PostgreSQL schema and data:
 
-- **Schema definition**: [database/DDL.md](database/DDL.md)
 - **Data import (basic)**: [database/load-habitatges-csv.sql](database/load-habitatges-csv.sql)
 - **Setup details**: [database/README.md](database/README.md)
+- **Schema definition**: [database/DDL.md](database/DDL.md)
 
 ### Data Pipelines
 
