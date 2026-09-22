@@ -1,0 +1,7 @@
+info:
+  name: Busqueda completa
+  type: folder
+  seq: 8
+
+request:
+  auth: inherit

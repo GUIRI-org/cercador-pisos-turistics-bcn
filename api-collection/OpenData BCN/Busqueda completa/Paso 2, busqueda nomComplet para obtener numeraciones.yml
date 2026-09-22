@@ -1,14 +1,14 @@
 info:
-  name: Cerca territori - exemple
+  name: Paso 2, busqueda nomComplet para obtener numeraciones
   type: http
-  seq: 4
+  seq: 2
 
 http:
   method: GET
-  url: https://{{baseURL}}/geoBCN/serveis/territori?q=carrer de sants, 22
+  url: https://{{baseURL}}/geoBCN/serveis/territori?q=carrer de sants
   params:
     - name: q
-      value: carrer de sants, 22
+      value: carrer de sants
       type: query
   auth: inherit
 
