@@ -5,10 +5,10 @@ info:
 
 http:
   method: GET
-  url: https://{{baseURL}}/geoBCN/serveis/territori?q=tarros, 3
+  url: https://{{baseURL}}/geoBCN/serveis/territori?q=agullers
   params:
     - name: q
-      value: tarros, 3
+      value: agullers
       type: query
   auth: inherit
 
@@ -17,3 +17,4 @@ settings:
   timeout: 0
   followRedirects: true
   maxRedirects: 5
+  forwardAuthorizationHeader: true
