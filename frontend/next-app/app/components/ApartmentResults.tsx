@@ -11,6 +11,7 @@ import { FaRegBuilding } from 'react-icons/fa6';
 
 interface ApartmentResultsProps {
   title: string;
+  streetName?: string;
   addressGroups: AddressGroup[];
   streetGroups?: AddressGroup[];
   loading?: boolean;
@@ -113,8 +114,8 @@ const dedupeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
   return Array.from(merged.values());
 };
 
-const formatAddress = (group: AddressGroup) => {
-  const street = `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
+const formatAddress = (group: AddressGroup, streetName?: string) => {
+  const street = streetName || `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
   const number = `${group.num1 ?? ''}${group.lletra1 || ''}`.trim();
   if (street && number) return `${street}, ${number}`;
   // Falls back to the raw address, adding the comma before its first number.
@@ -175,14 +176,17 @@ const streetKeyOf = (group: AddressGroup) =>
   `${group.tipus_carrer ?? ''} ${group.carrer ?? ''}`.trim().toLowerCase();
 
 // City view with the district of the address coloured, next to a district view highlighting its neighbourhood.
-function AddressLocationMaps({ group }: { group: AddressGroup }) {
+function AddressLocationMaps({ group, streetName }: { group: AddressGroup; streetName?: string }) {
   const [cityGroups, setCityGroups] = useState<AddressGroup[] | null>(null);
+  const [cityLoading, setCityLoading] = useState(true);
   const [showOtherApartments, setShowOtherApartments] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     fetchApartmentMap().then((groups) => {
       if (!cancelled) setCityGroups(groups);
+    }).finally(() => {
+      if (!cancelled) setCityLoading(false);
     });
     return () => {
       cancelled = true;
@@ -194,7 +198,7 @@ function AddressLocationMaps({ group }: { group: AddressGroup }) {
 
   const addressPoints =
     group.longitud_x !== undefined && group.latitud_y !== undefined
-      ? [{ longitude: group.longitud_x, latitude: group.latitud_y, label: group.address, radius: 4, color: '#dc2626' }]
+      ? [{ longitude: group.longitud_x, latitude: group.latitud_y, label: formatAddress(group, streetName), radius: 4, color: '#dc2626' }]
       : [];
 
   // Translucent white squares for every other licensed address, so overlaps read as a density cloud.
@@ -228,9 +232,18 @@ function AddressLocationMaps({ group }: { group: AddressGroup }) {
 
   if (!hasDistrict && !hasNeighborhood) return null;
 
+  if (cityLoading) {
+    return (
+      <div className="row g-3 my-3">
+        <div className="col-12">
+          <div className="border rounded p-4 text-gray-600">Carregant la ubicació de l&apos;adreça...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="row g-3 my-3">
-
       <div className="col-12 col-md-3">
         <h5 className="mb-1">{group.nom_districte || 'Districte'}</h5>
         <p className="text-gray-600">
@@ -627,6 +640,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
 
 export function ApartmentResults({
   title,
+  streetName,
   addressGroups,
   streetGroups,
   loading,
@@ -690,9 +704,9 @@ export function ApartmentResults({
             key={idx}
             className="container"
           >
-            <ApartmentDetail group={group} allGroups={displayGroups} currentIndex={idx} />
+            <ApartmentDetail group={group} allGroups={displayGroups} currentIndex={idx} streetName={streetName} />
 
-            <AddressLocationMaps group={group} />
+            <AddressLocationMaps group={group} streetName={streetName} />
             <button
               type="button"
               className="btn btn-outline-secondary ms-auto"
@@ -726,7 +740,7 @@ export function ApartmentResults({
                       <div className="card-body d-flex flex-row gap-3">
                         <FaRegBuilding className="fs-2" />
                         <div className="d-flex flex-column gap-1">
-                          <h5 className="card-title mb-0">{formatAddress(group)}</h5>
+                          <h5 className="card-title mb-0">{formatAddress(group, streetName)}</h5>
                           {formatArea(group).map((area) => (
                             <span key={area} className="card-subtitle text-gray-600">{area}</span>
                           ))}

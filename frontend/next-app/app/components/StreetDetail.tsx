@@ -10,6 +10,7 @@ interface ApartmentDetailProps {
   group: AddressGroup;
   allGroups: AddressGroup[];
   currentIndex: number;
+  streetName?: string;
 }
 
 const normalizePis = (value: string | number | null | undefined) => {
@@ -27,6 +28,7 @@ export function ApartmentDetail({
   group,
   allGroups,
   currentIndex,
+  streetName,
 }: ApartmentDetailProps) {
   const district = [group.nom_districte, group.nom_barri]
     .filter(Boolean)
@@ -89,7 +91,7 @@ export function ApartmentDetail({
   }, {});
 
   const formatAddress = (group: AddressGroup) => {
-    const street = `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
+    const street = streetName || `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
     const number = `${group.num1 ?? ''}${group.lletra1 || ''}`.trim();
     if (street && number) return `${street}, ${number}`;
     // Falls back to the raw address, adding the comma before its first number.

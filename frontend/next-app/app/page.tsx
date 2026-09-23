@@ -109,6 +109,7 @@ function HomeSearch() {
   const [results, setResults] = useState<AddressGroup[]>([]);
   const [streetResults, setStreetResults] = useState<AddressGroup[]>([]);
   const [loading, setLoading] = useState(false);
+  const [streetNameLoading, setStreetNameLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
   const carrerTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -124,6 +125,55 @@ function HomeSearch() {
     fetchTipusVies().then(setTipusVies);
   }, []);
 
+  // Resolve deep-linked street parameters to the human-readable geoBCN label.
+  useEffect(() => {
+    if (!queryCarrer) {
+      setSelectedCarrer(null);
+      setCarrerInput('');
+      setStreetNameLoading(false);
+      return;
+    }
+
+    setSelectedCarrer(null);
+    setCarrerInput(`${queryTipusVia} ${queryCarrer}`.trim());
+    setStreetNameLoading(true);
+    let cancelled = false;
+
+    searchCarrers(queryCarrer, queryTipusVia || undefined).then((response) => {
+      if (cancelled) return;
+
+      geoBcnResponseRef.current = {
+        query: queryCarrer.toLocaleLowerCase('ca'),
+        response,
+      };
+      console.log('[geoBCN] URL street response', {
+        query: {
+          tipus_via: queryTipusVia,
+          carrer: queryCarrer,
+        },
+        response,
+      });
+
+      const normalizedQuery = normalizeAddressPart(normalizeCarrerForApi(queryCarrer));
+      const via = response.vies.find(
+        (candidate) =>
+          normalizeAddressPart(candidate.nom) === normalizedQuery ||
+          normalizeAddressPart(candidate.nomComplet) === normalizedQuery
+      );
+
+      if (via) {
+        setSelectedCarrer(via);
+        setCarrerInput(via.nomComplet ?? via.nom);
+      }
+      setStreetNameLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+      setStreetNameLoading(false);
+    };
+  }, [queryTipusVia, queryCarrer]);
+
   // Re-runs on every URL change, so deep links, refreshes and back/forward all rebuild the results.
   useEffect(() => {
     if (!queryCarrer || !queryNum) {
@@ -131,10 +181,10 @@ function HomeSearch() {
       setResults([]);
       setStreetResults([]);
       setLoading(false);
+      setStreetNameLoading(false);
       return;
     }
 
-    setCarrerInput(selectedCarrer?.nomComplet ?? `${queryTipusVia} ${queryCarrer}`.trim());
     setNum(queryNum);
     setEscala(queryEscala);
     setPis(queryPis);
@@ -292,7 +342,10 @@ function HomeSearch() {
 
   const handleSelectAddress = useCallback(
     (group: AddressGroup) => {
-      setSelectedCarrer(null);
+      setResults([]);
+      setStreetResults([]);
+      setShowResults(true);
+      setLoading(true);
       pushSearch({
         tipusVia: group.tipus_carrer ?? '',
         carrer: group.carrer ?? '',
@@ -316,6 +369,7 @@ function HomeSearch() {
     setStreetResults([]);
     setShowResults(false);
     setLoading(false);
+    setStreetNameLoading(false);
     router.push('/', { scroll: false });
     requestAnimationFrame(() => carrerInputRef.current?.focus());
   }, [router]);
@@ -384,9 +438,10 @@ function HomeSearch() {
             <div className="d-flex flex-column gap-4">
               <ApartmentResults
                 title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
+                streetName={carrerDisplayName}
                 addressGroups={results}
                 streetGroups={streetResults}
-                loading={loading}
+                loading={loading || streetNameLoading}
                 onResetSearch={handleResetSearch}
                 onSelectAddress={handleSelectAddress}
                 singleResult={results.length === 1}
