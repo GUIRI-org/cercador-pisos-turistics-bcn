@@ -8,6 +8,7 @@ import { AddressGroup, CarrerVia, TipusVia } from '@/lib/types';
 import { AppNavbar } from './components/AppNavbar';
 import { ApartmentResults } from './components/ApartmentResults';
 import { MapComponent } from './components/MapComponent';
+import { SearchForm } from './components/SearchForm';
 import type { ChoroplethPoint } from './components/ChoroplethMap';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
@@ -41,6 +42,8 @@ const normalizeCarrerForApi = (carrer: string): string => {
 const RESULTS_ANCHOR_ID = 'seccio-resultats';
 
 type UnitFilters = { escala: string; pis: string; porta: string };
+
+type GeoBcnSearchResponse = Awaited<ReturnType<typeof searchCarrers>>;
 
 const matchesUnitField = (value: string | undefined, filter: string) => {
   if (!filter.trim()) return true;
@@ -109,7 +112,9 @@ function HomeSearch() {
   const [showResults, setShowResults] = useState(false);
 
   const carrerTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const storedAdrecesRef = useRef<{ carrerCodi: string; numeracioPostal: string }[]>([]);
+  const geoBcnResponseRef = useRef<{ query: string; response: GeoBcnSearchResponse } | null>(null);
+  const carrerRequestIdRef = useRef(0);
+  const selectedCarrerRequestIdRef = useRef(0);
   const searchSectionRef = useRef<HTMLDivElement | null>(null);
   const carrerInputRef = useRef<HTMLInputElement | null>(null);
   const numInputRef = useRef<HTMLInputElement | null>(null);
@@ -129,7 +134,7 @@ function HomeSearch() {
       return;
     }
 
-    setCarrerInput(`${queryTipusVia} ${queryCarrer}`.trim());
+    setCarrerInput(selectedCarrer?.nomComplet ?? `${queryTipusVia} ${queryCarrer}`.trim());
     setNum(queryNum);
     setEscala(queryEscala);
     setPis(queryPis);
@@ -170,26 +175,36 @@ function HomeSearch() {
     setNumOptions([]);
     setNum('');
     clearTimeout(carrerTimerRef.current);
+    const requestId = ++carrerRequestIdRef.current;
 
     if (value.trim().length < 2) {
       setCarrerSuggestions([]);
       return;
     }
 
+    const normalizedValue = value.trim().toLocaleLowerCase('ca');
+    const cached = geoBcnResponseRef.current;
+    if (cached && normalizedValue.startsWith(cached.query)) {
+      const filteredVies = cached.response.vies.filter((via) => {
+        const label = (via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`).toLocaleLowerCase('ca');
+        return label.includes(normalizedValue);
+      });
+      setCarrerSuggestions(filteredVies);
+      return;
+    }
+
     carrerTimerRef.current = setTimeout(async () => {
-      const { vies, adreces } = await searchCarrers(value, tipusVia || undefined);
-      setCarrerSuggestions(vies);
-      storedAdrecesRef.current = adreces.map((a) => ({
-        carrerCodi: a.carrer?.codi,
-        numeracioPostal: a.numeracioPostal,
-      }));
+      const response = await searchCarrers(value, tipusVia || undefined);
+      if (requestId !== carrerRequestIdRef.current) return;
+
+      geoBcnResponseRef.current = { query: normalizedValue, response };
+      console.log('[geoBCN] street search response', response);
+      setCarrerSuggestions(response.vies);
     }, 300);
   };
 
-  const handleSelectCarrer = (codi: string) => {
+  const handleSelectCarrer = async (codi: string) => {
     const via = carrerSuggestions.find((v) => v.codi === codi) || null;
-    setSelectedCarrer(via);
-    setCarrerInput(via?.nomComplet || via?.nom || '');
     setTouched((prev) => ({ ...prev, carrer: true }));
 
     if (!via) {
@@ -197,10 +212,20 @@ function HomeSearch() {
       return;
     }
 
+    const requestId = ++selectedCarrerRequestIdRef.current;
+    const selectedStreetQuery = via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`;
+    const response = await searchCarrers(selectedStreetQuery);
+    if (requestId !== selectedCarrerRequestIdRef.current) return;
+
+    console.log('[geoBCN] selected street response', response);
+    const resolvedVia = response.vies.find((candidate) => candidate.codi === via.codi) || via;
+    const addresses = response.adreces.filter((address) => address.carrer?.codi === resolvedVia.codi);
+
+    setSelectedCarrer(resolvedVia);
+    setCarrerInput(resolvedVia.nomComplet ?? resolvedVia.nom);
+
     const nums = [...new Set(
-      storedAdrecesRef.current
-        .filter((a) => a.carrerCodi === via.codi)
-        .map((a) => a.numeracioPostal)
+      addresses.map((address) => address.numeracioPostal)
     )]
       .filter(Boolean)
       .sort((a, b) => {
@@ -236,6 +261,7 @@ function HomeSearch() {
   };
 
   const carrerName = selectedCarrer?.nom ?? queryCarrer;
+  const carrerDisplayName = selectedCarrer?.nomComplet ?? `${selectedCarrer?.tipusVia?.nom || ''} ${selectedCarrer?.nom || queryCarrer}`.trim();
   const tipusViaName = selectedCarrer?.tipusVia?.nom ?? queryTipusVia;
   const carrerError = touched.carrer && !carrerName;
   const numError = touched.num && !num;
@@ -327,115 +353,29 @@ function HomeSearch() {
               </div>
             </div>
           </div>
-          <form className="search-form container p-5 border bg-white" onSubmit={handleSubmit}>
-            <fieldset className="d-flex flex-wrap gap-3">
-              <legend>Adreça</legend>
-              <div className="carrer flex-fill">
-                <div className="label">
-                  <label htmlFor="carrerInp">
-                    Nom del <u>C</u>arrer: * <span className="visually-hidden">(Alt+C)</span>
-                  </label>
-                </div>
-                <div className="input relative">
-                  <input
-                    id="carrerInp"
-                    ref={carrerInputRef}
-                    type="text"
-                    className="w-full"
-                    autoComplete="off"
-                    placeholder="Seleccioneu una opció"
-                    value={carrerInput}
-                    accessKey="c"
-                    aria-required="true"
-                    aria-invalid={carrerError}
-                    aria-describedby="error-address"
-                    onChange={(e) => handleCarrerInput(e.target.value)}
-                    onKeyDown={handleCarrerKeyDown}
-                    onBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
-                  />
-                  {carrerInput.trim().length >= 2 && !selectedCarrer && carrerSuggestions.length > 0 && (
-                    <ul className="carrer-suggestions">
-                      {carrerSuggestions.map((via) => (
-                        <li
-                          key={via.codi}
-                          tabIndex={0}
-                          role="button"
-                          onMouseDown={() => handleSelectCarrer(via.codi)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleSelectCarrer(via.codi);
-                            }
-                          }}
-                        >
-                          {via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {carrerError && (
-                    <span id="error-address" className="error-msg" role="status">
-                      Aquest camp és obligatori
-                    </span>
-                  )}
-                </div>
-              </div>
 
-              <div className="numero">
-                <div className="label">
-                  <label htmlFor="numInp">
-                    <u>N</u>úm: * <span className="visually-hidden">(Alt+N)</span>
-                  </label>
-                </div>
+          <SearchForm
+            carrerInput={carrerInput}
+            carrerSuggestions={carrerSuggestions}
+            selectedCarrer={selectedCarrer}
+            num={num}
+            numOptions={numOptions}
+            carrerError={carrerError}
+            numError={numError}
+            canSearch={canSearch}
+            carrerInputRef={carrerInputRef}
+            numInputRef={numInputRef}
+            searchButtonRef={searchButtonRef}
+            onSubmit={handleSubmit}
+            onCarrerInput={handleCarrerInput}
+            onSelectCarrer={handleSelectCarrer}
+            onNumChange={setNum}
+            onCarrerKeyDown={handleCarrerKeyDown}
+            onNumKeyDown={handleNumKeyDown}
+            onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
+            onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
+          />
 
-                <div className="input">
-                  {/* Geoportal's search endpoint caps results at 25 matches, so it can't reliably
-                      preload every number for a street — a free-text field lets users enter any number. */}
-                  <input
-                    id="numInp"
-                    ref={numInputRef}
-                    type="text"
-                    className="w-full"
-                    list="num-list"
-                    autoComplete="off"
-                    value={num}
-                    disabled={!selectedCarrer}
-                    accessKey="n"
-                    aria-required="true"
-                    aria-invalid={numError}
-                    aria-describedby="error-number"
-                    onChange={(e) => setNum(e.target.value)}
-                    onKeyDown={handleNumKeyDown}
-                    onBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
-                  />
-                  <datalist id="num-list">
-                    {numOptions.map((n) => (
-                      <option key={n} value={n} />
-                    ))}
-                  </datalist>
-                  {numError && (
-                    <span id="error-number" className="error-msg" role="status">
-                      Aquest camp és obligatori
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="search-button d-flex align-items-end">
-                <button
-                  ref={searchButtonRef}
-                  type="submit"
-                  className="btn btn-primary"
-                  accessKey="s"
-                  title="Cerca (Alt+S)"
-                  disabled={!canSearch}
-                >
-                  Cerca
-                </button>
-              </div>
-
-            </fieldset>
-          </form>
         </div>
       </section>
       <section id="seccio-resultats">
@@ -443,7 +383,7 @@ function HomeSearch() {
           <div className="bg-white border-top search-results-container">
             <div className="d-flex flex-column gap-4">
               <ApartmentResults
-                title={`${selectedCarrer?.tipusVia?.nom ? `${selectedCarrer.tipusVia.nom} ` : ''}${selectedCarrer?.nom || ''}${num ? `, ${num}` : ''}`.trim()}
+                title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
                 addressGroups={results}
                 streetGroups={streetResults}
                 loading={loading}
