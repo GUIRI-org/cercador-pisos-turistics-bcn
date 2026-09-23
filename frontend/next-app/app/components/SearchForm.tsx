@@ -13,14 +13,14 @@ interface SearchFormProps {
   numError: boolean | undefined;
   canSearch: boolean;
   carrerInputRef: RefObject<HTMLInputElement | null>;
-  numInputRef: RefObject<HTMLInputElement | null>;
+  numInputRef: RefObject<HTMLSelectElement | null>;
   searchButtonRef: RefObject<HTMLButtonElement | null>;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onCarrerInput: (value: string) => void;
   onSelectCarrer: (codi: string) => void;
   onNumChange: (value: string) => void;
   onCarrerKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-  onNumKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onNumKeyDown: (event: React.KeyboardEvent<HTMLSelectElement>) => void;
   onCarrerBlur: () => void;
   onNumBlur: () => void;
 }
@@ -108,15 +108,12 @@ export function SearchForm({
             </label>
           </div>
           <div className="input">
-            <input
+            <select
               id="numInp"
               ref={numInputRef}
-              type="text"
               className="w-full"
-              list="num-list"
-              autoComplete="off"
               value={num}
-              disabled={!selectedCarrer}
+              disabled={!selectedCarrer || numOptions.length === 0}
               accessKey="n"
               aria-required="true"
               aria-invalid={numError}
@@ -124,12 +121,12 @@ export function SearchForm({
               onChange={(event) => onNumChange(event.target.value)}
               onKeyDown={onNumKeyDown}
               onBlur={onNumBlur}
-            />
-            <datalist id="num-list">
+            >
+              <option value="">Seleccioneu un número</option>
               {numOptions.map((number) => (
-                <option key={number} value={number} />
+                <option key={number} value={number}>{number}</option>
               ))}
-            </datalist>
+            </select>
             {numError && (
               <span id="error-number" className="error-msg" role="status">
                 Aquest camp és obligatori

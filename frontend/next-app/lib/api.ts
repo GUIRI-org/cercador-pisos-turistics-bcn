@@ -180,6 +180,16 @@ export async function searchCarrers(
   }
 }
 
+export async function fetchPortalsByVia(codi: string): Promise<AdrecaSearchResult[]> {
+  try {
+    const res = await fetch(`${BASE}/portals?id_via=${encodeURIComponent(codi)}`);
+    const json = (await res.json()) as { resultats?: AdrecaSearchResult[] };
+    return json.resultats || [];
+  } catch {
+    return [];
+  }
+}
+
 // GUIRI Internal API calls
 export async function searchApartments(params: {
   carrer?: string;

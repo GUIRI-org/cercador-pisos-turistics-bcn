@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import './styles.css';
-import { fetchTipusVies, searchApartments, searchCarrers } from '@/lib/api';
+import { fetchPortalsByVia, fetchTipusVies, searchApartments, searchCarrers } from '@/lib/api';
 import { AddressGroup, CarrerVia, TipusVia } from '@/lib/types';
 import { AppNavbar } from './components/AppNavbar';
 import { ApartmentResults } from './components/ApartmentResults';
@@ -118,12 +118,16 @@ function HomeSearch() {
   const selectedCarrerRequestIdRef = useRef(0);
   const searchSectionRef = useRef<HTMLDivElement | null>(null);
   const carrerInputRef = useRef<HTMLInputElement | null>(null);
-  const numInputRef = useRef<HTMLInputElement | null>(null);
+  const numInputRef = useRef<HTMLSelectElement | null>(null);
   const searchButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     fetchTipusVies().then(setTipusVies);
   }, []);
+
+  useEffect(() => {
+    console.log('[geoBCN] numOptions state', numOptions);
+  }, [numOptions]);
 
   // Resolve deep-linked street parameters to the human-readable geoBCN label.
   useEffect(() => {
@@ -263,27 +267,24 @@ function HomeSearch() {
     }
 
     const requestId = ++selectedCarrerRequestIdRef.current;
-    const selectedStreetQuery = via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`;
-    const response = await searchCarrers(selectedStreetQuery);
+    const addresses = await fetchPortalsByVia(via.codi);
     if (requestId !== selectedCarrerRequestIdRef.current) return;
 
-    console.log('[geoBCN] selected street response', response);
-    const resolvedVia = response.vies.find((candidate) => candidate.codi === via.codi) || via;
-    const addresses = response.adreces.filter((address) => address.carrer?.codi === resolvedVia.codi);
+    console.log('[geoBCN] selected street portals response', {
+      id_via: via.codi,
+      adreces: addresses,
+    });
 
-    setSelectedCarrer(resolvedVia);
-    setCarrerInput(resolvedVia.nomComplet ?? resolvedVia.nom);
+    setSelectedCarrer(via);
+    setCarrerInput(via.nomComplet ?? via.nom);
 
     const nums = [...new Set(
       addresses.map((address) => address.numeracioPostal)
     )]
       .filter(Boolean)
-      .sort((a, b) => {
-        const na = parseInt(a, 10);
-        const nb = parseInt(b, 10);
-        return !isNaN(na) && !isNaN(nb) ? na - nb : a.localeCompare(b, 'ca');
-      });
+      .sort((a, b) => a.localeCompare(b, 'ca', { numeric: true, sensitivity: 'base' }));
 
+    console.log('[geoBCN] numOptions from selected street response', nums);
     setNumOptions(nums);
     setNum('');
 
@@ -303,7 +304,7 @@ function HomeSearch() {
     }
   };
 
-  const handleNumKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleNumKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     setTouched((prev) => ({ ...prev, num: true }));
