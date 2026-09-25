@@ -1,0 +1,19 @@
+info:
+  name: Portals
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: https://{{baseURL}}/geoBCN/serveis/territori/portals?id_via=198804
+  params:
+    - name: id_via
+      value: "198804"
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

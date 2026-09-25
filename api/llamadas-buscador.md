@@ -21,12 +21,12 @@ El usuario introduce nombre de via, ex. "sants"
     - input: "Carrer de Sants" 
     - output:
       - Lista posible de números 
-    - Llamada: `/geoBCN/serveis/territori?q=Carrer de Sants`
+    - Llamada: `geobcn/serveis/territori/portals?id_via=312400`
 
-Recogemos del objeto 'adreces', filtrado por "nomComplet LIKE 'Carrer de Sants%'":    
+Recogemos del objeto 'resultats':    
     - Lista de valores posibles de "numeracioPostal"
 
-Ojo que la API puede devolver más de una "via" a partir de la busqueda por nombre completo "Carrer de Sants"; mirar ejemplo de la API collection.
+Ojo que la API puede devolver más de una "via" a partir de la busqueda por nombre completo "Carrer de Sants"; mirar ejemplo de la API collection. Con el cambio de endpoint se evita la duplicidad
 
 **Paso 3, búsqueda per adreça completa en GeoBCN para obtener atributos relacionados**
 
