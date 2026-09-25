@@ -163,13 +163,16 @@ export async function fetchTipusVies(): Promise<TipusVia[]> {
   }
 }
 
+// The territori search endpoint defaults to 25 results per array (vies/adreces); `max` raises that cap.
+const SEARCH_CARRERS_MAX_RESULTS = 200;
+
 export async function searchCarrers(
   query: string,
   tipusAbr?: string
 ): Promise<{ vies: CarrerVia[]; adreces: AdrecaSearchResult[] }> {
   try {
     const searchQuery = tipusAbr ? `${tipusAbr} ${query}` : query;
-    const res = await fetch(`${BASE}?q=${encodeURIComponent(searchQuery)}`);
+    const res = await fetch(`${BASE}?q=${encodeURIComponent(searchQuery)}&max=${SEARCH_CARRERS_MAX_RESULTS}`);
     const json = (await res.json()) as TerritoriResponse;
     return {
       vies: json.resultats?.vies || [],

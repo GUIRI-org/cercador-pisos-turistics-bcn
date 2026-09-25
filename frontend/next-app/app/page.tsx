@@ -231,7 +231,7 @@ function HomeSearch() {
     clearTimeout(carrerTimerRef.current);
     const requestId = ++carrerRequestIdRef.current;
 
-    if (value.trim().length < 2) {
+    if (value.trim().length < 3) {
       setCarrerSuggestions([]);
       return;
     }
@@ -429,6 +429,8 @@ function HomeSearch() {
             onNumKeyDown={handleNumKeyDown}
             onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
             onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
+            showReset={showResults}
+            onHandleResetSearch={handleResetSearch}
           />
 
         </div>
@@ -447,15 +449,6 @@ function HomeSearch() {
                 onSelectAddress={handleSelectAddress}
                 singleResult={results.length === 1}
               />
-              <button
-                type="button"
-                className="btn btn-outline-secondary ms-auto"
-                accessKey="e"
-                title="Esborrar (Alt+E)"
-                onClick={handleResetSearch}
-              >
-                Esborrar
-              </button>
             </div>
           </div>
         )}
