@@ -7,6 +7,7 @@ import { fetchPortalsByVia, fetchTipusVies, searchApartments, searchCarrers } fr
 import { AddressGroup, CarrerVia, TipusVia } from '@/lib/types';
 import { AppNavbar } from './components/AppNavbar';
 import { ApartmentResults } from './components/ApartmentResults';
+import { CountdownBanner } from './components/CountdownBanner';
 import { MapComponent } from './components/MapComponent';
 import { SearchForm } from './components/SearchForm';
 import type { ChoroplethPoint } from './components/ChoroplethMap';
@@ -388,27 +389,28 @@ function HomeSearch() {
     <main className="" style={{ minHeight: '100vh' }}>
 
       <AppNavbar secondaryHref="/search-v1" secondaryLabel="Search v1" />
-      <section id="seccio-introduccio" className="container py-5">
-        <h1>Secció introducció</h1>
-        <p>Aquesta secció proporciona una introducció a la funcionalitat de cerca d'habitatges amb llicència a la ciutat de Barcelona.</p>
+
+      <section id="seccio-introduccio" className='bg-body'>
+        <div className="container py-5">
+          <h1>Secció introducció</h1>
+          <CountdownBanner />
+          <p>Aquesta secció proporciona una introducció a la funcionalitat de cerca d'habitatges amb llicència a la ciutat de Barcelona.</p>
+        </div>
       </section>
-      <section id="seccio-cerca">
-        <h1 className="container">Secció de cerca</h1>
-        <div className="bg-light py-5">
-          <div className="container d-flex flex-column">
-            <div className="row">
-              <div className="col-12 col-md-9">
-                <h1 className="">Consulta els habitatges que tenen llicència</h1>
-                <p className="fs-4 text-gray-600 lh-base">
-                  Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
-                </p>
-                <p className="text-gray-600 italic">
-                  Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
-                </p>
-              </div>
+
+      <section id="seccio-cerca" className='bg-body-tertiary'>
+        <div className="container py-5">
+          <h1 className="">Consulta els habitatges que tenen llicència</h1>
+          <div className="row">
+            <div className="col-12 col-md-9">
+              <p className="fs-4 text-gray-600 lh-base">
+                Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
+              </p>
+              <p className="text-gray-600 italic">
+                Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
+              </p>
             </div>
           </div>
-
           <SearchForm
             carrerInput={carrerInput}
             carrerSuggestions={carrerSuggestions}
@@ -432,12 +434,15 @@ function HomeSearch() {
             showReset={showResults}
             onHandleResetSearch={handleResetSearch}
           />
-
         </div>
+
+
+        {/* <!-- end of the search form --> */}
       </section>
-      <section id="seccio-resultats">
+
+      <section id="seccio-resultats" className='bg-body-secondary py-5'>
         {showResults && (
-          <div className="bg-white border-top search-results-container">
+          <div className="search-results-container">
             <div className="d-flex flex-column gap-4">
               <ApartmentResults
                 title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
@@ -452,8 +457,8 @@ function HomeSearch() {
             </div>
           </div>
         )}
-        {/* <!-- end of the search form --> */}
       </section>
+
       <section id="seccio-mapa">
         <h1 className="container">Secció del mapa</h1>
         <div className='map-container bg-light border-top'>
@@ -465,10 +470,12 @@ function HomeSearch() {
           />
         </div>
       </section>
+
       <section id="seccio-about" className="container py-5">
         <h1>Secció about</h1>
         <p>Aquesta secció proporciona informació sobre el projecte i els seus objectius.</p>
       </section>
+
     </main>
   );
 }

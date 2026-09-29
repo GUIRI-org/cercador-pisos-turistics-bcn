@@ -682,16 +682,19 @@ export function ApartmentResults({
   }
 
   return (
-    <div className={`d-flex flex-column gap-4 py-5`}>
+    <div className={`d-flex flex-column gap-4`}>
 
 
       {!displayGroups.length && (
         <div className="alert alert-warning p-5 rounded-0 border container">
           <h4 className="alert-heading">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
-          <p className="">Probablement el pis que busques és il·legal</p>
+          <p className="mb-0">Probablement el pis que busques és il·legal</p>
           <hr></hr>
           <div className="d-flex align-items-start gap-3">
-            <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" target="_blank" rel="noopener noreferrer" className="btn btn-outline-secondary">
+            <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" 
+               target="_blank" 
+               rel="noopener noreferrer" 
+               className="btn btn-outline-secondary">
               Avisa'ns
             </a>
           </div>

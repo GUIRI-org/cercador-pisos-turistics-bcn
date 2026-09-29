@@ -306,9 +306,9 @@ label {
 }
 
 /* Alternating soft gray rows for the per-floor list. */
-.floor-list>li:nth-child(odd) {
+/* .floor-list>li:nth-child(odd) {
     background-color: #f5f6f7;
-}
+} */
 
 
 /* Division switch floating over the top-right corner of the map. */

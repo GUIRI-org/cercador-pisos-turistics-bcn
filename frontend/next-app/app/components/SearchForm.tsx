@@ -55,7 +55,7 @@ export function SearchForm({
   const [showAccessKeysInfo, setShowAccessKeysInfo] = useState(false);
 
   return (
-    <form className="search-form container p-5 border" onSubmit={onSubmit}>
+    <form className="search-form container" onSubmit={onSubmit}>
       <div className="legend-row">
         <legend>Adreça</legend>
         <span className="access-keys-info relative">

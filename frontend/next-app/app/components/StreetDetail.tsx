@@ -24,6 +24,49 @@ const normalizePis = (value: string | number | null | undefined) => {
   return rawValue;
 };
 
+// Named floors below the numbered ones; EN/PR sort before "1º", AT keeps its default (after the numbers) position.
+const PIS_LABELS: Record<string, string> = {
+  EN: 'Entresuelo',
+  PR: 'Principal',
+  AT: 'Àtic',
+};
+const PIS_SPECIAL_SORT_ORDER: Record<string, number> = { EN: -2, PR: -1 };
+
+// Renders a normalized pis key (e.g. "01") as an ordinal (e.g. "1º"); named/non-numeric keys are mapped or left untouched.
+const formatPisDisplay = (pis: string) => {
+  const label = PIS_LABELS[pis.toUpperCase()];
+  if (label) return label;
+  if (!/^\d+$/.test(pis)) return pis;
+  return `${Number.parseInt(pis, 10)}º`;
+};
+
+const comparePis = (pisA: string, pisB: string) => {
+  const aSpecial = PIS_SPECIAL_SORT_ORDER[pisA.toUpperCase()];
+  const bSpecial = PIS_SPECIAL_SORT_ORDER[pisB.toUpperCase()];
+
+  if (aSpecial !== undefined || bSpecial !== undefined) {
+    if (aSpecial !== undefined && bSpecial !== undefined) return aSpecial - bSpecial;
+    return aSpecial !== undefined ? -1 : 1;
+  }
+
+  const aNum = Number.parseInt(pisA, 10);
+  const bNum = Number.parseInt(pisB, 10);
+  const aIsNum = !Number.isNaN(aNum);
+  const bIsNum = !Number.isNaN(bNum);
+
+  if (aIsNum && bIsNum) return aNum - bNum;
+  if (aIsNum) return -1;
+  if (bIsNum) return 1;
+
+  return pisA.localeCompare(pisB, 'ca');
+};
+
+// Renders a door number (e.g. "02") as an ordinal (e.g. "2ª"); non-numeric doors are left untouched.
+const formatPortaDisplay = (porta: string) => {
+  if (!/^\d+$/.test(porta)) return porta;
+  return `${Number.parseInt(porta, 10)}ª`;
+};
+
 export function ApartmentDetail({
   group,
   allGroups,
@@ -107,14 +150,14 @@ export function ApartmentDetail({
 
   return (
     <div className="row">
-      <div className="d-flex flex-column gap-2 col-12 col-md-3 pb-4">
-        <FaRegBuilding className="fs-1" aria-hidden="true" />
-        <h2>{formatAddress(group) || 'Address not available'}</h2>
-        {formatArea(group).map((area) => (
-          <p key={area} className="text-gray-600 mb-0">{area}</p>
-        ))}
-      </div>
       <div className="col col-md-auto">
+        <div className="d-flex flex-row gap-2 pb-4">
+          <FaRegBuilding className="fs-3" aria-hidden="true" />
+          <h2>{formatAddress(group) || 'Address not available'}</h2>
+          {/* {formatArea(group).map((area) => (
+            <p key={area} className="text-gray-600 mb-0">{area}</p>
+          ))} */}
+        </div>
         <h4 className="alert-heading">
           S'han trobat&nbsp;
           <strong>
@@ -123,40 +166,32 @@ export function ApartmentDetail({
         <p className="">
           Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
         </p>
-        <ul className="list-group floor-list">
+        <ul className="list-group">
           {Object.entries(pisosGrouped)
-            .sort(([pisA], [pisB]) => {
-              const aNum = Number.parseInt(pisA, 10);
-              const bNum = Number.parseInt(pisB, 10);
-              const aIsNum = !Number.isNaN(aNum);
-              const bIsNum = !Number.isNaN(bNum);
-
-              if (aIsNum && bIsNum) return aNum - bNum;
-              if (aIsNum) return -1;
-              if (bIsNum) return 1;
-
-              return pisA.localeCompare(pisB, 'ca');
-            })
+            .sort(([pisA], [pisB]) => comparePis(pisA, pisB))
             .map(([pis, pisData]) => (
-              <li key={pis} className="d-flex align-items-stretch ">
-                <div className="border-end p-2 me-2">
-                  <small><strong>P</strong> {pis}</small>
-                </div>
+              <li key={pis} className="">
+                {/* <div className="border-bottom">
+                  <small>{formatPisDisplay(pis)}</small>
+                </div> */}
 
-                <ul className="list-group list-group-horizontal flex-wrap p-2">
+                <ul className="list-group">
                   {Object.entries(pisData.portes)
                     .sort(([portaA], [portaB]) => portaA.localeCompare(portaB, 'ca'))
                     .map(([porta, portaPlaces]) => (
                       <li
                         key={`${pis}-${porta}`}
-                        className="d-flex me-4"
+                        className="d-flex p-3 bg-body align-items-center mb-2"
                       >
-                        <MdOutlineDoorFront className="inline-block me-2 fs-2" />
-                        <div>
-                          <small className="text-gray-600 d-block">
-                            <strong>{formatAddress(group)}</strong>  {`${pis}${porta !== '-' ? ` - ${porta}` : ''}`}
-                          </small>
-                          <span className="d-inline-flex align-items-center flex-wrap gap-1">
+                        {/* <MdOutlineDoorFront className="inline-block me-2 fs-1" /> */}
+                        <div className="flex-grow-1">
+                          <strong className="text-gray-600 d-block">
+                            {formatAddress(group)}
+                          </strong>
+                          <span className="text-gray-600 d-inline">
+                            {`${formatPisDisplay(pis)}${porta !== '-' ? ` - ${formatPortaDisplay(porta)}` : ''}${group.lletra1 || ''}`}
+                          </span>
+                          <span className="d-inline-flex align-items-center flex-wrap gap-1 ms-2">
                             {Array.from({ length: Math.max(0, Math.round(portaPlaces)) }).map((_, index) => (
                               <span
                                 key={`${pis}-${porta}-place-${index}`}
