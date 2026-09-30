@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     siteName: "El Guiri",
     images: [
       {
-        url: `${basePath}/.png`,
+        url: `${basePath}/og-image.png`,
         width: 1200,
         height: 630,
         alt: "Barcelona Tourist Apartments – Cercador de pisos turístics",
@@ -43,7 +43,17 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Cercador de pisos turístics Barcelona",
     description: "Identificar habitatges amb llicència turística a Barcelona.",
-    images: [`${basePath}/.png`],
+    images: [`${basePath}/og-image.png`],
+  },
+  icons: {
+    icon: [
+      { url: `${basePath}/icon0.svg`, type: "image/svg+xml" },
+      { url: `${basePath}/icon1.png`, type: "image/png" },
+    ],
+    apple: [{ url: `${basePath}/apple-icon.png` }],
+  },
+  appleWebApp: {
+    title: "Apartament - El Guir",
   },
 };
 
