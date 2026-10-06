@@ -110,8 +110,11 @@ const dedupeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
   return Array.from(merged.values());
 };
 
+const formatStreetName = (group: AddressGroup, streetName?: string) =>
+  streetName || `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
+
 const formatAddress = (group: AddressGroup, streetName?: string) => {
-  const street = streetName || `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
+  const street = formatStreetName(group, streetName);
   const number = `${group.num1 ?? ''}${group.lletra1 || ''}`.trim();
   if (street && number) return `${street}, ${number}`;
   // Falls back to the raw address, adding the comma before its first number.
@@ -395,18 +398,18 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
   return (
     <div className="mb-3 p-4 border border-gray-200 bg-gray-50">
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-        <div className="text-sm text-gray-600">Distribució per número de carrer (color = districte, degradat = barri)</div>
-        <div className="btn-group btn-group-sm" role="group" aria-label="Mètrica de la distribució">
+        <h5 className="text-sm text-gray-600">Distribució dels habitatges d&apos;ús turístic al carrer {groups[0] ? formatStreetName(groups[0]) : ''}</h5>
+        <div className="btn-group rounded-0" role="group" aria-label="Mètrica de la distribució">
           <button
             type="button"
-            className={`btn ${metric === 'apartments' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            className={`btn rounded-0 ${metric === 'apartments' ? 'btn-primary' : 'btn-outline-secondary'}`}
             onClick={() => setMetric('apartments')}
           >
             Apartaments
           </button>
           <button
             type="button"
-            className={`btn ${metric === 'places' ? 'btn-primary' : 'btn-outline-secondary'}`}
+            className={`btn rounded-0 ${metric === 'places' ? 'btn-primary' : 'btn-outline-secondary'}`}
             onClick={() => setMetric('places')}
           >
             Places
@@ -546,7 +549,7 @@ export function ApartmentResults({
                         )}
                         <span className="fw-normal fs-5">{formatAddress(group, streetName)}</span>
                       </span>
-                      <span className="badge bg-secondary rounded-0 ms-auto me-3">
+                      <span className="badge bg-secondary rounded-0 ms-auto me-2">
                         {group.apartments_count} habitatges · {group.total_places} places
                       </span>
                       <FaChevronRight className="street-addresses__chevron" aria-hidden="true" />

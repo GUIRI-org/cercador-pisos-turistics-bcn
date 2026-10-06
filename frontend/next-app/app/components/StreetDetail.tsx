@@ -45,6 +45,13 @@ const formatPisDisplay = (pis: string) => {
   return `${Number.parseInt(pis, 10)}ª planta`;
 };
 
+const formatPisAddressDisplay = (pis: string) => {
+  const label = PIS_LABELS[pis.toUpperCase()];
+  if (label) return label;
+  if (!/^\d+$/.test(pis)) return pis;
+  return `${Number.parseInt(pis, 10)}º`;
+};
+
 const comparePis = (pisA: string, pisB: string) => {
   const aSpecial = PIS_SPECIAL_SORT_ORDER[pisA.toUpperCase()];
   const bSpecial = PIS_SPECIAL_SORT_ORDER[pisB.toUpperCase()];
@@ -302,7 +309,7 @@ export function ApartmentDetail({
                       <div className="flex-grow-1 d-flex flex-row gap-2 align-items-center">
                         {/* <MdOutlineDoorBack className="fs-3" aria-hidden="true" /> */}
                         <p className="mb-0 flex-grow-1">
-                          {formatAddress(group)}, {`${formatPisDisplay(pis)}${porta !== '-' ? ` - ${formatPortaDisplay(porta)}` : ''}${group.lletra1 || ''}`}
+                          {formatAddress(group)}, {`${formatPisAddressDisplay(pis)} ${porta !== '-' ? ` - ${formatPortaDisplay(porta)}` : ''}${group.lletra1 || ''}`}
 
                           {/* <span className="d-inline-flex align-items-center flex-wrap gap-1 ms-2">
                             {Array.from({ length: Math.max(0, Math.round(portaPlaces)) }).map((_, index) => (
