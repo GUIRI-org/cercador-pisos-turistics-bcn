@@ -59,7 +59,7 @@ export function ParallaxContainer({ children }: { children: React.ReactNode }) {
         className="geo-plane geo-plane-mid"
         aria-hidden="true"
         style={{
-          backgroundImage: `url('${BASE}/parallax/building-pattern-l.png'), url('${BASE}/parallax/building-pattern-r.png')`,
+          backgroundImage: `url('${BASE}/parallax/building-pattern-l2.jpg'), url('${BASE}/parallax/building-pattern-r2.jpg')`,
         }}
       />
 

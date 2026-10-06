@@ -369,7 +369,7 @@ function HomeSearch() {
 
         <AppNavbar />
 
-        <section id="seccio-introduccio" className='bg-transparent'>
+        <section id="seccio-introduccio" className='section-introdution'>
           <div className="container intro-container w-50">
             <h1 className="intro-title mb-5">apartament</h1>
             <p className="fs-4 text-gray-600 lh-base">
@@ -416,7 +416,7 @@ function HomeSearch() {
 
         <section id="seccio-resultats" className='bg-transparent'>
           {showResults && (
-            <div className="search-results-container container w-50 py-5">
+            <div className="search-results-container container w-50">
               <div className="d-flex flex-column gap-4">
                 <ApartmentResults
                   title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
@@ -433,7 +433,7 @@ function HomeSearch() {
         </section>
 
         <section id="seccio-about">
-          <div className='container w-50 py-5'>
+          <div className='container w-50'>
             <h1>Una eina ciutadana, amb context</h1>
             <p className="fs-5 text-gray-600 lh-base">
               El projecte acosta la informació pública sobre habitatges d&apos;ús turístic a una consulta quotidiana: què hi ha registrat a la meva finca i al meu entorn?
@@ -468,7 +468,7 @@ function HomeSearch() {
 
       </main>
       <CountdownBanner />
-      <footer className="site-footer bg-white py-5">
+      <footer className="site-footer bg-white">
         <div className="container py-5">
           <div className="row g-4">
             <div className="col-12 col-md-5">
