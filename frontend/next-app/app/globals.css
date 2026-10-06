@@ -3,13 +3,14 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --app-font-family: Helvetica, "Open Sans", Arial, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--app-font-family);
+  --font-mono: var(--app-font-family);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,8 +20,82 @@
   }
 }
 
+html,
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--app-font-family);
+}
+
+
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+.parallax-scene {
+  position: relative;
+  isolation: isolate;
+  flex: 1 0 auto;
+  min-height: 100vh;
+}
+
+.geo-plane {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.geo-plane-back {
+  z-index: 0;
+  background: linear-gradient(180deg, #87D6F9 0%, #D0EFFD 100%);
+}
+
+.geo-plane-mid {
+  z-index: 2;
+  background-repeat: repeat-y, repeat-y;
+  will-change: background-position;
+}
+
+.geo-plane-third {
+  z-index: 1;
+  overflow: hidden;
+}
+
+.parallax-cloud {
+  position: absolute;
+  max-width: 55vw;
+  aspect-ratio: 1200 / 680;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.72;
+  filter: drop-shadow(0 8px 14px rgba(54, 91, 117, 0.22));
+  will-change: transform;
+}
+
+.parallax-cloud--one {
+  top: 14vh;
+  width: 420px;
+}
+
+.parallax-cloud--two {
+  top: 62vh;
+  width: 360px;
+  max-width: 48vw;
+}
+
+.parallax-content {
+  position: relative;
+  z-index: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .geo-plane-mid,
+  .parallax-cloud {
+    will-change: auto;
+  }
 }

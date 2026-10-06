@@ -28,24 +28,8 @@ export function AppNavbar({
   };
 
   return (
-    <nav className={`navbar navbar-expand-lg sticky-top shadow-sm`} style={{ backgroundColor: '#FFF' }}>
+    <nav className={`navbar bg-white navbar-expand-lg sticky-top shadow-sm py-0 shadow-none`}>
       <div className="container">
-        <Link
-          className={`navbar-brand ${isMainActive ? 'fw-semibold text-primary' : ''}`}
-          href="/"
-          aria-current={isMainActive ? 'page' : undefined}
-          onClick={closeMenu}
-        >
-          <img
-            src={`${BASE}/guiri-gamba-cabeza.svg`}
-            alt="Guiri Gamba"
-            width="48"
-            height="48"
-            className="d-inline-block"
-          />{' '}
-          El Guiri
-        </Link>
-
         <button
           className="navbar-toggler border-0"
           type="button"

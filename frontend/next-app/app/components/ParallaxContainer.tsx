@@ -1,70 +1,85 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 export function ParallaxContainer({ children }: { children: React.ReactNode }) {
-  const [scrollY, setScrollY] = useState(0);
+  const midPlaneRef = useRef<HTMLDivElement>(null);
+  const cloudPlaneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let ticking = false;
+    let frame = 0;
 
-    const handleScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
-          ticking = false;
-        });
+    const updateParallax = () => {
+      frame = 0;
+      const scrollY = window.scrollY;
+      const midPlane = midPlaneRef.current;
+      if (midPlane) {
+        const verticalOffset = (scrollY * 0.18).toFixed(2);
+        midPlane.style.backgroundPosition = `left ${verticalOffset}px, right ${verticalOffset}px`;
       }
+
+      const cloudPlane = cloudPlaneRef.current;
+      if (!cloudPlane) return;
+
+      const viewportWidth = window.innerWidth;
+      const clouds = cloudPlane.querySelectorAll<HTMLElement>('[data-parallax-cloud]');
+      clouds.forEach((cloud, index) => {
+        const cloudWidth = cloud.getBoundingClientRect().width;
+        const travelWidth = viewportWidth + cloudWidth;
+        const speed = index === 0 ? 0.24 : 0.16;
+        const distance = (scrollY * speed) % travelWidth;
+        const x = index === 0 ? distance - cloudWidth : viewportWidth - distance;
+        cloud.style.transform = `translate3d(${x.toFixed(2)}px, 0, 0)`;
+      });
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const scheduleParallax = () => {
+      if (!frame) frame = requestAnimationFrame(updateParallax);
+    };
+
+    window.addEventListener('scroll', scheduleParallax, { passive: true });
+    window.addEventListener('resize', scheduleParallax, { passive: true });
+    scheduleParallax();
+
+    return () => {
+      window.removeEventListener('scroll', scheduleParallax);
+      window.removeEventListener('resize', scheduleParallax);
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (
-    <div className="relative overflow-hidden">
-      {/* Back plane - static background */}
-      <div className="geo-plane geo-plane-back fixed inset-0 -z-30 bg-gradient-to-b from-slate-50 to-slate-100" />
+    <div className="parallax-scene">
+      <div className="geo-plane geo-plane-back" aria-hidden="true" />
 
-      {/* Mid plane — fixed to viewport, background shifts at 12% scroll speed
-           backgroundPositionY = scrollY * 0.12 → content at 100% feels much faster → slow parallax drift */}
       <div
-        className="geo-plane geo-plane-mid fixed inset-0 -z-20 pointer-events-none"
+        ref={midPlaneRef}
+        className="geo-plane geo-plane-mid"
+        aria-hidden="true"
         style={{
           backgroundImage: `url('${BASE}/parallax/building-pattern-l.png'), url('${BASE}/parallax/building-pattern-r.png')`,
-
           backgroundRepeat: 'repeat-y, repeat-y',
-          backgroundPosition: `left ${(scrollY * 0.12).toFixed(2)}px, right ${(scrollY * 0.12).toFixed(2)}px`,
+          backgroundPosition: 'left 0, right 0',
           backgroundSize: 'auto 800px, auto 800px',
         }}
       />
 
-      {/* Third plane - explicit horizontal image layer */}
-      <div
-        className="geo-plane geo-plane-third fixed inset-0 z-[-25] pointer-events-none"
-        style={{
-          transform: `translate3d(${(scrollY * 0.12).toFixed(2)}px, 0, 0)`,
-        }}
-      >
-        <img
-          src={`${BASE}/parallax/cloud-h.png`}
-          alt=""
-          aria-hidden="true"
-          className="absolute -right-16 top-16 w-[420px] max-w-[55vw]"
+      <div ref={cloudPlaneRef} className="geo-plane geo-plane-third" aria-hidden="true">
+        <div
+          data-parallax-cloud
+          className="parallax-cloud parallax-cloud--one"
+          style={{ backgroundImage: `url('${BASE}/parallax/cloud-h.png')` }}
         />
-        <img
-          src={`${BASE}/parallax/cloud-h.png`}
-          alt=""
-          aria-hidden="true"
-          className="absolute left-[18%] bottom-10 w-[360px] max-w-[48vw]"
+        <div
+          data-parallax-cloud
+          className="parallax-cloud parallax-cloud--two"
+          style={{ backgroundImage: `url('${BASE}/parallax/cloud-h.png')` }}
         />
       </div>
 
-      {/* Content - scrolls normally */}
-      <div className="relative z-0">{children}</div>
+      <div className="parallax-content">{children}</div>
     </div>
   );
 }

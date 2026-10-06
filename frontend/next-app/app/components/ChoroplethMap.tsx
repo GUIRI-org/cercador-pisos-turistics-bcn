@@ -158,7 +158,7 @@ export function ChoroplethMap({
     points = [],
     focusPoints = [],
     metricLabel = 'valor',
-    height = 420,
+    height = '75vh',
     width = 800,
     filterProperty,
     filterValue,
@@ -198,7 +198,7 @@ export function ChoroplethMap({
     // With height="100%" the map grows inside a sized parent instead of using a fixed box.
     const fillsParent = height === '100%';
 
-    const numericHeight = typeof height === 'number' ? height : 420;
+    const numericHeight = typeof height === 'number' ? height : viewport.height || 420;
 
     // The floating panel covers the left side on desktop, so the map is pushed to the right there.
     useEffect(() => {
@@ -470,7 +470,7 @@ export function ChoroplethMap({
 
     return (
         <div
-            className={`${fillsParent ? '' : 'container '}choropleth-wrapper d-flex flex-column gap-2 position-relative`}
+            className={`${fillsParent ? '' : 'container-fluid '}choropleth-wrapper d-flex flex-column gap-2 position-relative`}
             style={fillsParent ? { height: '100%' } : undefined}
         >
             {(showLegend || detail) && (

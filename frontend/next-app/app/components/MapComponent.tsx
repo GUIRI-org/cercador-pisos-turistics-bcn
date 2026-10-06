@@ -106,7 +106,7 @@ const addressKey = (group?: AddressGroup | null) => {
 export function MapComponent({
     data,
     points = [],
-    height = 480,
+    height = '75vh',
     defaultLevel = 'district',
     focusAddress = null,
 }: MapComponentProps) {

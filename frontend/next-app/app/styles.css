@@ -21,7 +21,7 @@ td,
 nav,
 input[type=button],
 input[type=text] {
-    font-family: "Source Sans 3", sans-serif
+    font-family: Helvetica, "Open Sans", Arial, sans-serif;
 }
 
 h1 {

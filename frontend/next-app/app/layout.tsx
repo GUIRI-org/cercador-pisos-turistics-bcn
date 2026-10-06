@@ -1,18 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "@/styles/bootstrap.scss";
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { ParallaxContainer } from "./components/ParallaxContainer";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elguiri.cat';
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
@@ -63,11 +53,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className="h-full antialiased">
+      <body className="min-h-full flex flex-col">
+        <ParallaxContainer>{children}</ParallaxContainer>
+      </body>
     </html>
   );
 }
