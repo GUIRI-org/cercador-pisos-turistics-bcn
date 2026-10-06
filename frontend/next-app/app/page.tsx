@@ -363,8 +363,8 @@ function HomeSearch() {
         <AppNavbar />
 
         <section id="seccio-introduccio" className='bg-transparent'>
-          <div className="container w-50 py-5">
-            <h1>Apartamento</h1>
+          <div className="container intro-container w-50 py-5">
+            <h1 className="intro-title">Apartamento</h1>
             <p className="fs-4 text-gray-600 lh-base">
               L’Ajuntament de Barcelona va anunciar el passat mes de setembre que “a Barcelona, el 2028, s’eliminaran les llicències d’habitatges d’ús turístic”
 
