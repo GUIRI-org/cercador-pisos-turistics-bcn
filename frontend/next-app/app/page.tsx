@@ -474,7 +474,7 @@ function HomeSearch() {
         </section>
 
         <section id="seccio-mapa">
-          <div className='map-container border-top'>
+          <div className='map-container'>
             <MapComponent
               points={results.flatMap((group): ChoroplethPoint[] => {
                 if (group.longitud_x === undefined || group.latitud_y === undefined) return [];
