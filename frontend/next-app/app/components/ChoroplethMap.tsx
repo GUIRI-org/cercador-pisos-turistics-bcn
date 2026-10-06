@@ -495,6 +495,7 @@ export function ChoroplethMap({
                                 </dd>
                             </dl>
                         )}
+                        <p>Consulta els registres disponibles, explora els resultats al mapa i entén millor com es distribueixen els habitatges turístics pels barris de la ciutat.</p>
                     </div>
 
                     {detail && <div className="choropleth-detail">{detail}</div>}

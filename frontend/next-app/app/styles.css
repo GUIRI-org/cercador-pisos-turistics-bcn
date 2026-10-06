@@ -96,7 +96,7 @@ p {
         white-space: normal;
     }
 
-    .countdown-marquee__item + .countdown-marquee__item {
+    .countdown-marquee__item+.countdown-marquee__item {
         display: none;
     }
 }
@@ -109,22 +109,49 @@ label {
 }
 
 
-.search-form {}
-
 .search-form .container {
     border: 1px solid #e5e5e5;
 }
 
-@media (min-width: 768px) {
-
-    .search-form .tipus-via-carrer>div {
-        background: #f4f6f8;
-    }
-}
-
-
 .search-form .input {
     position: relative;
+}
+
+.search-form .number-select__control {
+    min-height: 58px;
+    background: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    color: var(--bs-body-color);
+}
+
+.search-form .number-select__control--is-focused {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.search-form .number-select__control--is-disabled {
+    background: var(--bs-secondary-bg);
+}
+
+.search-form .number-select__single-value,
+.search-form .number-select__input-container {
+    color: var(--bs-body-color);
+}
+
+.search-form .number-select__menu {
+    background: var(--bs-body-bg);
+    color: var(--bs-body-color);
+    z-index: 30;
+}
+
+.search-form .number-select__option--is-focused {
+    background: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+.search-form .number-select__option--is-selected {
+    background: var(--bs-primary);
+    color: #fff;
 }
 
 .search-form .input select,
@@ -239,27 +266,41 @@ label {
 }
 
 
-.search-form .numero {
-    max-width: 100px;
+.search-form {
+    --search-field-width: 100%;
+    --search-number-max-width: none;
+    --search-field-margin: 1rem;
+    --search-form-padding: 1.5rem;
 }
 
-/* Stack the form fields to full width on small screens. */
-@media (max-width: 767px) {
-    .search-form .p-5 {
-        padding: 1.5rem !important;
-    }
+.search-form .p-5 {
+    padding: var(--search-form-padding) !important;
+}
 
-    .search-form .carrer,
-    .search-form .numero,
-    .search-form .search-button {
-        max-width: none;
-        width: 100%;
-    }
+.search-form .carrer,
+.search-form .numero,
+.search-form .search-button {
+    max-width: none;
+    width: var(--search-field-width);
+}
 
-    .search-form .carrer,
-    .search-form .numero {
-        margin-bottom: 1rem;
-    }
+.search-form .carrer,
+.search-form .numero {
+    margin-bottom: var(--search-field-margin);
+}
+
+.search-form .numero {
+    max-width: var(--search-number-max-width);
+}
+
+.section-search {
+    background: white;
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+
+.section-search>.container {
+    width: 100%;
 }
 
 /* Compact, pinned version of the search block shown while results are on screen. */
@@ -267,22 +308,6 @@ label {
     position: sticky;
     top: var(--app-navbar-height);
     z-index: 1020;
-    /* padding-top: 0.75rem !important;
-    padding-bottom: 0.75rem !important; */
-    /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); */
-}
-
-.search-section--sticky .search-form {
-    /* padding-top: 0 !important; */
-}
-
-.search-section--sticky .search-form>h2,
-.search-section--sticky .search-form>p {
-    /* display: none; */
-}
-
-.search-section--sticky .search-form>.p-5 {
-    /* padding: 1rem !important; */
 }
 
 .search-form .linkGuiaBcn a {
@@ -292,9 +317,6 @@ label {
 
 .search-results {
     margin-top: 1.5rem;
-}
-
-.site-footer {
 }
 
 .site-footer__brand {
@@ -358,12 +380,13 @@ label {
 }
 
 .choropleth-panel {
-    position: absolute;
+    position: relative;
     top: 0rem;
     left: 0rem;
     bottom: 0px;
     z-index: 2;
-    width: min(33%, calc(100% - 2rem));
+    width: auto;
+    margin-top: 2rem;
     padding: 2rem;
     background: #FFF;
     transition: transform 0.25s ease;
@@ -371,17 +394,18 @@ label {
 }
 
 .choropleth-panel__body {
-    max-height: calc(100% - 2rem);
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
 }
 
 .choropleth-panel--collapsed {
-    transform: translateX(calc(-100% + 1rem));
+    transform: none;
 }
 
 /* Sits outside the panel so it stays reachable once the panel slides away. */
 .choropleth-panel__toggle {
-    position: absolute;
+    position: static;
+    float: right;
     top: 2rem;
     right: -1.75rem;
     width: 2rem;
@@ -393,6 +417,7 @@ label {
 
 }
 
+.choropleth-panel--collapsed .choropleth-panel__body,
 .choropleth-panel--collapsed .choropleth-detail {
     display: none;
 }
@@ -416,16 +441,11 @@ label {
     width: 100%;
     aspect-ratio: 1 / 1;
 }
+
 .choropleth-double {
     width: 100%;
     aspect-ratio: 2 / 1;
 }
-
-/* Alternating soft gray rows for the per-floor list. */
-/* .floor-list>li:nth-child(odd) {
-    background-color: #f5f6f7;
-} */
-
 
 /* Division switch floating over the top-right corner of the map. */
 .choropleth-controls {
@@ -453,12 +473,13 @@ label {
 
 /* Colour scale: floating over the bottom right of the map, in flow below it on mobile. */
 .choropleth-legend {
-    position: absolute;
+    position: static;
     right: 0rem;
     bottom: 0rem;
     z-index: 2;
-    width: 240px;
-    padding: 2rem;
+    width: auto;
+    margin-top: 0.75rem;
+    padding: 0;
 }
 
 .choropleth-legend__scale {
@@ -492,17 +513,6 @@ label {
     right: 0;
 }
 
-@media (max-width: 767px) {
-    .choropleth-legend {
-        position: static;
-        width: auto;
-        margin-top: 0.75rem;
-        padding: 0;
-        border: none;
-        background: none;
-    }
-}
-
 .choropleth-panel__summary {
     display: grid;
     grid-template-columns: auto 1fr;
@@ -521,16 +531,17 @@ label {
 
 /* Nested panel sliding out of the right edge of the main one. */
 .choropleth-detail {
-    position: absolute;
+    position: relative;
     top: 0;
     left: 0rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    width: 100%;
+    width: auto;
+    margin-top: 2rem;
     padding: 2rem;
     background: #F2F2F2;
-    animation: choropleth-detail-in 0.25s ease;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
     bottom: 0;
 }
 
@@ -544,6 +555,7 @@ label {
 .choropleth-detail__list {
     flex: 1;
     min-height: 0;
+    max-height: 40vh;
     overflow-y: auto;
     margin: 0;
     padding: 0;
@@ -562,11 +574,6 @@ label {
     color: inherit;
 }
 
-.choropleth-detail__item:hover .choropleth-detail__address,
-.choropleth-detail__item[aria-pressed='true'] .choropleth-detail__address {
-    /* color: #0057a3; */
-}
-
 .choropleth-detail__address {
     font-weight: 500;
 }
@@ -582,67 +589,90 @@ label {
     position: absolute;
     top: 0;
     left: 0rem;
-    animation: choropleth-detail-in 0.25s ease;
     padding: 2rem;
-    position: absolute;
     bottom: 0px;
 }
 
-/* Not enough room for three side-by-side panels, so stack the last one. */
-@media (max-width: 1199px) {
-    .choropleth-subdetail {
-        border: none;
-        border-radius: 0;
-        box-shadow: none;
-        animation: none;
-    }
-
-    .choropleth-subdetail .choropleth-detail__list {
-        max-height: 30vh;
-    }
+.choropleth-subdetail .choropleth-detail__list {
+    max-height: 30vh;
 }
 
-@media (max-width: 767px) {
+@media (min-width: 768px) {
+    .search-form {
+        --search-field-width: auto;
+        --search-number-max-width: 100px;
+        --search-field-margin: 0;
+        --search-form-padding: 3rem;
+    }
+
+    .search-form .tipus-via-carrer>div {
+        background: #f4f6f8;
+    }
 
     .choropleth-panel,
     .choropleth-detail {
-        position: relative;
-        left: 0;
-        width: auto;
-        max-height: none;
-        overflow: visible;
-        box-shadow: none;
-        margin-top: 2rem;
+        position: absolute;
+        margin-top: 0;
+    }
+
+    .choropleth-panel {
+        width: min(33%, calc(100% - 2rem));
     }
 
     .choropleth-panel__body {
-        max-height: none;
-        overflow: visible;
+        max-height: calc(100% - 2rem);
+        overflow-y: auto;
     }
 
     .choropleth-panel--collapsed {
-        transform: none;
+        transform: translateX(calc(-100% + 1rem));
     }
 
     .choropleth-panel__toggle {
-        position: static;
-        float: right;
+        position: absolute;
+        float: none;
     }
 
-    .choropleth-panel--collapsed .choropleth-panel__body,
-    .choropleth-panel--collapsed .choropleth-detail {
-        display: none;
+    .choropleth-panel--collapsed .choropleth-panel__body {
+        display: flex;
     }
 
     .choropleth-detail {
+        width: 100%;
         border: none;
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 0;
-        animation: none;
+        animation: choropleth-detail-in 0.25s ease;
     }
 
     .choropleth-detail__list {
-        max-height: 40vh;
-        overflow-y: auto;
+        max-height: none;
+    }
+
+    .choropleth-legend {
+        position: absolute;
+        width: 240px;
+        margin-top: 0;
+        padding: 2rem;
+    }
+
+    .section-search {
+        background: transparent;
+        padding: 0px;
+
+    }
+
+    .section-search>.container {
+        width: 50%;
+    }
+}
+
+@media (min-width: 992px) {}
+
+@media (min-width: 1200px) {
+    .choropleth-subdetail {
+        animation: choropleth-detail-in 0.25s ease;
+    }
+
+    .choropleth-subdetail .choropleth-detail__list {
+        max-height: none;
     }
 }

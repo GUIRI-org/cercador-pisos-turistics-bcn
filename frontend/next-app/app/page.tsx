@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import type { SelectInstance } from 'react-select';
 import { useRouter, useSearchParams } from 'next/navigation';
 import './styles.css';
 import { fetchPortalsByVia, searchApartments, searchCarrers } from '@/lib/api';
@@ -93,14 +94,26 @@ function HomeSearch() {
   const [loading, setLoading] = useState(false);
   const [streetNameLoading, setStreetNameLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [carrerLoading, setCarrerLoading] = useState(false);
+  const [numLoading, setNumLoading] = useState(false);
 
   const carrerTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const carrerAbortRef = useRef<AbortController | null>(null);
+  const portalsAbortRef = useRef<AbortController | null>(null);
   const geoBcnResponseRef = useRef<{ query: string; response: GeoBcnSearchResponse } | null>(null);
   const carrerRequestIdRef = useRef(0);
   const selectedCarrerRequestIdRef = useRef(0);
-  const carrerInputRef = useRef<HTMLInputElement | null>(null);
-  const numInputRef = useRef<HTMLSelectElement | null>(null);
+  const carrerInputRef = useRef<SelectInstance<CarrerVia, false> | null>(null);
+  const numInputRef = useRef<SelectInstance<{ value: string; label: string }, false> | null>(null);
   const searchButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => () => {
+    clearTimeout(carrerTimerRef.current);
+    carrerAbortRef.current?.abort();
+    portalsAbortRef.current?.abort();
+    ++carrerRequestIdRef.current;
+    ++selectedCarrerRequestIdRef.current;
+  }, []);
 
   // Resolve deep-linked street parameters to the human-readable geoBCN label.
   useEffect(() => {
@@ -114,15 +127,11 @@ function HomeSearch() {
     setSelectedCarrer(null);
     setCarrerInput(`${queryTipusVia} ${queryCarrer}`.trim());
     setStreetNameLoading(true);
+    const requestId = ++carrerRequestIdRef.current;
     let cancelled = false;
 
     searchCarrers(queryCarrer, queryTipusVia || undefined).then((response) => {
-      if (cancelled) return;
-
-      geoBcnResponseRef.current = {
-        query: queryCarrer.toLocaleLowerCase('ca'),
-        response,
-      };
+      if (cancelled || requestId !== carrerRequestIdRef.current) return;
       console.log('[geoBCN] URL street response', {
         query: {
           tipus_via: queryTipusVia,
@@ -197,11 +206,18 @@ function HomeSearch() {
   }, [queryTipusVia, queryCarrer, queryNum, queryEscala, queryPis, queryPorta]);
 
   const handleCarrerInput = (value: string) => {
+    setStreetNameLoading(false);
     setCarrerInput(value);
     setSelectedCarrer(null);
     setNumOptions([]);
     setNum('');
     clearTimeout(carrerTimerRef.current);
+    carrerAbortRef.current?.abort();
+    portalsAbortRef.current?.abort();
+    ++selectedCarrerRequestIdRef.current;
+    setNumLoading(false);
+    setCarrerLoading(false);
+    setCarrerSuggestions([]);
     const requestId = ++carrerRequestIdRef.current;
 
     if (value.trim().length < 3) {
@@ -211,22 +227,21 @@ function HomeSearch() {
 
     const normalizedValue = value.trim().toLocaleLowerCase('ca');
     const cached = geoBcnResponseRef.current;
-    if (cached && normalizedValue.startsWith(cached.query)) {
-      const filteredVies = cached.response.vies.filter((via) => {
-        const label = (via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`).toLocaleLowerCase('ca');
-        return label.includes(normalizedValue);
-      });
-      setCarrerSuggestions(filteredVies);
+    if (cached && normalizedValue === cached.query) {
+      setCarrerSuggestions(cached.response.vies);
       return;
     }
 
+    setCarrerLoading(true);
     carrerTimerRef.current = setTimeout(async () => {
-      const response = await searchCarrers(value, queryTipusVia || undefined);
+      const controller = new AbortController();
+      carrerAbortRef.current = controller;
+      const response = await searchCarrers(value.trim(), undefined, controller.signal);
       if (requestId !== carrerRequestIdRef.current) return;
 
       geoBcnResponseRef.current = { query: normalizedValue, response };
-      console.log('[geoBCN] street search response', response);
       setCarrerSuggestions(response.vies);
+      setCarrerLoading(false);
     }, 300);
   };
 
@@ -240,16 +255,21 @@ function HomeSearch() {
     }
 
     const requestId = ++selectedCarrerRequestIdRef.current;
-    const addresses = await fetchPortalsByVia(via.codi);
-    if (requestId !== selectedCarrerRequestIdRef.current) return;
-
-    console.log('[geoBCN] selected street portals response', {
-      id_via: via.codi,
-      adreces: addresses,
-    });
-
+    clearTimeout(carrerTimerRef.current);
+    carrerAbortRef.current?.abort();
+    ++carrerRequestIdRef.current;
+    portalsAbortRef.current?.abort();
+    const controller = new AbortController();
+    portalsAbortRef.current = controller;
     setSelectedCarrer(via);
     setCarrerInput(via.nomComplet ?? via.nom);
+    setCarrerLoading(false);
+    setNumOptions([]);
+    setNum('');
+    setNumLoading(true);
+    const addresses = await fetchPortalsByVia(via.codi, controller.signal);
+    if (requestId !== selectedCarrerRequestIdRef.current) return;
+    setNumLoading(false);
 
     const nums = [...new Set(
       addresses.map((address) => address.numeracioPostal)
@@ -257,31 +277,11 @@ function HomeSearch() {
       .filter(Boolean)
       .sort((a, b) => a.localeCompare(b, 'ca', { numeric: true, sensitivity: 'base' }));
 
-    console.log('[geoBCN] numOptions from selected street response', nums);
     setNumOptions(nums);
     setNum('');
 
     // The number input is only enabled once a street is selected, so wait for the re-render.
     requestAnimationFrame(() => numInputRef.current?.focus());
-  };
-
-  const handleCarrerKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter' && e.key !== 'ArrowDown') return;
-    const first = carrerSuggestions[0];
-    if (!selectedCarrer && first) {
-      e.preventDefault();
-      handleSelectCarrer(first.codi);
-    } else if (e.key === 'Enter' && selectedCarrer) {
-      e.preventDefault();
-      numInputRef.current?.focus();
-    }
-  };
-
-  const handleNumKeyDown = (e: React.KeyboardEvent<HTMLSelectElement>) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    setTouched((prev) => ({ ...prev, num: true }));
-    if (num.trim()) searchButtonRef.current?.focus();
   };
 
   const carrerName = selectedCarrer?.nom ?? queryCarrer;
@@ -330,6 +330,13 @@ function HomeSearch() {
   );
 
   const handleResetSearch = useCallback(() => {
+    clearTimeout(carrerTimerRef.current);
+    carrerAbortRef.current?.abort();
+    portalsAbortRef.current?.abort();
+    ++carrerRequestIdRef.current;
+    ++selectedCarrerRequestIdRef.current;
+    setCarrerLoading(false);
+    setNumLoading(false);
     setTouched({});
     setSelectedCarrer(null);
     setCarrerInput('');
@@ -363,32 +370,20 @@ function HomeSearch() {
         <AppNavbar />
 
         <section id="seccio-introduccio" className='bg-transparent'>
-          <div className="container intro-container w-50 py-5">
-            <h1 className="intro-title">Apartamento</h1>
+          <div className="container intro-container w-50">
+            <h1 className="intro-title mb-5">apartament</h1>
             <p className="fs-4 text-gray-600 lh-base">
               L’Ajuntament de Barcelona va anunciar el passat mes de setembre que “a Barcelona, el 2028, s’eliminaran les llicències d’habitatges d’ús turístic”
-
             </p>
             <p className="text-gray-600">
-              Consulta els registres disponibles, explora els resultats al mapa i entén millor com es distribueixen els habitatges turístics pels barris de la ciutat.
+              El departament d’<a href="https://ajuntament.barcelona.cat/urbanisme-accio-climatica-mobilitat-pla-barris-serveis-urbans/ca" target="_blank" rel="noopener noreferrer">Urbanisme, Acció Climàtica, Mobilitat, Pla de Barris i Serveis Urbans</a> ha publicat recentment una nova secció al seu portal web de l’Ajuntament per informar d’aquesta nova iniciativa politica del <a href="https://www.barcelona.cat/habitatge/ca/pla-viure/en-que-consisteix" target="_blank" rel="noopener noreferrer">pla “VIURE”</a>.
             </p>
-            <a className="btn btn-primary mt-2" href="#seccio-cerca">Comença amb una adreça</a>
           </div>
         </section>
 
-        <section id="seccio-cerca" className='bg-transparent'>
-          <div className="container w-50 py-5">
-            <h3 className="">Consulta els habitatges que tenen llicència</h3>
-            <div className="row">
-              <div className="col-12 col-md-9">
-                <p className="fs-4 text-gray-600 lh-base">
-                  Detecta fàcilment si a la teva finca hi ha habitatges d&apos;ús turístic sense llicència, o si creus que pots estar allotjat en un d&apos;ells.
-                </p>
-                <p className="text-gray-600 italic">
-                  Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
-                </p>
-              </div>
-            </div>
+        <section id="seccio-cerca" className='section-search'>
+          <div className="container">
+
             <SearchForm
               carrerInput={carrerInput}
               carrerSuggestions={carrerSuggestions}
@@ -399,26 +394,27 @@ function HomeSearch() {
               numError={numError}
               canSearch={canSearch}
               carrerInputRef={carrerInputRef}
+              carrerLoading={carrerLoading}
+              numLoading={numLoading}
               numInputRef={numInputRef}
               searchButtonRef={searchButtonRef}
               onSubmit={handleSubmit}
               onCarrerInput={handleCarrerInput}
               onSelectCarrer={handleSelectCarrer}
               onNumChange={setNum}
-              onCarrerKeyDown={handleCarrerKeyDown}
-              onNumKeyDown={handleNumKeyDown}
               onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
               onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
               showReset={showResults}
               onHandleResetSearch={handleResetSearch}
             />
+
           </div>
 
 
           {/* <!-- end of the search form --> */}
         </section>
 
-        <section id="seccio-resultats" className='border-top border-white'>
+        <section id="seccio-resultats" className='bg-transparent'>
           {showResults && (
             <div className="search-results-container container w-50 py-5">
               <div className="d-flex flex-column gap-4">

@@ -55,8 +55,9 @@ body {
 }
 
 .geo-plane-mid {
-  --building-width: clamp(150px, 15vw, 360px);
-  --building-side-offset: 0px;
+  --building-width: clamp(128px, 24vw, 180px);
+  --building-visible-width: calc(var(--building-width) * 0.34);
+  --building-side-offset: calc(var(--building-visible-width) - var(--building-width));
   --building-scroll-offset: 0px;
   z-index: 2;
   background-repeat: repeat-y, repeat-y;
@@ -67,12 +68,9 @@ body {
   will-change: background-position;
 }
 
-@media (max-width: 767px) {
-  .geo-plane-mid {
-    --building-width: clamp(128px, 24vw, 180px);
-    --building-visible-width: calc(var(--building-width) / 4);
-    --building-side-offset: calc(var(--building-visible-width) - var(--building-width));
-  }
+.parallax-content main > section > .container.w-50 {
+  width: 75% !important;
+  max-width: none;
 }
 
 .geo-plane-third {
@@ -115,6 +113,18 @@ body {
 .intro-title {
   font-size: min(5.5rem, 17cqi);
   letter-spacing: 0;
+}
+
+@media (min-width: 768px) {
+  .geo-plane-mid {
+    --building-width: clamp(150px, 15vw, 360px);
+    --building-side-offset: 0px;
+  }
+
+  .parallax-content main > section > .container.w-50 {
+    width: 50% !important;
+    max-width: 1320px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

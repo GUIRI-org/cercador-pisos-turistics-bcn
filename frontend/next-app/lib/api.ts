@@ -153,11 +153,12 @@ const SEARCH_CARRERS_MAX_RESULTS = 200;
 
 export async function searchCarrers(
   query: string,
-  tipusAbr?: string
+  tipusAbr?: string,
+  signal?: AbortSignal
 ): Promise<{ vies: CarrerVia[]; adreces: AdrecaSearchResult[] }> {
   try {
     const searchQuery = tipusAbr ? `${tipusAbr} ${query}` : query;
-    const res = await fetch(`${BASE}?q=${encodeURIComponent(searchQuery)}&max=${SEARCH_CARRERS_MAX_RESULTS}`);
+    const res = await fetch(`${BASE}?q=${encodeURIComponent(searchQuery)}&max=${SEARCH_CARRERS_MAX_RESULTS}`, { signal });
     const json = (await res.json()) as TerritoriResponse;
     return {
       vies: json.resultats?.vies || [],
@@ -168,9 +169,9 @@ export async function searchCarrers(
   }
 }
 
-export async function fetchPortalsByVia(codi: string): Promise<AdrecaSearchResult[]> {
+export async function fetchPortalsByVia(codi: string, signal?: AbortSignal): Promise<AdrecaSearchResult[]> {
   try {
-    const res = await fetch(`${BASE}/portals?id_via=${encodeURIComponent(codi)}`);
+    const res = await fetch(`${BASE}/portals?id_via=${encodeURIComponent(codi)}`, { signal });
     const json = (await res.json()) as { resultats?: AdrecaSearchResult[] };
     return json.resultats || [];
   } catch {
