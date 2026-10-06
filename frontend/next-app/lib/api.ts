@@ -1,6 +1,5 @@
 import {
   TerritoriResponse,
-  TipusVia,
   CarrerVia,
   AdrecaSearchResult,
   ApartmentSearchResponse,
@@ -148,20 +147,6 @@ const mergeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
 
   return Array.from(merged.values());
 };
-
-// Barcelona Territory API calls
-export async function fetchTipusVies(): Promise<TipusVia[]> {
-  try {
-    const res = await fetch(`${BASE}/tipusvies`);
-    // Unlike the other territori endpoints, /tipusvies returns `resultats` as a flat array.
-    const json = (await res.json()) as { resultats?: TipusVia[] };
-    return (json.resultats || []).sort((a, b) =>
-      a.nom.localeCompare(b.nom, 'ca')
-    );
-  } catch {
-    return [];
-  }
-}
 
 // The territori search endpoint defaults to 25 results per array (vies/adreces); `max` raises that cap.
 const SEARCH_CARRERS_MAX_RESULTS = 200;

@@ -1,38 +1,52 @@
 'use client';
 
-import Countdown, { CountdownRenderProps } from 'react-countdown';
+import { useEffect, useState } from 'react';
 
 const TARGET_DATE = new Date('2028-01-01T00:00:00');
 
-const renderer = ({ days, hours, minutes, seconds, completed }: CountdownRenderProps) => {
-  if (completed) {
-    return <span className="fw-semibold">Ja és 1 de gener de 2028!</span>;
-  }
+interface CountdownTime {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  completed: boolean;
+}
 
-  const units = [
-    { value: days, label: 'dies' },
-    { value: hours, label: 'hores' },
-    { value: minutes, label: 'minuts' },
-    { value: seconds, label: 'segons' },
-  ];
+const getCountdownTime = (): CountdownTime => {
+  const milliseconds = Math.max(0, TARGET_DATE.getTime() - Date.now());
+  const totalSeconds = Math.floor(milliseconds / 1000);
 
-  return (
-    <div className="d-flex gap-3 flex-wrap" role="timer" aria-live="off">
-      {units.map((unit) => (
-        <div key={unit.label} className="text-center">
-          <div className="fs-2 fw-bold text-primary lh-1">{String(unit.value).padStart(2, '0')}</div>
-          <div className="text-uppercase text-secondary" style={{ fontSize: '0.7rem' }}>{unit.label}</div>
-        </div>
-      ))}
-    </div>
-  );
+  return {
+    days: Math.floor(totalSeconds / 86400),
+    hours: Math.floor((totalSeconds % 86400) / 3600),
+    minutes: Math.floor((totalSeconds % 3600) / 60),
+    seconds: totalSeconds % 60,
+    completed: milliseconds === 0,
+  };
 };
 
 export function CountdownBanner() {
+  const [time, setTime] = useState<CountdownTime | null>(null);
+
+  useEffect(() => {
+    const update = () => setTime(getCountdownTime());
+    update();
+    const interval = window.setInterval(update, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const message = time?.completed
+    ? 'Ja és 1 de gener de 2028!'
+    : `${time?.days ?? '--'} dies · ${time?.hours ?? '--'} hores · ${time?.minutes ?? '--'} minuts · ${time?.seconds ?? '--'} segons`;
+
   return (
-    <div className="countdown-banner mb-4">
-      <p className="text-secondary mb-2">Compte enrere fins a l&apos;1 de gener de 2028:</p>
-      <Countdown date={TARGET_DATE} renderer={renderer} />
+    <div className="countdown-banner" role="timer" aria-live="off" aria-label={message}>
+      <div className="countdown-marquee" aria-hidden="true">
+        <div className="countdown-marquee__track">
+          <span className="countdown-marquee__item">{message}</span>
+          <span className="countdown-marquee__item">{message}</span>
+        </div>
+      </div>
     </div>
   );
 }

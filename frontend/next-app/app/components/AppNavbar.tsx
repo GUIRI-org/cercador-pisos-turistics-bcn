@@ -5,19 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { homeSections } from '../config/sections';
 
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
-
-interface AppNavbarProps {
-  secondaryHref: string;
-  secondaryLabel: string;
-  compact?: boolean;
-}
-
-export function AppNavbar({
-  secondaryHref,
-  secondaryLabel,
-  compact = false,
-}: AppNavbarProps) {
+export function AppNavbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 

@@ -18,7 +18,6 @@ interface ApartmentResultsProps {
   onResetSearch?: () => void;
   /** Runs a new search for the clicked address of the street. */
   onSelectAddress?: (group: AddressGroup) => void;
-  singleResult?: boolean;
 }
 
 const normalizePart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
@@ -125,36 +124,6 @@ const formatAddress = (group: AddressGroup, streetName?: string) => {
 const formatArea = (group: AddressGroup) =>
   [group.nom_barri, group.nom_districte].filter(Boolean) as string[];
 
-// Numeric floors/doors come first in ascending order, then the rest alphabetically.
-const compareAscending = (a: string, b: string) => {
-  const aNum = Number.parseInt(a, 10);
-  const bNum = Number.parseInt(b, 10);
-  const aIsNum = !Number.isNaN(aNum);
-  const bIsNum = !Number.isNaN(bNum);
-
-  if (aIsNum && bIsNum) return aNum - bNum;
-  if (aIsNum) return -1;
-  if (bIsNum) return 1;
-  return a.localeCompare(b, 'ca');
-};
-
-const groupApartmentsByFloor = (apartments: ApartmentDetailType[]) => {
-  const floors = new Map<string, Map<string, number>>();
-
-  apartments.forEach((apt) => {
-    const pis = normalizePis(apt.pis);
-    const porta = String(apt.porta ?? '').trim() || '-';
-    const doors = floors.get(pis) ?? new Map<string, number>();
-    doors.set(porta, (doors.get(porta) ?? 0) + 1);
-    floors.set(pis, doors);
-  });
-
-  return Array.from(floors, ([pis, doors]) => ({
-    pis,
-    doors: Array.from(doors, ([porta, count]) => ({ porta, count })).sort((a, b) => compareAscending(a.porta, b.porta)),
-  })).sort((a, b) => compareAscending(a.pis, b.pis));
-};
-
 const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
   const aNum = a.num1 ?? Number.POSITIVE_INFINITY;
   const bNum = b.num1 ?? Number.POSITIVE_INFINITY;
@@ -171,9 +140,6 @@ const COMARQUES_CONTEXT = {
   stroke: '#94a3b8',
   strokeWidth: 1.5,
 };
-
-const streetKeyOf = (group: AddressGroup) =>
-  `${group.tipus_carrer ?? ''} ${group.carrer ?? ''}`.trim().toLowerCase();
 
 // City view with the district of the address coloured, next to a district view highlighting its neighbourhood.
 function AddressLocationMaps({ group, streetName }: { group: AddressGroup; streetName?: string }) {
@@ -646,9 +612,7 @@ export function ApartmentResults({
   loading,
   onResetSearch,
   onSelectAddress,
-  singleResult,
 }: ApartmentResultsProps) {
-  const shouldOpenFirstItem = !!onResetSearch;
   const displayGroups = useMemo(
     () => dedupeAddressGroups(addressGroups).sort(compareByStreetNumber),
     [addressGroups]
@@ -661,17 +625,6 @@ export function ApartmentResults({
   );
 
   const searchedKeys = useMemo(() => new Set(displayGroups.map(getAddressGroupKey)), [displayGroups]);
-
-  const resultSignature = useMemo(
-    () => `${shouldOpenFirstItem ? 'reset' : 'plain'}:${displayGroups.map(getAddressGroupKey).join('||')}`,
-    [displayGroups, shouldOpenFirstItem]
-  );
-  const defaultOpenItems = shouldOpenFirstItem ? new Set<number>([0]) : new Set<number>();
-  const [openState, setOpenState] = useState<{ signature: string; openItems: Set<number> }>({
-    signature: resultSignature,
-    openItems: defaultOpenItems,
-  });
-
 
   if (loading) {
     return (
@@ -695,7 +648,7 @@ export function ApartmentResults({
                target="_blank" 
                rel="noopener noreferrer" 
                className="btn btn-outline-secondary">
-              Avisa'ns
+              Avisa&apos;ns
             </a>
           </div>
         </div>
@@ -707,7 +660,7 @@ export function ApartmentResults({
             key={idx}
             className="container"
           >
-            <ApartmentDetail group={group} allGroups={displayGroups} currentIndex={idx} streetName={streetName} />
+            <ApartmentDetail group={group} streetName={streetName} />
 
             <AddressLocationMaps group={group} streetName={streetName} />
             <button

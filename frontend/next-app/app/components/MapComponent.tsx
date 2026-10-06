@@ -358,8 +358,6 @@ export function MapComponent({
                         
                         <ApartmentDetail
                             group={selectedAddress}
-                            allGroups={selectedAddresses ?? []}
-                            currentIndex={selectedAddresses?.indexOf(selectedAddress) ?? -1}
                         />
                     </div>
                 )

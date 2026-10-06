@@ -43,6 +43,64 @@ p {
     line-height: 20px;
 }
 
+.countdown-banner {
+    width: 100%;
+    margin: 1.5rem 0;
+    overflow: hidden;
+    color: #1b3c70;
+}
+
+.countdown-marquee {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.countdown-marquee__track {
+    display: flex;
+    width: max-content;
+    animation: countdown-marquee 34s linear infinite;
+    will-change: transform;
+}
+
+.countdown-marquee__item {
+    flex: none;
+    padding-right: 3rem;
+    color: inherit;
+    font-size: clamp(3rem, 10.5vw, 9.375rem);
+    font-weight: 700;
+    line-height: 0.95;
+    white-space: nowrap;
+}
+
+@keyframes countdown-marquee {
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .countdown-marquee {
+        white-space: normal;
+    }
+
+    .countdown-marquee__track {
+        display: block;
+        width: auto;
+        animation: none;
+    }
+
+    .countdown-marquee__item {
+        display: block;
+        padding: 0;
+        font-size: clamp(2.5rem, 7vw, 5rem);
+        white-space: normal;
+    }
+
+    .countdown-marquee__item + .countdown-marquee__item {
+        display: none;
+    }
+}
+
 .label,
 label {
     margin-bottom: 6px;
@@ -234,6 +292,64 @@ label {
 
 .search-results {
     margin-top: 1.5rem;
+}
+
+.site-footer {
+}
+
+.site-footer__brand {
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.site-footer__heading {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.site-footer__summary {
+    max-width: 28rem;
+    margin: 0 0 0.75rem;
+    line-height: 1.6;
+}
+
+.site-footer__links {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.site-footer__links a,
+.site-footer__link {
+    text-decoration: none;
+}
+
+.site-footer__links a:hover,
+.site-footer__link:hover {
+    text-decoration: underline;
+}
+
+.site-footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(100, 100, 100, 0.2);
+    font-size: 0.875rem;
+}
+
+.site-footer__legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 /* Floating panel over the choropleth: left sliding column on desktop, in-flow block on mobile. */

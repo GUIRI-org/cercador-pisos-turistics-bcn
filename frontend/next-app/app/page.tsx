@@ -1,10 +1,10 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import './styles.css';
-import { fetchPortalsByVia, fetchTipusVies, searchApartments, searchCarrers } from '@/lib/api';
-import { AddressGroup, CarrerVia, TipusVia } from '@/lib/types';
+import { fetchPortalsByVia, searchApartments, searchCarrers } from '@/lib/api';
+import { AddressGroup, CarrerVia } from '@/lib/types';
 import { AppNavbar } from './components/AppNavbar';
 import { ApartmentResults } from './components/ApartmentResults';
 import { CountdownBanner } from './components/CountdownBanner';
@@ -13,22 +13,6 @@ import { SearchForm } from './components/SearchForm';
 import type { ChoroplethPoint } from './components/ChoroplethMap';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
-
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
-
-const getAddressGroupKey = (group: AddressGroup) => {
-  return [
-    normalizeAddressPart(group.tipus_carrer),
-    normalizeAddressPart(group.carrer),
-    normalizeAddressPart(group.num1),
-    normalizeAddressPart(group.lletra1),
-    normalizeAddressPart(group.num2),
-    normalizeAddressPart(group.lletra2),
-    normalizeAddressPart(group.address),
-    normalizeAddressPart(group.latitud_y),
-    normalizeAddressPart(group.longitud_x),
-  ].join('|');
-};
 
 // Geoportal street names don't always match how they're stored in the GUIRI DB — add exceptions here as they're found.
 const CARRER_NAME_OVERRIDES: Record<string, string> = {
@@ -94,9 +78,6 @@ function HomeSearch() {
   const queryPis = (searchParams.get('pis') ?? '').trim();
   const queryPorta = (searchParams.get('porta') ?? '').trim();
 
-  const [tipusVies, setTipusVies] = useState<TipusVia[]>([]);
-  const [tipusVia, setTipusVia] = useState('');
-
   const [carrerInput, setCarrerInput] = useState('');
   const [carrerSuggestions, setCarrerSuggestions] = useState<CarrerVia[]>([]);
   const [selectedCarrer, setSelectedCarrer] = useState<CarrerVia | null>(null);
@@ -117,18 +98,9 @@ function HomeSearch() {
   const geoBcnResponseRef = useRef<{ query: string; response: GeoBcnSearchResponse } | null>(null);
   const carrerRequestIdRef = useRef(0);
   const selectedCarrerRequestIdRef = useRef(0);
-  const searchSectionRef = useRef<HTMLDivElement | null>(null);
   const carrerInputRef = useRef<HTMLInputElement | null>(null);
   const numInputRef = useRef<HTMLSelectElement | null>(null);
   const searchButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    fetchTipusVies().then(setTipusVies);
-  }, []);
-
-  useEffect(() => {
-    console.log('[geoBCN] numOptions state', numOptions);
-  }, [numOptions]);
 
   // Resolve deep-linked street parameters to the human-readable geoBCN label.
   useEffect(() => {
@@ -249,7 +221,7 @@ function HomeSearch() {
     }
 
     carrerTimerRef.current = setTimeout(async () => {
-      const response = await searchCarrers(value, tipusVia || undefined);
+      const response = await searchCarrers(value, queryTipusVia || undefined);
       if (requestId !== carrerRequestIdRef.current) return;
 
       geoBcnResponseRef.current = { query: normalizedValue, response };
@@ -385,99 +357,159 @@ function HomeSearch() {
   );
 
   return (
+    <>
+      <main className="" style={{ minHeight: '100vh' }}>
 
-    <main className="" style={{ minHeight: '100vh' }}>
+        <AppNavbar />
 
-      <AppNavbar secondaryHref="/search-v1" secondaryLabel="Search v1" />
+        <section id="seccio-introduccio" className='bg-transparent'>
+          <div className="container w-50 py-5">
+            <h1>Apartamento</h1>
+            <p className="fs-4 text-gray-600 lh-base">
+              L’Ajuntament de Barcelona va anunciar el passat mes de setembre que “a Barcelona, el 2028, s’eliminaran les llicències d’habitatges d’ús turístic”
 
-      <section id="seccio-introduccio" className='bg-transparent'>
-        <div className="container w-50 py-5">
-          <h1>Secció introducció</h1>
-          <CountdownBanner />
-          <p>Aquesta secció proporciona una introducció a la funcionalitat de cerca d'habitatges amb llicència a la ciutat de Barcelona.</p>
-        </div>
-      </section>
+            </p>
+            <p className="text-gray-600">
+              Consulta els registres disponibles, explora els resultats al mapa i entén millor com es distribueixen els habitatges turístics pels barris de la ciutat.
+            </p>
+            <a className="btn btn-primary mt-2" href="#seccio-cerca">Comença amb una adreça</a>
+          </div>
+        </section>
 
-      <section id="seccio-cerca" className='border-top'>
-        <div className="container w-50 py-5">
-          <h1 className="">Consulta els habitatges que tenen llicència</h1>
-          <div className="row">
-            <div className="col-12 col-md-9">
-              <p className="fs-4 text-gray-600 lh-base">
-                Detecta fàcilment si a la teva finca hi ha habitatges d'ús turístic sense llicència, o si creus que pots estar allotjat en un d'ells.
-              </p>
-              <p className="text-gray-600 italic">
-                Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
-              </p>
+        <section id="seccio-cerca" className='bg-transparent'>
+          <div className="container w-50 py-5">
+            <h3 className="">Consulta els habitatges que tenen llicència</h3>
+            <div className="row">
+              <div className="col-12 col-md-9">
+                <p className="fs-4 text-gray-600 lh-base">
+                  Detecta fàcilment si a la teva finca hi ha habitatges d&apos;ús turístic sense llicència, o si creus que pots estar allotjat en un d&apos;ells.
+                </p>
+                <p className="text-gray-600 italic">
+                  Omple les caselles. Si la teva adreça no hi apareix, el pis que busques és il·legal. (Per a habitatges de la ciutat de Barcelona.)
+                </p>
+              </div>
+            </div>
+            <SearchForm
+              carrerInput={carrerInput}
+              carrerSuggestions={carrerSuggestions}
+              selectedCarrer={selectedCarrer}
+              num={num}
+              numOptions={numOptions}
+              carrerError={carrerError}
+              numError={numError}
+              canSearch={canSearch}
+              carrerInputRef={carrerInputRef}
+              numInputRef={numInputRef}
+              searchButtonRef={searchButtonRef}
+              onSubmit={handleSubmit}
+              onCarrerInput={handleCarrerInput}
+              onSelectCarrer={handleSelectCarrer}
+              onNumChange={setNum}
+              onCarrerKeyDown={handleCarrerKeyDown}
+              onNumKeyDown={handleNumKeyDown}
+              onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
+              onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
+              showReset={showResults}
+              onHandleResetSearch={handleResetSearch}
+            />
+          </div>
+
+
+          {/* <!-- end of the search form --> */}
+        </section>
+
+        <section id="seccio-resultats" className='border-top border-white'>
+          {showResults && (
+            <div className="search-results-container container w-50 py-5">
+              <div className="d-flex flex-column gap-4">
+                <ApartmentResults
+                  title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
+                  streetName={carrerDisplayName}
+                  addressGroups={results}
+                  streetGroups={streetResults}
+                  loading={loading || streetNameLoading}
+                  onResetSearch={handleResetSearch}
+                  onSelectAddress={handleSelectAddress}
+                />
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section id="seccio-about">
+          <div className='container w-50 py-5'>
+            <h1>Una eina ciutadana, amb context</h1>
+            <p className="fs-5 text-gray-600 lh-base">
+              El projecte acosta la informació pública sobre habitatges d&apos;ús turístic a una consulta quotidiana: què hi ha registrat a la meva finca i al meu entorn?
+            </p>
+            <div className="row gy-4 mt-2">
+              <div className="col-12 col-md-4">
+                <h2>Consulta local</h2>
+                <p className="text-gray-600">Busca per carrer i número per revisar els registres associats a una adreça de Barcelona.</p>
+              </div>
+              <div className="col-12 col-md-4">
+                <h2>Dades obertes</h2>
+                <p className="text-gray-600">La informació es presenta a partir de registres públics i es relaciona amb el mapa dels barris.</p>
+              </div>
+              <div className="col-12 col-md-4">
+                <h2>Lectura responsable</h2>
+                <p className="text-gray-600">Les dades poden tenir mancances o desfasaments. No trobar un registre no és, per si sol, una determinació sobre la legalitat d&apos;un habitatge.</p>
+              </div>
             </div>
           </div>
-          <SearchForm
-            carrerInput={carrerInput}
-            carrerSuggestions={carrerSuggestions}
-            selectedCarrer={selectedCarrer}
-            num={num}
-            numOptions={numOptions}
-            carrerError={carrerError}
-            numError={numError}
-            canSearch={canSearch}
-            carrerInputRef={carrerInputRef}
-            numInputRef={numInputRef}
-            searchButtonRef={searchButtonRef}
-            onSubmit={handleSubmit}
-            onCarrerInput={handleCarrerInput}
-            onSelectCarrer={handleSelectCarrer}
-            onNumChange={setNum}
-            onCarrerKeyDown={handleCarrerKeyDown}
-            onNumKeyDown={handleNumKeyDown}
-            onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
-            onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
-            showReset={showResults}
-            onHandleResetSearch={handleResetSearch}
-          />
-        </div>
+        </section>
 
+        <section id="seccio-mapa">
+          <div className='map-container border-top'>
+            <MapComponent
+              points={results.flatMap((group): ChoroplethPoint[] => {
+                if (group.longitud_x === undefined || group.latitud_y === undefined) return [];
+                return [{ longitude: group.longitud_x, latitude: group.latitud_y, label: group.address }];
+              })}
+            />
+          </div>
+        </section>
 
-        {/* <!-- end of the search form --> */}
-      </section>
+      </main>
+      <CountdownBanner />
+      <footer className="site-footer bg-white py-5">
+        <div className="container py-5">
+          <div className="row g-4">
+            <div className="col-12 col-md-5">
+              <a className="site-footer__brand" href="#seccio-introduccio">El Guiri</a>
+              <p className="site-footer__summary">
+                Informació ciutadana sobre habitatges d&apos;ús turístic a Barcelona, a partir de dades obertes.
+              </p>
+            </div>
 
-      <section id="seccio-resultats" className='border-top'>
-        {showResults && (
-          <div className="search-results-container container w-50 py-5">
-            <div className="d-flex flex-column gap-4">
-              <ApartmentResults
-                title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
-                streetName={carrerDisplayName}
-                addressGroups={results}
-                streetGroups={streetResults}
-                loading={loading || streetNameLoading}
-                onResetSearch={handleResetSearch}
-                onSelectAddress={handleSelectAddress}
-                singleResult={results.length === 1}
-              />
+            <nav className="col-6 col-md-3" aria-label="Navegació del peu de pàgina">
+              <h2 className="site-footer__heading">Explora</h2>
+              <ul className="site-footer__links">
+                <li><a href="#seccio-cerca">Cerca una adreça</a></li>
+                <li><a href="#seccio-resultats">Resultats</a></li>
+                <li><a href="#seccio-mapa">Mapa de Barcelona</a></li>
+                <li><a href="#seccio-about">Sobre el projecte</a></li>
+              </ul>
+            </nav>
+
+            <div className="col-6 col-md-4">
+              <h2 className="site-footer__heading">Contacte</h2>
+              <p className="site-footer__summary">Tens preguntes o vols compartir informació?</p>
+              <a className="site-footer__link" href="mailto:contacte@elguiri.cat">contacte@elguiri.cat</a>
             </div>
           </div>
-        )}
-      </section>
 
-      <section id="seccio-mapa">
-        <div className='map-container border-top'>
-          <MapComponent
-            points={results.flatMap((group): ChoroplethPoint[] => {
-              if (group.longitud_x === undefined || group.latitud_y === undefined) return [];
-              return [{ longitude: group.longitud_x, latitude: group.latitud_y, label: group.address }];
-            })}
-          />
+          <div className="site-footer__bottom">
+            <span>&copy; 2026 El Guiri. Tots els drets reservats.</span>
+            <div className="site-footer__legal" aria-label="Informació legal">
+              <span>Avís legal</span>
+              <span>Privacitat</span>
+              <span>Accessibilitat</span>
+            </div>
+          </div>
         </div>
-      </section>
-
-      <section id="seccio-about">
-        <div className='container w-50 py-5'>
-          <h1>Secció about</h1>
-          <p>Aquesta secció proporciona informació sobre el projecte i els seus objectius.</p>
-        </div>
-      </section>
-
-    </main>
+      </footer>
+    </>
   );
 }
 

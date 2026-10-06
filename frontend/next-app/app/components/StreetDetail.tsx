@@ -1,15 +1,11 @@
 'use client';
 
 import type { AddressGroup } from '@/lib/types';
-import { AddressMiniMap } from './AddressMiniMap';
 import { FaRegBuilding } from 'react-icons/fa6';
-import { MdOutlineDoorFront } from "react-icons/md";
 
 
 interface ApartmentDetailProps {
   group: AddressGroup;
-  allGroups: AddressGroup[];
-  currentIndex: number;
   streetName?: string;
 }
 
@@ -69,53 +65,8 @@ const formatPortaDisplay = (porta: string) => {
 
 export function ApartmentDetail({
   group,
-  allGroups,
-  currentIndex,
   streetName,
 }: ApartmentDetailProps) {
-  const district = [group.nom_districte, group.nom_barri]
-    .filter(Boolean)
-    .join(' · ');
-
-  const streetLabel = [group.tipus_carrer, group.carrer]
-    .filter(Boolean)
-    .join(' ');
-
-  const numberLabel = [
-    group.num1 !== undefined && group.num1 !== null ? `${group.num1}${group.lletra1 || ''}` : null,
-    group.num2 !== undefined && group.num2 !== null ? `${group.num2}${group.lletra2 || ''}` : null,
-  ]
-    .filter(Boolean)
-    .join(' - ');
-
-  const hasCoordinates =
-    group.longitud_x !== undefined &&
-    group.longitud_x !== null &&
-    group.latitud_y !== undefined &&
-    group.latitud_y !== null;
-
-  const otherStreetMarkers = allGroups
-    .filter((other, otherIdx) => {
-      const otherHasCoordinates =
-        other.longitud_x !== undefined &&
-        other.longitud_x !== null &&
-        other.latitud_y !== undefined &&
-        other.latitud_y !== null;
-
-      return (
-        otherIdx !== currentIndex &&
-        otherHasCoordinates &&
-        !!group.carrer &&
-        !!other.carrer &&
-        other.carrer === group.carrer
-      );
-    })
-    .map((other) => ({
-      lat: other.latitud_y as number,
-      lng: other.longitud_x as number,
-      label: other.address || undefined,
-    }));
-
   const pisosGrouped = group.apartments.reduce<
     Record<string, { totalPlaces: number; portes: Record<string, number> }>
   >((acc, apt) => {
@@ -141,12 +92,7 @@ export function ApartmentDetail({
     return (group.address || '').replace(/\s+(\d)/, ', $1');
   };
 
-  const formatArea = (group: AddressGroup) =>
-    [group.nom_barri, group.nom_districte].filter(Boolean) as string[];
-
   const totalDoors = Object.values(pisosGrouped).reduce((acc, pisData) => acc + Object.keys(pisData.portes).length, 0);
-  const totalPlaces = Object.values(pisosGrouped).reduce((acc, pisData) => acc + pisData.totalPlaces, 0);
-  const occupancyDensity = totalPlaces > 0 ? (totalDoors / totalPlaces) * 100 : 0;
 
   return (
     <div className="row">
@@ -154,12 +100,9 @@ export function ApartmentDetail({
         <div className="d-flex flex-row gap-2 pb-4">
           <FaRegBuilding className="fs-3" aria-hidden="true" />
           <h2>{formatAddress(group) || 'Address not available'}</h2>
-          {/* {formatArea(group).map((area) => (
-            <p key={area} className="text-gray-600 mb-0">{area}</p>
-          ))} */}
         </div>
         <h4 className="alert-heading">
-          S'han trobat&nbsp;
+          S&apos;han trobat&nbsp;
           <strong>
             {totalDoors}&nbsp;habitatges</strong>&nbsp;amb llicencia d&apos;ús turístic
         </h4>
@@ -183,7 +126,6 @@ export function ApartmentDetail({
                         key={`${pis}-${porta}`}
                         className="d-flex p-3 bg-body align-items-center mb-2"
                       >
-                        {/* <MdOutlineDoorFront className="inline-block me-2 fs-1" /> */}
                         <div className="flex-grow-1">
                           <strong className="text-gray-600 d-block">
                             {formatAddress(group)}
