@@ -55,7 +55,7 @@ body {
 }
 
 .geo-plane-mid {
-  --building-width: clamp(100px, 10vw, 250px);
+  --building-width: clamp(150px, 15vw, 360px);
   --building-side-offset: 0px;
   --building-scroll-offset: 0px;
   z-index: 2;
@@ -106,6 +106,15 @@ body {
 .parallax-content {
   position: relative;
   z-index: 3;
+}
+
+.intro-container {
+  container-type: inline-size;
+}
+
+.intro-title {
+  font-size: min(5.5rem, 17cqi);
+  letter-spacing: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
