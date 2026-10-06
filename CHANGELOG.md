@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+- Only the Nginx container publishes a host port (loopback). The API and Mage no longer publish host ports, so `API_PORT` and `MAGE_PORT` are removed from the env samples.
+- PostgreSQL publishes on loopback by default; set `GLOBAL_DB_BIND_ADDRESS=0.0.0.0` to expose it (only with an allowlist).
+  
 ## v0.0.6 - Oct 6, 2026
 
 ### Added

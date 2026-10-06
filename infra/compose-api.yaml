@@ -25,7 +25,5 @@ services:
       - DB_USER=${GLOBAL_DB_USER}
       - DB_PASSWORD=${GLOBAL_DB_PASSWORD}
       - DB_NAME=${GLOBAL_DB_NAME}
-    ports:
-      - "${API_PORT}:8000"
     depends_on:
       - db

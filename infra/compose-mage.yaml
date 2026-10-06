@@ -34,8 +34,6 @@ services:
       POSTGRES_PASSWORD: ${GLOBAL_DB_PASSWORD}
       POSTGRES_HOST: ${DOCKER_BASE_NAME}-pgsql
       PG_HOST_PORT: 5432
-    ports:
-      - 127.0.0.1:${MAGE_PORT}:6789
     # We want the mage service to be started every time the server starts running, regardles of its state when the server shutted off.
     restart: always
     # Mage's scheduler relies on Python multiprocessing (semaphores/pipes via /dev/shm).
