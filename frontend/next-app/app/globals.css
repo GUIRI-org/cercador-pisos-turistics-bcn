@@ -55,9 +55,24 @@ body {
 }
 
 .geo-plane-mid {
+  --building-width: clamp(100px, 10vw, 250px);
+  --building-side-offset: 0px;
+  --building-scroll-offset: 0px;
   z-index: 2;
   background-repeat: repeat-y, repeat-y;
+  background-size: var(--building-width) auto, var(--building-width) auto;
+  background-position:
+    left var(--building-side-offset) top var(--building-scroll-offset),
+    right var(--building-side-offset) top var(--building-scroll-offset);
   will-change: background-position;
+}
+
+@media (max-width: 767px) {
+  .geo-plane-mid {
+    --building-width: clamp(64px, 12vw, 90px);
+    --building-visible-width: clamp(12px, 3vw, 24px);
+    --building-side-offset: calc(var(--building-visible-width) - var(--building-width));
+  }
 }
 
 .geo-plane-third {

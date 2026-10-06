@@ -17,7 +17,7 @@ export function ParallaxContainer({ children }: { children: React.ReactNode }) {
       const midPlane = midPlaneRef.current;
       if (midPlane) {
         const verticalOffset = (scrollY * 0.18).toFixed(2);
-        midPlane.style.backgroundPosition = `left ${verticalOffset}px, right ${verticalOffset}px`;
+        midPlane.style.setProperty('--building-scroll-offset', `${verticalOffset}px`);
       }
 
       const cloudPlane = cloudPlaneRef.current;
@@ -60,9 +60,6 @@ export function ParallaxContainer({ children }: { children: React.ReactNode }) {
         aria-hidden="true"
         style={{
           backgroundImage: `url('${BASE}/parallax/building-pattern-l.png'), url('${BASE}/parallax/building-pattern-r.png')`,
-          backgroundRepeat: 'repeat-y, repeat-y',
-          backgroundPosition: 'left 0, right 0',
-          backgroundSize: 'auto 800px, auto 800px',
         }}
       />
 
