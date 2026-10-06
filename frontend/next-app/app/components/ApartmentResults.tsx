@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
 import { ApartmentDetail } from './StreetDetail';
+import { ChoroplethMap, type ChoroplethPoint } from './ChoroplethMap';
+import { EPSG_25831 } from '../lib/geoUtils';
 import { FaChevronRight } from 'react-icons/fa6';
 
 
@@ -123,6 +125,54 @@ const formatAddress = (group: AddressGroup, streetName?: string) => {
 
 const formatArea = (group: AddressGroup) =>
   [group.nom_districte, group.nom_barri].filter(Boolean) as string[];
+
+const STREET_MAP_GEOJSON = '/geo/barcelona-barris.geojson';
+
+function StreetAddressMap({ groups, streetName }: { groups: AddressGroup[]; streetName?: string }) {
+  const locatedAddresses = groups.filter(
+    (group) =>
+      group.total_places > 0 &&
+      typeof group.longitud_x === 'number' &&
+      Number.isFinite(group.longitud_x) &&
+      typeof group.latitud_y === 'number' &&
+      Number.isFinite(group.latitud_y)
+  );
+
+  if (locatedAddresses.length === 0) return null;
+
+  const points: ChoroplethPoint[] = locatedAddresses.map((group) => ({
+    longitude: group.longitud_x as number,
+    latitude: group.latitud_y as number,
+    label: `${formatAddress(group)} (${group.apartments_count} habitatges, ${group.total_places} places)`,
+    radius: 4,
+    color: '#dc2626',
+    stroke: '#ffffff',
+  }));
+  const focusPoints = locatedAddresses.map(
+    (group): [number, number] => [group.longitud_x as number, group.latitud_y as number]
+  );
+
+  return (
+    <section className="street-address-map bg-light">
+      <ChoroplethMap
+        geoJsonUrl={STREET_MAP_GEOJSON}
+        sourceCrs={EPSG_25831}
+        filterProperty="TIPUS_UA"
+        filterValue="BARRI"
+        boundaryFilterValue="DISTRICTE"
+        codeProperty="BARRI"
+        labelProperty="NOM"
+        data={[]}
+        points={points}
+        focusPoints={focusPoints}
+        showAreaLabels={false}
+        showBasemap
+        showLegend={false}
+        height={420}
+      />
+    </section>
+  );
+}
 
 const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
   const aNum = a.num1 ?? Number.POSITIVE_INFINITY;
@@ -489,7 +539,7 @@ export function ApartmentResults({
   }
 
   return (
-    <div className={`d-flex flex-column gap-4`}>
+    <div className="bg-transparent">
 
 
       {!displayGroups.length && (
@@ -524,7 +574,7 @@ export function ApartmentResults({
         );
       })}
 
-      {chartGroups.length > 0 && (
+      {chartGroups.length > 1 && (
         <section className="street-addresses container w-50">
           <h4 className="fw-normal">Altres adreces al carrer <strong>{streetName}</strong> amb habitatges amb llicència d&apos;us turístic</h4>
           <ul className="list-group rounded-0">
@@ -562,7 +612,12 @@ export function ApartmentResults({
         </section>
       )}
 
-      <AddressNumberDistributionChart groups={chartGroups} />
+      {chartGroups.length > 1 && (
+        <>
+          <StreetAddressMap groups={chartGroups} streetName={streetName} />
+          <AddressNumberDistributionChart groups={chartGroups} />
+        </>
+      )}
 
     </div>
   );

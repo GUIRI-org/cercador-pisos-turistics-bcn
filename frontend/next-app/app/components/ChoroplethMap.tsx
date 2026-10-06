@@ -193,7 +193,7 @@ export function ChoroplethMap({
     const basemapRef = useRef<HTMLDivElement | null>(null);
     const basemapMapRef = useRef<LeafletMap | null>(null);
 
-    const isZoomed = focusCode !== undefined && focusCode !== null;
+    const isZoomed = (focusCode !== undefined && focusCode !== null) || focusPoints.length > 0;
 
     // With height="100%" the map grows inside a sized parent instead of using a fixed box.
     const fillsParent = height === '100%';
@@ -418,7 +418,7 @@ export function ChoroplethMap({
 
     // Names of the choropleth areas themselves (barris): only worth showing once zoomed into one of them.
     const zoomLabels = useMemo<AreaLabel[]>(() => {
-        const isZoomed = focusCode !== undefined && focusCode !== null;
+        const isZoomed = (focusCode !== undefined && focusCode !== null) || focusPoints.length > 0;
         if (!showAreaLabels || !isZoomed || !pathGenerator || !labelProperty || !boundaryData || !geoData) return [];
 
         return geoData.features.flatMap((feature) => {

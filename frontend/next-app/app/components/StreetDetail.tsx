@@ -29,13 +29,14 @@ const normalizePis = (value: string | number | null | undefined) => {
   return rawValue;
 };
 
-// Named floors below the numbered ones; EN/PR sort before "1º", AT keeps its default (after the numbers) position.
+// Named floors sort before numbered floors; BJ sorts first, while AT keeps its default position after the numbers.
 const PIS_LABELS: Record<string, string> = {
+  BJ: 'Baix',
   EN: 'Entresuelo',
   PR: 'Principal',
   AT: 'Àtic',
 };
-const PIS_SPECIAL_SORT_ORDER: Record<string, number> = { EN: -2, PR: -1 };
+const PIS_SPECIAL_SORT_ORDER: Record<string, number> = { BJ: -3, EN: -2, PR: -1 };
 
 // Renders a normalized pis key (e.g. "01") as an ordinal (e.g. "1º"); named/non-numeric keys are mapped or left untouched.
 const formatPisDisplay = (pis: string) => {
