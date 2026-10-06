@@ -1,12 +1,21 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import type { AddressGroup } from '@/lib/types';
 import { FaRegBuilding } from 'react-icons/fa6';
+import { FaMapMarkerAlt } from "react-icons/fa";
+
+import { MdOutlineDoorBack } from "react-icons/md";
+import { ChoroplethMap } from './ChoroplethMap';
+import { EPSG_25831 } from '../lib/geoUtils';
+import { fetchApartmentMap } from '@/lib/api';
+
 
 
 interface ApartmentDetailProps {
   group: AddressGroup;
   streetName?: string;
+  onResetSearch?: () => void;
 }
 
 const normalizePis = (value: string | number | null | undefined) => {
@@ -63,9 +72,160 @@ const formatPortaDisplay = (porta: string) => {
   return `${Number.parseInt(porta, 10)}ª`;
 };
 
+const formatAddress = (group: AddressGroup, streetName?: string) => {
+  const street = streetName || `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
+  const number = `${group.num1 ?? ''}${group.lletra1 || ''}`.trim();
+  if (street && number) return `${street}, ${number}`;
+  return (group.address || '').replace(/\s+(\d)/, ', $1');
+};
+
+const BARRIS_GEOJSON = '/geo/barcelona-barris.geojson';
+
+const COMARQUES_CONTEXT = {
+  geoJsonUrl: '/geo/dts_comarques_8comarques.geojson',
+  stroke: '#94a3b8',
+  strokeWidth: 1.5,
+};
+
+function AddressLocationMaps({ group, streetName }: { group: AddressGroup; streetName?: string }) {
+  const [cityGroups, setCityGroups] = useState<AddressGroup[] | null>(null);
+  const [cityLoading, setCityLoading] = useState(true);
+  const [showOtherApartments, setShowOtherApartments] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchApartmentMap().then((groups) => {
+      if (!cancelled) setCityGroups(groups);
+    }).finally(() => {
+      if (!cancelled) setCityLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasDistrict = group.codi_districte !== undefined && group.codi_districte !== null;
+  const hasNeighborhood = group.codi_barri !== undefined && group.codi_barri !== null;
+
+  const addressPoints =
+    group.longitud_x !== undefined && group.latitud_y !== undefined
+      ? [{ longitude: group.longitud_x, latitude: group.latitud_y, label: formatAddress(group, streetName), radius: 4, color: '#dc2626' }]
+      : [];
+
+  const cityPoints = useMemo(() => {
+    if (!showOtherApartments || !cityGroups) return [];
+
+    return cityGroups
+      .filter((other) => other.longitud_x !== undefined && other.latitud_y !== undefined)
+      .map((other) => ({
+        longitude: other.longitud_x as number,
+        latitude: other.latitud_y as number,
+        label: `${other.address} (${other.apartments_count} habitatges)`,
+        radius: 2,
+        shape: 'square' as const,
+        color: '#ffffff',
+        opacity: 0.4,
+      }));
+  }, [showOtherApartments, cityGroups]);
+
+  const areaTotals = useMemo(() => {
+    if (!cityGroups) return { district: null, neighborhood: null } as { district: number | null; neighborhood: number | null };
+
+    const sumFor = (matches: (other: AddressGroup) => boolean) =>
+      cityGroups.filter(matches).reduce((acc, other) => acc + (other.apartments_count || 0), 0);
+
+    return {
+      district: hasDistrict ? sumFor((other) => Number(other.codi_districte) === Number(group.codi_districte)) : null,
+      neighborhood: hasNeighborhood ? sumFor((other) => Number(other.codi_barri) === Number(group.codi_barri)) : null,
+    };
+  }, [cityGroups, group, hasDistrict, hasNeighborhood]);
+
+  if (!hasDistrict && !hasNeighborhood) return null;
+
+  if (cityLoading) {
+    return (
+      <div className="row g-3 my-3">
+        <div className="col-12">
+          <div className="border rounded p-4 text-gray-600">Carregant la ubicació de l&apos;adreça...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="row g-3">
+      {/* <div className="col-12 col-lg-4">
+        <h5 className="mb-1">{group.nom_districte || 'Districte'}</h5>
+        <p className="text-gray-600">
+          {areaTotals.district !== null ? `${areaTotals.district} habitatges turístics` : 'Carregant total…'}
+        </p>
+        <div className="choropleth-square">
+          <ChoroplethMap
+            geoJsonUrl={BARRIS_GEOJSON}
+            sourceCrs={EPSG_25831}
+            filterProperty="TIPUS_UA"
+            filterValue="DISTRICTE"
+            codeProperty="DISTRICTE"
+            labelProperty="NOM"
+            contextLayer={COMARQUES_CONTEXT}
+            data={hasDistrict ? [{ code: group.codi_districte as number, value: 1, label: group.nom_districte }] : []}
+            points={[...cityPoints, ...addressPoints]}
+            height="100%"
+            showAreaLabels={false}
+            showLegend={false}
+          />
+        </div>
+      </div> */}
+      <div className="col-12 position-relative">
+        <div className="form-check position-absolute bottom-0 start-0 z-10 px-5 py-1">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id={`show-other-apartments-${group.codi_barri ?? 'x'}-${group.num1 ?? 'x'}`}
+            checked={showOtherApartments}
+            onChange={(e) => setShowOtherApartments(e.target.checked)}
+          />
+          <label
+            className="form-check-label fs-6"
+            htmlFor={`show-other-apartments-${group.codi_barri ?? 'x'}-${group.num1 ?? 'x'}`}
+          >
+            Mostra la resta d&apos;habitatges turístics de la ciutat
+          </label>
+        </div>
+        {/* <h5 className="mb-1">{group.nom_barri || 'Barri'}</h5>
+        <p className="text-gray-600">
+          {areaTotals.neighborhood !== null ? `${areaTotals.neighborhood} habitatges turístics` : 'Carregant total…'}
+        </p> */}
+        <div className="choropleth-double">
+          <ChoroplethMap
+            geoJsonUrl={BARRIS_GEOJSON}
+            sourceCrs={EPSG_25831}
+            filterProperty="TIPUS_UA"
+            filterValue="BARRI"
+            boundaryFilterValue="DISTRICTE"
+            codeProperty="BARRI"
+            labelProperty="NOM"
+            contextLayer={COMARQUES_CONTEXT}
+            data={hasNeighborhood ? [{ code: group.codi_barri as number, value: 1, label: group.nom_barri }] : []}
+            focusProperty="DISTRICTE"
+            focusCode={hasDistrict ? (group.codi_districte as number) : null}
+            points={[...cityPoints, ...addressPoints]}
+            height="100%"
+            showAreaLabels={false}
+            showBasemap={false}
+            showLegend={false}
+          />
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 export function ApartmentDetail({
   group,
   streetName,
+  onResetSearch,
 }: ApartmentDetailProps) {
   const pisosGrouped = group.apartments.reduce<
     Record<string, { totalPlaces: number; portes: Record<string, number> }>
@@ -84,74 +244,83 @@ export function ApartmentDetail({
     return acc;
   }, {});
 
-  const formatAddress = (group: AddressGroup) => {
-    const street = streetName || `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
-    const number = `${group.num1 ?? ''}${group.lletra1 || ''}`.trim();
-    if (street && number) return `${street}, ${number}`;
-    // Falls back to the raw address, adding the comma before its first number.
-    return (group.address || '').replace(/\s+(\d)/, ', $1');
-  };
-
   const totalDoors = Object.values(pisosGrouped).reduce((acc, pisData) => acc + Object.keys(pisData.portes).length, 0);
 
   return (
-    <div className="row">
-      <div className="col col-md-auto">
-        <div className="d-flex flex-row gap-2 pb-4">
-          <FaRegBuilding className="fs-3" aria-hidden="true" />
-          <h2>{formatAddress(group) || 'Address not available'}</h2>
-        </div>
-        <h4 className="alert-heading">
-          S&apos;han trobat&nbsp;
-          <strong>
-            {totalDoors}&nbsp;habitatges</strong>&nbsp;amb llicencia d&apos;ús turístic
+    <div className="street-detail-content">
+      <div className="alert alert-info p-4 rounded-0 border container" role="alert">
+        <h4 className="alert-heading fw-normal">
+          <strong>{formatAddress(group) || 'Address not available'}</strong>, {totalDoors === 1 ? 's\'ha trobat' : 's\'han trobat'} <strong>{totalDoors}&nbsp;{totalDoors === 1 ? 'habitatge' : 'habitatges'}</strong>&nbsp;amb llicencia d&apos;ús turístic para un total de <strong>{group.total_places || 0}&nbsp;plaçes</strong>.
         </h4>
-        <p className="">
+
+        <p className="mb-0">
           Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
         </p>
-        <ul className="list-group">
-          {Object.entries(pisosGrouped)
-            .sort(([pisA], [pisB]) => comparePis(pisA, pisB))
-            .map(([pis, pisData]) => (
-              <li key={pis} className="">
-                {/* <div className="border-bottom">
-                  <small>{formatPisDisplay(pis)}</small>
-                </div> */}
+        {onResetSearch && (
+          <>
+            <hr></hr>
+            <button type="button" className="btn btn-outline-secondary rounded-0" onClick={onResetSearch}>
+              Esborrar cerca
+            </button>
+          </>
+        )}
+      </div>
+      <AddressLocationMaps group={group} streetName={streetName} />
+      <ul className="list-group bg-dark rounded-0 border-0 pb-3">
+        <li className="list-group-item bg-dark text-white border-0">
+          <div className="d-flex flex-row gap-2 py-2">
+            <h2 className="fs-5 mb-0 fw-semibold">{formatAddress(group) || 'Address not available'}</h2>
+            <small className="ms-auto">
+              {group.apartments_count} {group.apartments_count === 1 ? 'habitatge' : 'habitatges'} · {group.total_places} {group.total_places === 1 ? 'plaça' : 'places'}
+            </small>
+          </div>
+          {(group.nom_barri || group.nom_districte) && (
+            <p className="mb-0 pb-2">
+              {group.nom_districte && <span >{group.nom_districte}</span>},
+              {group.nom_barri && <span className="ms-1">{group.nom_barri}</span>}
+            </p>
+          )}
+        </li>
+        {Object.entries(pisosGrouped)
+          .sort(([pisA], [pisB]) => comparePis(pisA, pisB))
+          .map(([pis, pisData]) => (
+            <li key={pis} className="border-0 px-3">
+              {/* <div className="border-bottom">
+                <small>{formatPisDisplay(pis)}</small>
+              </div> */}
 
-                <ul className="list-group">
-                  {Object.entries(pisData.portes)
-                    .sort(([portaA], [portaB]) => portaA.localeCompare(portaB, 'ca'))
-                    .map(([porta, portaPlaces]) => (
-                      <li
-                        key={`${pis}-${porta}`}
-                        className="d-flex p-3 bg-body align-items-center mb-2"
-                      >
-                        <div className="flex-grow-1">
-                          <strong className="text-gray-600 d-block">
-                            {formatAddress(group)}
-                          </strong>
-                          <span className="text-gray-600 d-inline">
-                            {`${formatPisDisplay(pis)}${porta !== '-' ? ` - ${formatPortaDisplay(porta)}` : ''}${group.lletra1 || ''}`}
-                          </span>
-                          <span className="d-inline-flex align-items-center flex-wrap gap-1 ms-2">
+              <ul className="list-group">
+                {Object.entries(pisData.portes)
+                  .sort(([portaA], [portaB]) => portaA.localeCompare(portaB, 'ca'))
+                  .map(([porta, portaPlaces]) => (
+                    <li
+                      key={`${pis}-${porta}`}
+                      className="d-flex p-3 bg-body align-items-center mb-1"
+                    >
+                      <div className="flex-grow-1 d-flex flex-row gap-2 align-items-center">
+                        {/* <MdOutlineDoorBack className="fs-3" aria-hidden="true" /> */}
+                        <p className="mb-0 flex-grow-1"><strong>{formatAddress(group)}</strong>, {`${formatPisDisplay(pis)}${porta !== '-' ? ` - ${formatPortaDisplay(porta)}` : ''}${group.lletra1 || ''}`}
+
+                          {/* <span className="d-inline-flex align-items-center flex-wrap gap-1 ms-2">
                             {Array.from({ length: Math.max(0, Math.round(portaPlaces)) }).map((_, index) => (
                               <span
-                                key={`${pis}-${porta}-place-${index}`}
-                                className="d-inline-block rounded-sm border border-blue-200 bg-gray-500"
-                                style={{ width: '8px', height: '8px' }}
-                                title={`1 plaça de porta ${porta}`}
+                              key={`${pis}-${porta}-place-${index}`}
+                              className="d-inline-block rounded-sm border border-blue-200 bg-gray-500"
+                              style={{ width: '8px', height: '8px' }}
+                              title={`1 plaça de porta ${porta}`}
                               />
-                            ))}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                </ul>
-              </li>
-            ))}
-        </ul>
-      </div>
+                              ))}
+                              </span> */}
+                        </p>
+                        <span className="text-muted ms-auto">{portaPlaces} plaçes</span>
+                      </div>
+                    </li>
+                  ))}
+              </ul>
+            </li>
+          ))}
+      </ul>
+    </div >
 
-    </div>
   );
 }

@@ -125,8 +125,12 @@ label {
     min-height: 58px;
     background: var(--bs-body-bg);
     border-color: var(--bs-border-color);
-    border-radius: var(--bs-border-radius);
     color: var(--bs-body-color);
+}
+
+.search-form .number-select__control,
+.search-form .btn {
+    border-radius: 0;
 }
 
 .search-form .number-select__control--is-focused {

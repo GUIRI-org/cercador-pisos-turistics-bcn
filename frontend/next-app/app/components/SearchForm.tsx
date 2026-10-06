@@ -72,8 +72,7 @@ export function SearchForm({
   return (
     <form className="search-form container px-0" onSubmit={onSubmit}>
       <div className="legend-row">
-        <legend>Consulta els habitatges que tenen llicència</legend>
-        <span className="access-keys-info relative">
+        {/* <span className="access-keys-info relative">
           <button
             type="button"
             className="access-keys-info-trigger"
@@ -94,7 +93,8 @@ export function SearchForm({
               En alguns navegadors cal combinar-les amb Shift (p. ex. Alt+Shift+C a Firefox/Chrome).
             </span>
           )}
-        </span>
+        </span> */}
+        <legend>Consulta els habitatges</legend>
       </div>
       <div className="row">
         <p className="text-gray-600 italic">
@@ -196,18 +196,6 @@ export function SearchForm({
             >
               Cerca
             </button>
-            {showReset && (
-              <button
-                type="button"
-                className="btn border-none py-3"
-                accessKey="e"
-                title="Esborrar (Alt+E)"
-                aria-label="Esborrar (Alt+E)"
-                onClick={onHandleResetSearch}
-              >
-                <TfiClose aria-hidden="true" />
-              </button>
-            )}
           </div>
         </div>
       </div>

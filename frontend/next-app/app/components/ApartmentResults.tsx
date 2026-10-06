@@ -1,11 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
 import { ApartmentDetail } from './StreetDetail';
-import { ChoroplethMap } from './ChoroplethMap';
-import { EPSG_25831 } from '../lib/geoUtils';
-import { fetchApartmentMap } from '@/lib/api';
 import { FaRegBuilding } from 'react-icons/fa6';
 
 
@@ -130,152 +127,6 @@ const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
   if (aNum !== bNum) return aNum - bNum;
   return (a.lletra1 || '').localeCompare(b.lletra1 || '', 'ca');
 };
-
-// Same file as the main map: every administrative level lives in it, picked through TIPUS_UA.
-const BARRIS_GEOJSON = '/geo/barcelona-barris.geojson';
-
-// Context only: the main layer still drives the zoom, so the view stays on the city shapes.
-const COMARQUES_CONTEXT = {
-  geoJsonUrl: '/geo/dts_comarques_8comarques.geojson',
-  stroke: '#94a3b8',
-  strokeWidth: 1.5,
-};
-
-// City view with the district of the address coloured, next to a district view highlighting its neighbourhood.
-function AddressLocationMaps({ group, streetName }: { group: AddressGroup; streetName?: string }) {
-  const [cityGroups, setCityGroups] = useState<AddressGroup[] | null>(null);
-  const [cityLoading, setCityLoading] = useState(true);
-  const [showOtherApartments, setShowOtherApartments] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchApartmentMap().then((groups) => {
-      if (!cancelled) setCityGroups(groups);
-    }).finally(() => {
-      if (!cancelled) setCityLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const hasDistrict = group.codi_districte !== undefined && group.codi_districte !== null;
-  const hasNeighborhood = group.codi_barri !== undefined && group.codi_barri !== null;
-
-  const addressPoints =
-    group.longitud_x !== undefined && group.latitud_y !== undefined
-      ? [{ longitude: group.longitud_x, latitude: group.latitud_y, label: formatAddress(group, streetName), radius: 4, color: '#dc2626' }]
-      : [];
-
-  // Translucent white squares for every other licensed address, so overlaps read as a density cloud.
-  const cityPoints = useMemo(() => {
-    if (!showOtherApartments || !cityGroups) return [];
-
-    return cityGroups
-      .filter((other) => other.longitud_x !== undefined && other.latitud_y !== undefined)
-      .map((other) => ({
-        longitude: other.longitud_x as number,
-        latitude: other.latitud_y as number,
-        label: `${other.address} (${other.apartments_count} habitatges)`,
-        radius: 2,
-        shape: 'square' as const,
-        color: '#ffffff',
-        opacity: 0.4,
-      }));
-  }, [showOtherApartments, cityGroups]);
-
-  const areaTotals = useMemo(() => {
-    if (!cityGroups) return { district: null, neighborhood: null } as { district: number | null; neighborhood: number | null };
-
-    const sumFor = (matches: (other: AddressGroup) => boolean) =>
-      cityGroups.filter(matches).reduce((acc, other) => acc + (other.apartments_count || 0), 0);
-
-    return {
-      district: hasDistrict ? sumFor((other) => Number(other.codi_districte) === Number(group.codi_districte)) : null,
-      neighborhood: hasNeighborhood ? sumFor((other) => Number(other.codi_barri) === Number(group.codi_barri)) : null,
-    };
-  }, [cityGroups, group, hasDistrict, hasNeighborhood]);
-
-  if (!hasDistrict && !hasNeighborhood) return null;
-
-  if (cityLoading) {
-    return (
-      <div className="row g-3 my-3">
-        <div className="col-12">
-          <div className="border rounded p-4 text-gray-600">Carregant la ubicació de l&apos;adreça...</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="row g-3 my-3">
-      <div className="col-12 col-md-3">
-        <h5 className="mb-1">{group.nom_districte || 'Districte'}</h5>
-        <p className="text-gray-600">
-          {areaTotals.district !== null ? `${areaTotals.district} habitatges turístics` : 'Carregant total…'}
-        </p>
-        <div className="choropleth-square">
-          <ChoroplethMap
-            geoJsonUrl={BARRIS_GEOJSON}
-            sourceCrs={EPSG_25831}
-            filterProperty="TIPUS_UA"
-            filterValue="DISTRICTE"
-            codeProperty="DISTRICTE"
-            labelProperty="NOM"
-            contextLayer={COMARQUES_CONTEXT}
-            data={hasDistrict ? [{ code: group.codi_districte as number, value: 1, label: group.nom_districte }] : []}
-            points={[...cityPoints, ...addressPoints]}
-            height="100%"
-            showAreaLabels={false}
-            showLegend={false}
-          />
-        </div>
-      </div>
-      <div className="col-12 col-md-9">
-        <h5 className="mb-1">{group.nom_barri || 'Barri'}</h5>
-        <p className="text-gray-600">
-          {areaTotals.neighborhood !== null ? `${areaTotals.neighborhood} habitatges turístics` : 'Carregant total…'}
-        </p>
-        <div className="choropleth-double">
-          <ChoroplethMap
-            geoJsonUrl={BARRIS_GEOJSON}
-            sourceCrs={EPSG_25831}
-            filterProperty="TIPUS_UA"
-            filterValue="BARRI"
-            boundaryFilterValue="DISTRICTE"
-            codeProperty="BARRI"
-            labelProperty="NOM"
-            contextLayer={COMARQUES_CONTEXT}
-            data={hasNeighborhood ? [{ code: group.codi_barri as number, value: 1, label: group.nom_barri }] : []}
-            focusProperty="DISTRICTE"
-            focusCode={hasDistrict ? (group.codi_districte as number) : null}
-            points={[...cityPoints, ...addressPoints]}
-            height="100%"
-            showAreaLabels={false}
-            showBasemap={false}
-            showLegend={false}
-          />
-        </div>
-        <div className="form-check mt-2">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id={`show-other-apartments-${group.codi_barri ?? 'x'}-${group.num1 ?? 'x'}`}
-            checked={showOtherApartments}
-            onChange={(e) => setShowOtherApartments(e.target.checked)}
-          />
-          <label
-            className="form-check-label"
-            htmlFor={`show-other-apartments-${group.codi_barri ?? 'x'}-${group.num1 ?? 'x'}`}
-          >
-            Mostra la resta d&apos;habitatges turístics de la ciutat
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Each district gets a fixed hue; neighbourhoods within it are shades (gradient) of that hue.
 const hashStringToHue = (value: string): number => {
@@ -639,18 +490,22 @@ export function ApartmentResults({
 
 
       {!displayGroups.length && (
-        <div className="alert alert-warning p-5 rounded-0 border container">
-          <h4 className="alert-heading">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
+        <div className="alert alert-warning p-4 rounded-0 border container">
+          <h4 className="alert-heading fw-normal">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
           <p className="mb-0">Probablement el pis que busques és il·legal</p>
           <hr></hr>
+          <button type="button" className="btn btn-outline-secondary rounded-0" onClick={onResetSearch}>
+            Esborrar cerca
+          </button>
+          {/*
           <div className="d-flex align-items-start gap-3">
-            <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205" 
-               target="_blank" 
-               rel="noopener noreferrer" 
-               className="btn btn-outline-secondary">
+            <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline-secondary">
               Avisa&apos;ns
             </a>
-          </div>
+          </div> */}
         </div>
       )}
 
@@ -658,27 +513,16 @@ export function ApartmentResults({
         return (
           <div
             key={idx}
-            className="container"
+            className="bg-transparent"
           >
-            <ApartmentDetail group={group} streetName={streetName} />
-
-            <AddressLocationMaps group={group} streetName={streetName} />
-            <button
-              type="button"
-              className="btn btn-outline-secondary ms-auto"
-              accessKey="e"
-              title="Esborrar (Alt+E)"
-              onClick={onResetSearch}
-            >
-              Esborrar
-            </button>
+            <ApartmentDetail group={group} streetName={streetName} onResetSearch={onResetSearch} />
 
           </div>
         );
       })}
 
       {chartGroups.length > 0 && (
-        <section className="street-addresses bg-dark text-white py-5">
+        <section className="street-addresses">
           <div className='container'>
             <h4>Adreces del mateix carrer amb llicència</h4>
             <p className="text-gray-600">Ordenades per número.</p>

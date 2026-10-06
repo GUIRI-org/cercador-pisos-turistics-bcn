@@ -106,6 +106,8 @@ function HomeSearch() {
   const carrerInputRef = useRef<SelectInstance<CarrerVia, false> | null>(null);
   const numInputRef = useRef<SelectInstance<{ value: string; label: string }, false> | null>(null);
   const searchButtonRef = useRef<HTMLButtonElement | null>(null);
+  const resultsSectionRef = useRef<HTMLElement | null>(null);
+  const pendingResultsScrollRef = useRef(false);
 
   useEffect(() => () => {
     clearTimeout(carrerTimerRef.current);
@@ -163,6 +165,7 @@ function HomeSearch() {
   // Re-runs on every URL change, so deep links, refreshes and back/forward all rebuild the results.
   useEffect(() => {
     if (!queryCarrer || !queryNum) {
+      pendingResultsScrollRef.current = false;
       setShowResults(false);
       setResults([]);
       setStreetResults([]);
@@ -197,13 +200,30 @@ function HomeSearch() {
         setStreetResults([]);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          pendingResultsScrollRef.current = true;
+          setLoading(false);
+        }
       });
 
     return () => {
       cancelled = true;
     };
   }, [queryTipusVia, queryCarrer, queryNum, queryEscala, queryPis, queryPorta]);
+
+  useEffect(() => {
+    if (!showResults || loading || streetNameLoading || !pendingResultsScrollRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      resultsSectionRef.current?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+        block: 'start',
+      });
+      pendingResultsScrollRef.current = false;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [showResults, loading, streetNameLoading]);
 
   const handleCarrerInput = (value: string) => {
     setStreetNameLoading(false);
@@ -330,6 +350,7 @@ function HomeSearch() {
   );
 
   const handleResetSearch = useCallback(() => {
+    pendingResultsScrollRef.current = false;
     clearTimeout(carrerTimerRef.current);
     carrerAbortRef.current?.abort();
     portalsAbortRef.current?.abort();
@@ -383,7 +404,6 @@ function HomeSearch() {
 
         <section id="seccio-cerca" className='section-search'>
           <div className="container">
-
             <SearchForm
               carrerInput={carrerInput}
               carrerSuggestions={carrerSuggestions}
@@ -414,7 +434,7 @@ function HomeSearch() {
           {/* <!-- end of the search form --> */}
         </section>
 
-        <section id="seccio-resultats" className='bg-transparent'>
+        <section id="seccio-resultats" ref={resultsSectionRef} className='bg-transparent'>
           {showResults && (
             <div className="search-results-container container w-50">
               <div className="d-flex flex-column gap-4">
