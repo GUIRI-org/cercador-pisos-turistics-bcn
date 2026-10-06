@@ -436,8 +436,7 @@ function HomeSearch() {
 
         <section id="seccio-resultats" ref={resultsSectionRef} className='bg-transparent'>
           {showResults && (
-            <div className="search-results-container container w-50">
-              <div className="d-flex flex-column gap-4">
+            <div className="search-results-container">
                 <ApartmentResults
                   title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
                   streetName={carrerDisplayName}
@@ -447,7 +446,6 @@ function HomeSearch() {
                   onResetSearch={handleResetSearch}
                   onSelectAddress={handleSelectAddress}
                 />
-              </div>
             </div>
           )}
         </section>

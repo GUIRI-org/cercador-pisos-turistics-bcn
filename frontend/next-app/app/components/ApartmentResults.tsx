@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
 import { ApartmentDetail } from './StreetDetail';
-import { FaRegBuilding } from 'react-icons/fa6';
+import { FaChevronRight } from 'react-icons/fa6';
 
 
 interface ApartmentResultsProps {
@@ -119,7 +119,7 @@ const formatAddress = (group: AddressGroup, streetName?: string) => {
 };
 
 const formatArea = (group: AddressGroup) =>
-  [group.nom_barri, group.nom_districte].filter(Boolean) as string[];
+  [group.nom_districte, group.nom_barri].filter(Boolean) as string[];
 
 const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
   const aNum = a.num1 ?? Number.POSITIVE_INFINITY;
@@ -393,7 +393,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
   const maxValue = Math.max(...bars.map((bar) => (metric === 'places' ? bar.places : bar.apartments)), 1);
 
   return (
-    <div className="mb-3 p-2 rounded border border-gray-200 bg-gray-50">
+    <div className="mb-3 p-4 border border-gray-200 bg-gray-50">
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
         <div className="text-sm text-gray-600">Distribució per número de carrer (color = districte, degradat = barri)</div>
         <div className="btn-group btn-group-sm" role="group" aria-label="Mètrica de la distribució">
@@ -490,22 +490,22 @@ export function ApartmentResults({
 
 
       {!displayGroups.length && (
-        <div className="alert alert-warning p-4 rounded-0 border container">
+        <div className="alert alert-warning p-4 rounded-0 border container w-50">
           <h4 className="alert-heading fw-normal">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
           <p className="mb-0">Probablement el pis que busques és il·legal</p>
           <hr></hr>
-          <button type="button" className="btn btn-outline-secondary rounded-0" onClick={onResetSearch}>
-            Esborrar cerca
-          </button>
-          {/*
+
           <div className="d-flex align-items-start gap-3">
+            <button type="button" className="btn btn-outline-secondary rounded-0 ms-auto" onClick={onResetSearch}>
+              Esborrar cerca
+            </button>
             <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205"
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-outline-secondary">
+              className="btn btn-outline-secondary rounded-0">
               Avisa&apos;ns
             </a>
-          </div> */}
+          </div>
         </div>
       )}
 
@@ -513,7 +513,7 @@ export function ApartmentResults({
         return (
           <div
             key={idx}
-            className="bg-transparent"
+            className="bg-transparent container w-50"
           >
             <ApartmentDetail group={group} streetName={streetName} onResetSearch={onResetSearch} />
 
@@ -522,39 +522,40 @@ export function ApartmentResults({
       })}
 
       {chartGroups.length > 0 && (
-        <section className="street-addresses">
-          <div className='container'>
-            <h4>Adreces del mateix carrer amb llicència</h4>
-            <p className="text-gray-600">Ordenades per número.</p>
-            <div className="row row-cols-1 row-cols-md-4 g-3">
-              {chartGroups.map((group) => {
-                const isSearched = searchedKeys.has(getAddressGroupKey(group));
-                return (
-                  <div key={getAddressGroupKey(group)} className="col">
-                    <button
-                      type="button"
-                      className={`card h-100 w-100 text-start${isSearched ? ' border-primary' : ''}`}
-                      aria-current={isSearched ? 'true' : undefined}
-                      onClick={() => onSelectAddress?.(group)}
-                    >
-                      <div className="card-body d-flex flex-row gap-3">
-                        <FaRegBuilding className="fs-2" />
-                        <div className="d-flex flex-column gap-1">
-                          <h5 className="card-title mb-0">{formatAddress(group, streetName)}</h5>
-                          {formatArea(group).map((area) => (
-                            <span key={area} className="card-subtitle text-gray-600">{area}</span>
-                          ))}
-                          <span className="badge bg-secondary rounded-pill align-self-start mt-2">
-                            {group.apartments_count} habitatges · {group.total_places} places
-                          </span>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        <section className="street-addresses container w-50">
+          <h4 className="fw-normal">Altres adreces al carrer <strong>{streetName}</strong> amb habitatges amb llicència d&apos;us turístic</h4>
+          <ul className="list-group rounded-0">
+            {chartGroups.map((group) => {
+              const isSearched = searchedKeys.has(getAddressGroupKey(group));
+              const areas = formatArea(group);
+              return (
+                <li
+                  key={getAddressGroupKey(group)}
+                  className={`list-group-item p-0 street-addresses__item${isSearched ? ' street-addresses__item--selected' : ''}`}
+                >
+                  <button
+                    type="button"
+                    className="street-addresses__button"
+                    aria-current={isSearched ? 'true' : undefined}
+                    onClick={() => onSelectAddress?.(group)}
+                  >
+                    <span className="d-flex flex-row align-items-center gap-2">
+                      <span className="d-flex flex-column gap-0">
+                        {areas.length > 0 && (
+                          <small className="text-body-secondary">{areas.join(' · ')}</small>
+                        )}
+                        <span className="fw-normal fs-5">{formatAddress(group, streetName)}</span>
+                      </span>
+                      <span className="badge bg-secondary rounded-0 ms-auto me-3">
+                        {group.apartments_count} habitatges · {group.total_places} places
+                      </span>
+                      <FaChevronRight className="street-addresses__chevron" aria-hidden="true" />
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </section>
       )}
 

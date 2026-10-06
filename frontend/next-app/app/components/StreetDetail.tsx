@@ -42,7 +42,7 @@ const formatPisDisplay = (pis: string) => {
   const label = PIS_LABELS[pis.toUpperCase()];
   if (label) return label;
   if (!/^\d+$/.test(pis)) return pis;
-  return `${Number.parseInt(pis, 10)}º`;
+  return `${Number.parseInt(pis, 10)}ª planta`;
 };
 
 const comparePis = (pisA: string, pisB: string) => {
@@ -259,47 +259,50 @@ export function ApartmentDetail({
         {onResetSearch && (
           <>
             <hr></hr>
-            <button type="button" className="btn btn-outline-secondary rounded-0" onClick={onResetSearch}>
-              Esborrar cerca
-            </button>
+            <div className="d-flex align-items-start gap-3">
+              <button type="button" className="btn btn-outline-secondary rounded-0 ms-auto" onClick={onResetSearch}>
+                Esborrar cerca
+              </button>
+            </div>
           </>
         )}
       </div>
       <AddressLocationMaps group={group} streetName={streetName} />
-      <ul className="list-group bg-dark rounded-0 border-0 pb-3">
-        <li className="list-group-item bg-dark text-white border-0">
-          <div className="d-flex flex-row gap-2 py-2">
-            <h2 className="fs-5 mb-0 fw-semibold">{formatAddress(group) || 'Address not available'}</h2>
-            <small className="ms-auto">
-              {group.apartments_count} {group.apartments_count === 1 ? 'habitatge' : 'habitatges'} · {group.total_places} {group.total_places === 1 ? 'plaça' : 'places'}
-            </small>
-          </div>
+      <ul className="list-group rounded-0 border-0 pb-3">
+        <li className="list-group-item border-0">
           {(group.nom_barri || group.nom_districte) && (
-            <p className="mb-0 pb-2">
+            <small className="d-block">
               {group.nom_districte && <span >{group.nom_districte}</span>},
               {group.nom_barri && <span className="ms-1">{group.nom_barri}</span>}
-            </p>
+            </small>
           )}
+          <div className="d-flex flex-row gap-2 py-2">
+            <p className="fs-5 mb-0 fw-normal">{formatAddress(group) || 'Address not available'}</p>
+            <span className="ms-auto badge bg-secondary rounded-0">
+              {group.apartments_count} {group.apartments_count === 1 ? 'habitatge' : 'habitatges'} · {group.total_places} {group.total_places === 1 ? 'plaça' : 'places'}
+            </span>
+          </div>
         </li>
         {Object.entries(pisosGrouped)
           .sort(([pisA], [pisB]) => comparePis(pisA, pisB))
           .map(([pis, pisData]) => (
-            <li key={pis} className="border-0 px-3">
-              {/* <div className="border-bottom">
+            <li key={pis} className="border-0">
+              <div className="bg-gray-200 px-3 py-1">
                 <small>{formatPisDisplay(pis)}</small>
-              </div> */}
+              </div>
 
-              <ul className="list-group">
+              <ul className="list-group list-group-flush">
                 {Object.entries(pisData.portes)
                   .sort(([portaA], [portaB]) => portaA.localeCompare(portaB, 'ca'))
                   .map(([porta, portaPlaces]) => (
                     <li
                       key={`${pis}-${porta}`}
-                      className="d-flex p-3 bg-body align-items-center mb-1"
+                      className="list-group-item d-flex align-items-center bg-light"
                     >
                       <div className="flex-grow-1 d-flex flex-row gap-2 align-items-center">
                         {/* <MdOutlineDoorBack className="fs-3" aria-hidden="true" /> */}
-                        <p className="mb-0 flex-grow-1"><strong>{formatAddress(group)}</strong>, {`${formatPisDisplay(pis)}${porta !== '-' ? ` - ${formatPortaDisplay(porta)}` : ''}${group.lletra1 || ''}`}
+                        <p className="mb-0 flex-grow-1">
+                          {formatAddress(group)}, {`${formatPisDisplay(pis)}${porta !== '-' ? ` - ${formatPortaDisplay(porta)}` : ''}${group.lletra1 || ''}`}
 
                           {/* <span className="d-inline-flex align-items-center flex-wrap gap-1 ms-2">
                             {Array.from({ length: Math.max(0, Math.round(portaPlaces)) }).map((_, index) => (
@@ -312,7 +315,7 @@ export function ApartmentDetail({
                               ))}
                               </span> */}
                         </p>
-                        <span className="text-muted ms-auto">{portaPlaces} plaçes</span>
+                        <small className="badge bg-light rounded-0 text-dark">{portaPlaces} plaçes</small>
                       </div>
                     </li>
                   ))}

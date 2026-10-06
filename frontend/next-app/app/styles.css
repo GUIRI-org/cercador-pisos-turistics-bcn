@@ -382,6 +382,63 @@ label {
     gap: 1rem;
 }
 
+.street-addresses__item {
+    transition: border-color 140ms ease;
+}
+
+.street-addresses__item--selected {
+    /* border-color: var(--bs-primary) !important; */
+}
+
+.street-addresses__button {
+    width: 100%;
+    padding: 1.25rem;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 140ms ease;
+}
+
+.street-addresses__button:hover,
+.street-addresses__button:focus-visible {
+    background-color: rgba(var(--bs-secondary-rgb), 0.12);
+}
+
+.street-addresses__button:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--bs-secondary);
+    outline-offset: -2px;
+}
+
+.street-addresses__item--selected > .street-addresses__button {
+    background-color: rgba(var(--bs-secondary-rgb), 0.16);
+}
+
+.street-addresses__button:active {
+    background-color: rgba(var(--bs-secondary-rgb), 0.24);
+}
+
+.street-addresses__chevron {
+    flex-shrink: 0;
+    transition: transform 140ms ease;
+}
+
+.street-addresses__button:hover .street-addresses__chevron,
+.street-addresses__button:focus-visible .street-addresses__chevron {
+    transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .street-addresses__item,
+    .street-addresses__button,
+    .street-addresses__chevron {
+        transition: none;
+    }
+}
+
 /* Floating panel over the choropleth: left sliding column on desktop, in-flow block on mobile. */
 .choropleth-wrapper {
     overflow: hidden;
