@@ -70,7 +70,7 @@ body {
 @media (max-width: 767px) {
   .geo-plane-mid {
     --building-width: clamp(64px, 12vw, 90px);
-    --building-visible-width: clamp(12px, 3vw, 24px);
+    --building-visible-width: calc(var(--building-width) / 5);
     --building-side-offset: calc(var(--building-visible-width) - var(--building-width));
   }
 }
