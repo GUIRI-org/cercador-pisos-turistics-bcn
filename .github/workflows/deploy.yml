@@ -3,7 +3,7 @@
 # Branch convention:
 #   - `production` branch → deploys to production environment (required)
 #   - `staging` branch → deploys to staging environment (OPTIONAL)
-#   - `main` branch → default development branch (no auto-deploy), temporary deploys to production environment
+#   - `main` branch → default development branch (no auto-deploy)
 #
 # If your project does NOT have a staging environment:
 #   1. Remove `staging` from the push branches list
@@ -12,7 +12,7 @@
 # Frontend is deployed via SFTP, backend via SSH + Docker Compose.
 #
 # Required Variables (Environment level - per environment):
-#   - SERVER_URL: Server IP address (e.g., 78.46.45.253)
+#   - SERVER_URL: Server IP address (e.g., 78.46.41.12)
 #   - SERVER_REMOTE_PATH: Full path to the cloned repo on server
 #   - NEXT_PUBLIC_GUIRI_API_BASE: API URL for frontend
 #   - NEXT_PUBLIC_SITE_URL: Site URL for frontend
@@ -31,7 +31,7 @@ on:
     branches:
       - production
       - staging  # Optional: remove if project has no staging environment
-      - main 
+      # - main # TEMP
   workflow_dispatch:
     inputs:
       environment:
@@ -42,7 +42,7 @@ on:
         options:
           - production
           - staging  # Optional: remove if project has no staging environment
-          - main 
+          # - main  # TEMP
 
 env:
   PROJECT_NAME: guiripisos
@@ -66,8 +66,6 @@ jobs:
             ENV="${{ inputs.environment }}"
           elif [ "${{ github.ref }}" == "refs/heads/production" ]; then
             ENV="production"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then ## TEMP
-            ENV="production"                                      ## TEMP
           else
             ENV="staging" 
           fi
@@ -105,13 +103,10 @@ jobs:
               - 'frontend/next-app/**'
             workflow:
               - '.github/workflows/deploy.yml'
+            api:
+              - 'api/**'
             database:
               - 'database/**'
-            backend:
-              - 'api/**'
-              - 'magic/**'
-              - 'infra/**'
-              - 'Makefile'
 
 
       - name: Setup Node.js
@@ -131,12 +126,7 @@ jobs:
         if: steps.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           cp ${{ env.FRONTEND_PATH }}/.env.sample ${{ env.FRONTEND_PATH }}/.env
-          API_BASE="${{ vars.NEXT_PUBLIC_GUIRI_API_BASE }}"
-          ## TEMP: main branch deploys temporarily point at the new apartamento.danielca.net API domain
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            API_BASE="https://api.apartamento.danielca.net"
-          fi
-          sed -i "s#NEXT_PUBLIC_GUIRI_API_BASE=.*#NEXT_PUBLIC_GUIRI_API_BASE=$API_BASE#" ${{ env.FRONTEND_PATH }}/.env
+          sed -i "s#NEXT_PUBLIC_GUIRI_API_BASE=.*#NEXT_PUBLIC_GUIRI_API_BASE=${{ vars.NEXT_PUBLIC_GUIRI_API_BASE }}#" ${{ env.FRONTEND_PATH }}/.env
           sed -i "s#NEXT_PUBLIC_SITE_URL=.*#NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}#" ${{ env.FRONTEND_PATH }}/.env
 
       - name: Build frontend
@@ -173,27 +163,19 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v5
 
       - name: Detect Changed Paths
-        uses: dorny/paths-filter@v4
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
-            workflow:
-              - '.github/workflows/deploy.yml'
             database:
               - 'database/**'
-            backend:
-              - 'api/**'
-              - 'magic/**'
-              - 'infra/**'
-              - 'Makefile'
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
         env:
-          BACKEND_CHANGED: ${{ steps.changes.outputs.backend }}
           DATABASE_CHANGED: ${{ steps.changes.outputs.database }}
         with:
           host: ${{ vars.SERVER_URL }}
@@ -216,12 +198,11 @@ jobs:
             # Run deployment using Make
             if [ "$DATABASE_CHANGED" == "true" ]; then
               echo "🗄️ Database changes detected - running full purge and recreate..."
-              make infra-undeploy-purge
+              # make infra-undeploy-purge
               make cicd-deploy-recreate
             else
               echo "🐳 Starting standard Docker deployment..."
-              # make cicd-deploy
-              make cicd-deploy-full
+              make cicd-deploy
             fi
             
             echo "✅ Deployment complete!"

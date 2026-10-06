@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 ### Added
+- cicd: update strategy using staging and production environments
 - **Fix conditional frontend proxy in Nginx**: Optional frontend deployment support
   - `ENABLE_FRONTEND` environment variable (default: `false`) to control frontend proxy configuration
   - Dynamic Nginx entrypoint script that only renders frontend proxy config when frontend is enabled
