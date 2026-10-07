@@ -69,7 +69,7 @@ document.querySelector('meta[name="app-version"]').content
 From the command line:
 
 ```bash
-curl -s https://elguiri.cat/ | grep -o 'name="app-version" content="[^"]*"'   # deployed site
+curl -s http://127.0.0.1:3000 | grep -o 'name="app-version" content="[^"]*"'   # deployed site
 grep -o 'name="app-version" content="[^"]*"' out/index.html                    # local static build
 ```
 

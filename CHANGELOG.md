@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+## v0.1.0 - Oct 7, 2026
+
 ### Added
 - Frontend exposes the `package.json` version in a hidden `<meta name="app-version">` tag and a `data-app-version` attribute on `<html>`, in both dev and static builds. See "App version" in `frontend/next-app/README.md` for how to check it.
 
