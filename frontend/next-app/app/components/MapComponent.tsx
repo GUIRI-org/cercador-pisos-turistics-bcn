@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { FaChevronRight, FaRegBuilding } from 'react-icons/fa6';
 import { ChoroplethMap, ChoroplethDatum, ChoroplethPoint, ChoroplethSelection, ContextLayer } from './ChoroplethMap';
 import { ApartmentDetail } from './StreetDetail';
@@ -99,7 +99,7 @@ const addressKey = (group?: AddressGroup | null) => {
     return key || null;
 };
 
-export function MapComponent({
+export const MapComponent = memo(function MapComponent({
     data,
     points = [],
     height = '75vh',
@@ -572,4 +572,4 @@ export function MapComponent({
             onSelect={handleMapSelection}
         />
     );
-}
+});

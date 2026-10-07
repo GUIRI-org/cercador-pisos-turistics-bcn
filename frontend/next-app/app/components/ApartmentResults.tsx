@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
 import { ApartmentDetail } from './StreetDetail';
 import { ChoroplethMap, type ChoroplethPoint } from './ChoroplethMap';
@@ -580,7 +580,7 @@ function AddressNumberDistributionChart({
   );
 }
 
-export function ApartmentResults({
+export const ApartmentResults = memo(function ApartmentResults({
   title,
   streetName,
   addressGroups,
@@ -694,4 +694,4 @@ export function ApartmentResults({
 
     </div>
   );
-}
+});

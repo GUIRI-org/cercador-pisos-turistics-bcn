@@ -28,8 +28,6 @@ const RESULTS_ANCHOR_ID = 'seccio-resultats';
 
 type UnitFilters = { escala: string; pis: string; porta: string };
 
-type GeoBcnSearchResponse = Awaited<ReturnType<typeof searchCarrers>>;
-
 const matchesUnitField = (value: string | undefined, filter: string) => {
   if (!filter.trim()) return true;
   return normalizeAddressPart(value) === normalizeAddressPart(filter);
@@ -78,8 +76,7 @@ function HomeSearch() {
   const queryPis = (searchParams.get('pis') ?? '').trim();
   const queryPorta = (searchParams.get('porta') ?? '').trim();
 
-  const [carrerInput, setCarrerInput] = useState('');
-  const [carrerSuggestions, setCarrerSuggestions] = useState<CarrerVia[]>([]);
+  const [carrerSeed, setCarrerSeed] = useState({ text: '' });
   const [selectedCarrer, setSelectedCarrer] = useState<CarrerVia | null>(null);
   const [numOptions, setNumOptions] = useState<string[]>([]);
   const [num, setNum] = useState('');
@@ -93,13 +90,9 @@ function HomeSearch() {
   const [loading, setLoading] = useState(false);
   const [streetNameLoading, setStreetNameLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [carrerLoading, setCarrerLoading] = useState(false);
   const [numLoading, setNumLoading] = useState(false);
 
-  const carrerTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const carrerAbortRef = useRef<AbortController | null>(null);
   const portalsAbortRef = useRef<AbortController | null>(null);
-  const geoBcnResponseRef = useRef<{ query: string; response: GeoBcnSearchResponse } | null>(null);
   const carrerRequestIdRef = useRef(0);
   const selectedCarrerRequestIdRef = useRef(0);
   const carrerInputRef = useRef<SelectInstance<CarrerVia, false> | null>(null);
@@ -109,8 +102,6 @@ function HomeSearch() {
   const pendingResultsScrollRef = useRef(false);
 
   useEffect(() => () => {
-    clearTimeout(carrerTimerRef.current);
-    carrerAbortRef.current?.abort();
     portalsAbortRef.current?.abort();
     ++carrerRequestIdRef.current;
     ++selectedCarrerRequestIdRef.current;
@@ -120,13 +111,13 @@ function HomeSearch() {
   useEffect(() => {
     if (!queryCarrer) {
       setSelectedCarrer(null);
-      setCarrerInput('');
+      setCarrerSeed({ text: '' });
       setStreetNameLoading(false);
       return;
     }
 
     setSelectedCarrer(null);
-    setCarrerInput(`${queryTipusVia} ${queryCarrer}`.trim());
+    setCarrerSeed({ text: `${queryTipusVia} ${queryCarrer}`.trim() });
     setStreetNameLoading(true);
     const requestId = ++carrerRequestIdRef.current;
     let cancelled = false;
@@ -150,7 +141,6 @@ function HomeSearch() {
 
       if (via) {
         setSelectedCarrer(via);
-        setCarrerInput(via.nomComplet ?? via.nom);
       }
       setStreetNameLoading(false);
     });
@@ -224,65 +214,27 @@ function HomeSearch() {
     return () => cancelAnimationFrame(frame);
   }, [showResults, loading, streetNameLoading]);
 
-  const handleCarrerInput = (value: string) => {
+  // Runs on every keystroke in the street field; each setter must bail out when nothing changed.
+  const handleCarrerEdit = useCallback(() => {
     setStreetNameLoading(false);
-    setCarrerInput(value);
     setSelectedCarrer(null);
-    setNumOptions([]);
+    setNumOptions((prev) => (prev.length ? [] : prev));
     setNum('');
-    clearTimeout(carrerTimerRef.current);
-    carrerAbortRef.current?.abort();
     portalsAbortRef.current?.abort();
     ++selectedCarrerRequestIdRef.current;
+    ++carrerRequestIdRef.current;
     setNumLoading(false);
-    setCarrerLoading(false);
-    setCarrerSuggestions([]);
-    const requestId = ++carrerRequestIdRef.current;
+  }, []);
 
-    if (value.trim().length < 3) {
-      setCarrerSuggestions([]);
-      return;
-    }
-
-    const normalizedValue = value.trim().toLocaleLowerCase('ca');
-    const cached = geoBcnResponseRef.current;
-    if (cached && normalizedValue === cached.query) {
-      setCarrerSuggestions(cached.response.vies);
-      return;
-    }
-
-    setCarrerLoading(true);
-    carrerTimerRef.current = setTimeout(async () => {
-      const controller = new AbortController();
-      carrerAbortRef.current = controller;
-      const response = await searchCarrers(value.trim(), undefined, controller.signal);
-      if (requestId !== carrerRequestIdRef.current) return;
-
-      geoBcnResponseRef.current = { query: normalizedValue, response };
-      setCarrerSuggestions(response.vies);
-      setCarrerLoading(false);
-    }, 300);
-  };
-
-  const handleSelectCarrer = async (codi: string) => {
-    const via = carrerSuggestions.find((v) => v.codi === codi) || null;
+  const handleSelectCarrer = async (via: CarrerVia) => {
     setTouched((prev) => ({ ...prev, carrer: true }));
 
-    if (!via) {
-      setNumOptions([]);
-      return;
-    }
-
     const requestId = ++selectedCarrerRequestIdRef.current;
-    clearTimeout(carrerTimerRef.current);
-    carrerAbortRef.current?.abort();
     ++carrerRequestIdRef.current;
     portalsAbortRef.current?.abort();
     const controller = new AbortController();
     portalsAbortRef.current = controller;
     setSelectedCarrer(via);
-    setCarrerInput(via.nomComplet ?? via.nom);
-    setCarrerLoading(false);
     setNumOptions([]);
     setNum('');
     setNumLoading(true);
@@ -350,17 +302,13 @@ function HomeSearch() {
 
   const handleResetSearch = useCallback(() => {
     pendingResultsScrollRef.current = false;
-    clearTimeout(carrerTimerRef.current);
-    carrerAbortRef.current?.abort();
     portalsAbortRef.current?.abort();
     ++carrerRequestIdRef.current;
     ++selectedCarrerRequestIdRef.current;
-    setCarrerLoading(false);
     setNumLoading(false);
     setTouched({});
     setSelectedCarrer(null);
-    setCarrerInput('');
-    setCarrerSuggestions([]);
+    setCarrerSeed({ text: '' });
     setNumOptions([]);
     setNum('');
     setEscala('');
@@ -404,8 +352,7 @@ function HomeSearch() {
         <section id="seccio-cerca" className='section-search'>
           <div className="container">
             <SearchForm
-              carrerInput={carrerInput}
-              carrerSuggestions={carrerSuggestions}
+              carrerSeed={carrerSeed}
               selectedCarrer={selectedCarrer}
               num={num}
               numOptions={numOptions}
@@ -413,12 +360,11 @@ function HomeSearch() {
               numError={numError}
               canSearch={canSearch}
               carrerInputRef={carrerInputRef}
-              carrerLoading={carrerLoading}
               numLoading={numLoading}
               numInputRef={numInputRef}
               searchButtonRef={searchButtonRef}
               onSubmit={handleSubmit}
-              onCarrerInput={handleCarrerInput}
+              onCarrerEdit={handleCarrerEdit}
               onSelectCarrer={handleSelectCarrer}
               onNumChange={setNum}
               onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}

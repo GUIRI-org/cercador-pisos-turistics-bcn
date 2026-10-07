@@ -149,7 +149,7 @@ const mergeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
 };
 
 // The territori search endpoint defaults to 25 results per array (vies/adreces); `max` raises that cap.
-const SEARCH_CARRERS_MAX_RESULTS = 200;
+export const SEARCH_CARRERS_MAX_RESULTS = 200;
 
 export async function searchCarrers(
   query: string,

@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
 import Select, { components } from 'react-select';
 import type { InputProps, SelectInstance } from 'react-select';
 import { FaArrowRotateLeft, FaCircleInfo } from 'react-icons/fa6';
 import { TfiClose } from "react-icons/tfi";
 import type { CarrerVia } from '@/lib/types';
+import { MIN_STREET_QUERY_LENGTH, useStreetSuggestions } from '../hooks/useStreetSuggestions';
+
+const MAX_RENDERED_STREETS = 50;
 
 type NumberOption = { value: string; label: string };
 
@@ -15,14 +18,14 @@ function NumberInput(props: InputProps<NumberOption, false>) {
 }
 
 function StreetInput(props: InputProps<CarrerVia, false>) {
-  return <components.Input {...props} accessKey="c" />;
+  return <components.Input {...props} accessKey="c" inputMode="search" />;
 }
 
 const streetLabel = (via: CarrerVia) => via.nomComplet || `${via.tipusVia?.nom || ''} ${via.nom}`.trim();
 
 interface SearchFormProps {
-  carrerInput: string;
-  carrerSuggestions: CarrerVia[];
+  /** Replaces the typed street text (deep links, reset); a new object always applies. */
+  carrerSeed: { text: string };
   selectedCarrer: CarrerVia | null;
   num: string;
   numOptions: string[];
@@ -30,13 +33,12 @@ interface SearchFormProps {
   numError: boolean | undefined;
   canSearch: boolean;
   carrerInputRef: RefObject<SelectInstance<CarrerVia, false> | null>;
-  carrerLoading: boolean;
   numLoading: boolean;
   numInputRef: RefObject<SelectInstance<NumberOption, false> | null>;
   searchButtonRef: RefObject<HTMLButtonElement | null>;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
-  onCarrerInput: (value: string) => void;
-  onSelectCarrer: (codi: string) => void;
+  onCarrerEdit: () => void;
+  onSelectCarrer: (via: CarrerVia) => void;
   onNumChange: (value: string) => void;
   onCarrerBlur: () => void;
   onNumBlur: () => void;
@@ -45,8 +47,7 @@ interface SearchFormProps {
 }
 
 export function SearchForm({
-  carrerInput,
-  carrerSuggestions,
+  carrerSeed,
   selectedCarrer,
   num,
   numOptions,
@@ -54,12 +55,11 @@ export function SearchForm({
   numError,
   canSearch,
   carrerInputRef,
-  carrerLoading,
   numLoading,
   numInputRef,
   searchButtonRef,
   onSubmit,
-  onCarrerInput,
+  onCarrerEdit,
   onSelectCarrer,
   onNumChange,
   onCarrerBlur,
@@ -68,6 +68,20 @@ export function SearchForm({
   onHandleResetSearch,
 }: SearchFormProps) {
   const [showAccessKeysInfo, setShowAccessKeysInfo] = useState(false);
+  const street = useStreetSuggestions();
+  const { reset: resetStreet } = street;
+  const streetOptions = useMemo(
+    () => street.suggestions.slice(0, MAX_RENDERED_STREETS),
+    [street.suggestions]
+  );
+  const numberOptions = useMemo(
+    () => numOptions.map((number) => ({ value: number, label: number })),
+    [numOptions]
+  );
+
+  useEffect(() => {
+    resetStreet(carrerSeed.text);
+  }, [carrerSeed, resetStreet]);
 
   return (
     <form className="search-form container px-0" onSubmit={onSubmit}>
@@ -113,27 +127,34 @@ export function SearchForm({
               ref={carrerInputRef}
               classNamePrefix="number-select"
               components={{ Input: StreetInput }}
-              options={carrerSuggestions}
+              options={streetOptions}
               getOptionLabel={streetLabel}
               getOptionValue={(via) => via.codi}
               filterOption={null}
               value={selectedCarrer}
-              inputValue={selectedCarrer ? '' : carrerInput}
+              inputValue={selectedCarrer ? '' : street.input}
               isSearchable
               isClearable
-              isLoading={carrerLoading}
+              isLoading={street.loading}
               placeholder="Cerqueu un carrer"
               loadingMessage={() => 'Cercant carrers...'}
-              noOptionsMessage={() => carrerInput.trim().length < 3 ? 'Escriviu almenys 3 caràcters' : 'No hi ha carrers coincidents'}
+              noOptionsMessage={() => street.input.trim().length < MIN_STREET_QUERY_LENGTH ? `Escriviu almenys ${MIN_STREET_QUERY_LENGTH} caràcters` : 'No hi ha carrers coincidents'}
               aria-required="true"
               aria-invalid={carrerError}
               aria-describedby={carrerError ? 'error-address' : undefined}
               onInputChange={(value, action) => {
-                if (action.action === 'input-change') onCarrerInput(value);
+                if (action.action !== 'input-change') return;
+                street.onInputChange(value);
+                onCarrerEdit();
               }}
               onChange={(via) => {
-                if (via) onSelectCarrer(via.codi);
-                else onCarrerInput('');
+                if (via) {
+                  street.cancel();
+                  onSelectCarrer(via);
+                } else {
+                  street.reset();
+                  onCarrerEdit();
+                }
               }}
               onBlur={onCarrerBlur}
             />
@@ -159,7 +180,7 @@ export function SearchForm({
               ref={numInputRef}
               classNamePrefix="number-select"
               components={{ Input: NumberInput }}
-              options={numOptions.map((number) => ({ value: number, label: number }))}
+              options={numberOptions}
               value={num ? { value: num, label: num } : null}
               isDisabled={!selectedCarrer || numOptions.length === 0}
               isLoading={numLoading}
