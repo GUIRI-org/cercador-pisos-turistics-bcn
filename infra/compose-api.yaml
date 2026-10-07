@@ -19,6 +19,8 @@ services:
     build:
       context: ../api
     restart: always
+    ports:
+      - "127.0.0.1:${API_PORT:-9092}:8000"
     environment:
       - DB_HOST=${DOCKER_BASE_NAME}-pgsql
       - DB_PORT=5432

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+- The API container publishes a loopback host port again (`127.0.0.1:${API_PORT:-9092}`), so the frontend dev server can reach it at `http://127.0.0.1:9092` (the default `NEXT_PUBLIC_GUIRI_API_BASE`). Reverts the API part of the v0.1.0 "only Nginx publishes a host port" change; `API_PORT` is optional and defaults to `9092`.
+
 ## v0.1.0 - Oct 7, 2026
 
 ### Added
