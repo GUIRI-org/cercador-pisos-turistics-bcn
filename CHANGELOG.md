@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+- Frontend exposes the `package.json` version in a hidden `<meta name="app-version">` tag and a `data-app-version` attribute on `<html>`, in both dev and static builds. See "App version" in `frontend/next-app/README.md` for how to check it.
+
 ### Changed
 - Street search responds faster while typing, and suggestions now appear from 2 characters.
 - Only the Nginx container publishes a host port (loopback). The API and Mage no longer publish host ports, so `API_PORT` and `MAGE_PORT` are removed from the env samples.

@@ -7,6 +7,7 @@ import { ParallaxContainer } from "./components/ParallaxContainer";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elguiri.cat';
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 const canonicalUrl = `${siteUrl}${basePath}`;
+const appVersion = process.env.NEXT_PUBLIC_APP_VERSION || 'unknown';
 
 export const metadata: Metadata = {
   metadataBase: new URL(canonicalUrl),
@@ -45,6 +46,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     title: "Apartament - El Guir",
   },
+  other: {
+    "app-version": appVersion,
+  },
 };
 
 export default function RootLayout({
@@ -53,7 +57,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" data-app-version={appVersion}>
       <body className="min-h-full flex flex-col">
         <ParallaxContainer>{children}</ParallaxContainer>
       </body>

@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+import { readFileSync } from "node:fs";
+
+const { version } = JSON.parse(readFileSync("./package.json", "utf-8")) as { version: string };
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
@@ -13,6 +16,10 @@ const nextConfig: NextConfig = {
   output: 'export',
   basePath,
   assetPrefix: basePath,
+  // Inlined at build time (and read at runtime by `next dev`); consumed by app/layout.tsx
+  env: {
+    NEXT_PUBLIC_APP_VERSION: version,
+  },
   sassOptions: {
     quietDeps: true,
   },
