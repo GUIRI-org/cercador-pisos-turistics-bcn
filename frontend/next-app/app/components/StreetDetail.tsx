@@ -16,6 +16,7 @@ interface ApartmentDetailProps {
   group: AddressGroup;
   streetName?: string;
   onResetSearch?: () => void;
+  showSummaryAlert?: boolean;
 }
 
 const normalizePis = (value: string | number | null | undefined) => {
@@ -234,6 +235,7 @@ export function ApartmentDetail({
   group,
   streetName,
   onResetSearch,
+  showSummaryAlert = true,
 }: ApartmentDetailProps) {
   const pisosGrouped = group.apartments.reduce<
     Record<string, { totalPlaces: number; portes: Record<string, number> }>
@@ -256,7 +258,8 @@ export function ApartmentDetail({
 
   return (
     <div className="street-detail-content">
-      <div className="alert alert-info p-4 rounded-0 border container" role="alert">
+      {showSummaryAlert && (
+        <div className="alert alert-info p-4 rounded-0 border container" role="alert">
         <h4 className="alert-heading fw-normal">
           <strong>{formatAddress(group) || 'Address not available'}</strong>, {totalDoors === 1 ? 's\'ha trobat' : 's\'han trobat'} <strong>{totalDoors}&nbsp;{totalDoors === 1 ? 'habitatge' : 'habitatges'}</strong>&nbsp;amb llicencia d&apos;ús turístic para un total de <strong>{group.total_places || 0}&nbsp;plaçes</strong>.
         </h4>
@@ -274,8 +277,9 @@ export function ApartmentDetail({
             </div>
           </>
         )}
-      </div>
-      <AddressLocationMaps group={group} streetName={streetName} />
+        </div>
+      )}
+      {/* <AddressLocationMaps group={group} streetName={streetName} /> */}
       <ul className="list-group rounded-0 border-0 pb-3">
         <li className="list-group-item border-0">
           {(group.nom_barri || group.nom_districte) && (

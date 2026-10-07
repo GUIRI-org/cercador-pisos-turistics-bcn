@@ -501,6 +501,69 @@ label {
     font-weight: normal;
 }
 
+.choropleth-district-chart {
+    margin-top: 0.25rem;
+}
+
+.choropleth-district-chart__title {
+    margin: 0 0 0.35rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.choropleth-district-chart__list {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.choropleth-district-chart__item {
+    width: 100%;
+    padding: 0.35rem 0.25rem;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+
+.choropleth-district-chart__item:hover,
+.choropleth-district-chart__item:focus-visible {
+    background: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+.choropleth-district-chart__item:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+}
+
+.choropleth-district-chart__meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.2rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+.choropleth-district-chart__track {
+    display: block;
+    height: 5px;
+    overflow: hidden;
+    background: #e2e8f0;
+}
+
+.choropleth-district-chart__fill {
+    display: block;
+    height: 100%;
+    transition: width 180ms ease, background-color 140ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .choropleth-district-chart__fill {
+        transition: none;
+    }
+}
+
 /* Square box for the context maps; the map fills it with height: 100%. */
 .choropleth-square {
     width: 100%;
@@ -654,7 +717,7 @@ label {
     position: absolute;
     top: 0;
     left: 0rem;
-    padding: 2rem;
+    padding: 0rem;
     bottom: 0px;
 }
 

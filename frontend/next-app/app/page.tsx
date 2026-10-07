@@ -11,7 +11,6 @@ import { ApartmentResults } from './components/ApartmentResults';
 import { CountdownBanner } from './components/CountdownBanner';
 import { MapComponent } from './components/MapComponent';
 import { SearchForm } from './components/SearchForm';
-import type { ChoroplethPoint } from './components/ChoroplethMap';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
 
@@ -476,10 +475,6 @@ function HomeSearch() {
         <section id="seccio-mapa">
           <div className='map-container'>
             <MapComponent
-              points={results.flatMap((group): ChoroplethPoint[] => {
-                if (group.longitud_x === undefined || group.latitud_y === undefined) return [];
-                return [{ longitude: group.longitud_x, latitude: group.latitud_y, label: group.address }];
-              })}
             />
           </div>
         </section>

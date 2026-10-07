@@ -64,9 +64,13 @@ interface ChoroplethMapProps {
     /** Property used for tooltips when an area has no datum, e.g. "nom_comarca". */
     labelProperty?: string;
     data: ChoroplethDatum[];
+    /** District-code keyed stroke colours shared by district and neighbourhood outlines. */
+    districtColorsByCode?: Record<string, string>;
     points?: ChoroplethPoint[];
     /** [longitude, latitude] pairs the view zooms to, taking priority over `focusCode`. */
     focusPoints?: [number, number][];
+    /** Zoom multiplier for focus-point bounds; values above 1 frame them more closely. */
+    focusPointZoom?: number;
     /** Unit shown in tooltips, e.g. "apartaments". */
     metricLabel?: string;
     height?: number | string;
@@ -76,12 +80,18 @@ interface ChoroplethMapProps {
     filterProperty?: string;
     /** Value of `filterProperty` to keep, e.g. "DISTRICTE" or "BARRI". */
     filterValue?: string;
+    /** Optional second feature set from the same GeoJSON to outline over the main areas. */
+    overlayFilterValue?: string;
+    overlayCodeProperty?: string;
+    overlayFocusCode?: string | number | null;
     /** Value of `filterProperty` to draw as a thicker, unfilled outline on top (e.g. "DISTRICTE" while showing barris). */
     boundaryFilterValue?: string;
     boundaryStrokeWidth?: number;
     contextLayer?: ContextLayer;
     /** Draws the `labelProperty` name centred on each outline area and context area. */
     showAreaLabels?: boolean;
+    /** Draws each main area’s choropleth value at its centroid instead of its name. */
+    showAreaValues?: boolean;
     /** Loads the Leaflet tile basemap behind the shapes while zoomed. */
     showBasemap?: boolean;
     /** Zooms the viewport onto the area with this code. */
@@ -90,6 +100,8 @@ interface ChoroplethMapProps {
     focusProperty?: string;
     /** Rendered at the top of the floating panel, above the legend. */
     controls?: ReactNode;
+    /** Rendered after the main panel text and before the nested detail. */
+    panelContent?: ReactNode;
     /** Rendered in the nested panel that slides out of the floating panel; hidden when omitted. */
     detail?: ReactNode;
     showLegend?: boolean;
@@ -103,11 +115,13 @@ function AreaLabelText({
     label,
     fontSize,
     fill,
+    fontWeight = 300,
     halo = '#ffffff',
 }: {
     label: AreaLabel;
     fontSize: number;
     fill: string;
+    fontWeight?: number;
     halo?: string;
 }) {
     const lines = label.name.toLocaleUpperCase('ca-ES').split(/\s+/).filter(Boolean);
@@ -119,7 +133,7 @@ function AreaLabelText({
             textAnchor="middle"
             dominantBaseline="middle"
             fontSize={fontSize}
-            fontWeight={300}
+            fontWeight={fontWeight}
             letterSpacing={fontSize * 0.06}
             fill={fill}
             stroke={halo}
@@ -155,21 +169,28 @@ export function ChoroplethMap({
     codeProperty,
     labelProperty,
     data,
+    districtColorsByCode,
     points = [],
     focusPoints = [],
+    focusPointZoom = 1,
     metricLabel = 'valor',
     height = '75vh',
     width = 800,
     filterProperty,
     filterValue,
+    overlayFilterValue,
+    overlayCodeProperty,
+    overlayFocusCode,
     boundaryFilterValue,
     boundaryStrokeWidth = 2.5,
     contextLayer,
     showAreaLabels = true,
+    showAreaValues = false,
     showBasemap = true,
     focusCode,
     focusProperty,
     controls,
+    panelContent,
     detail,
     showLegend = true,
     onSelect,
@@ -193,7 +214,8 @@ export function ChoroplethMap({
     const basemapRef = useRef<HTMLDivElement | null>(null);
     const basemapMapRef = useRef<LeafletMap | null>(null);
 
-    const isZoomed = (focusCode !== undefined && focusCode !== null) || focusPoints.length > 0;
+    const isZoomed = (focusCode !== undefined && focusCode !== null) || (overlayFocusCode !== undefined && overlayFocusCode !== null) || focusPoints.length > 0;
+    const hasNestedSelection = focusCode !== undefined && focusCode !== null;
 
     // With height="100%" the map grows inside a sized parent instead of using a fixed box.
     const fillsParent = height === '100%';
@@ -277,6 +299,11 @@ export function ChoroplethMap({
         return prepareLayer(filtered, sourceCrs);
     }, [rawGeoData, filterProperty, filterValue, sourceCrs]);
 
+    const overlayData = useMemo(() => {
+        if (!rawGeoData || !filterProperty || !overlayFilterValue) return null;
+        return prepareLayer(filterFeaturesByProperty(rawGeoData, filterProperty, overlayFilterValue), sourceCrs);
+    }, [rawGeoData, filterProperty, overlayFilterValue, sourceCrs]);
+
     // Optional thicker outline layer grouping the polygons above (e.g. the 10 districts over the barris).
     const boundaryData = useMemo(() => {
         if (!rawGeoData || !filterProperty || !boundaryFilterValue) return null;
@@ -300,12 +327,19 @@ export function ChoroplethMap({
         const path = geoPath(projection);
 
         // Zooming means framing the matching features instead of the whole layer; the projection itself never changes.
-        const focusFeatures =
+        const mainFocusFeatures =
             focusCode === undefined || focusCode === null
                 ? []
                 : geoData.features.filter(
                     (feature) => normalizeCode(feature.properties?.[focusProperty ?? codeProperty]) === normalizeCode(focusCode)
                 );
+        const overlayFocusFeatures =
+            overlayData && overlayCodeProperty && overlayFocusCode !== undefined && overlayFocusCode !== null
+                ? overlayData.features.filter(
+                    (feature) => normalizeCode(feature.properties?.[overlayCodeProperty]) === normalizeCode(overlayFocusCode)
+                )
+                : [];
+        const focusFeatures = overlayFocusFeatures.length ? overlayFocusFeatures : mainFocusFeatures;
         const focus: Feature<Geometry> | FeatureCollection<Geometry> | undefined = focusFeatures.length
             ? ({ type: 'FeatureCollection', features: focusFeatures } as FeatureCollection<Geometry>)
             : undefined;
@@ -326,8 +360,9 @@ export function ChoroplethMap({
         const pad = lineBounds ? 16 : focus ? 8 : 4;
         // Keeps a short street, or a lone address, from zooming past any useful context.
         const minExtent = lineBounds ? (linePoints.length > 1 ? 60 : 40) : 0;
-        const targetWidth = Math.max(x1 - x0 + pad * 2, minExtent);
-        const targetHeight = Math.max(y1 - y0 + pad * 2, minExtent);
+        const pointZoom = lineBounds ? Math.max(1, focusPointZoom) : 1;
+        const targetWidth = Math.max(x1 - x0 + pad * 2, minExtent) / pointZoom;
+        const targetHeight = Math.max(y1 - y0 + pad * 2, minExtent) / pointZoom;
         const targetCenterX = (x0 + x1) / 2;
         const targetCenterY = (y0 + y1) / 2;
 
@@ -350,7 +385,7 @@ export function ChoroplethMap({
             center: [viewBoxX + viewBoxWidth / 2, viewBoxY + viewBoxHeight / 2] as [number, number],
             unitsPerPixel: viewBoxWidth / (viewport.width || width),
         };
-    }, [geoData, width, numericHeight, viewport, alignRight, showLegend, detail, focusCode, focusProperty, codeProperty, focusPoints]);
+    }, [geoData, overlayData, overlayCodeProperty, overlayFocusCode, width, numericHeight, viewport, alignRight, showLegend, detail, focusCode, focusProperty, codeProperty, focusPoints, focusPointZoom]);
 
     const pathGenerator = projected?.path ?? null;
     // Strokes, labels and dots are sized in pixels and converted, so they stay constant while zooming.
@@ -415,6 +450,19 @@ export function ChoroplethMap({
             return [{ name: String(name), x, y, code: normalizeCode(feature.properties?.[codeProperty]) }];
         });
     }, [showAreaLabels, pathGenerator, labelProperty, codeProperty, boundaryData, geoData]);
+
+    const areaValueLabels = useMemo<AreaLabel[]>(() => {
+        if (!showAreaValues || !pathGenerator || !geoData) return [];
+
+        return geoData.features.flatMap((feature) => {
+            const code = normalizeCode(feature.properties?.[codeProperty]);
+            const datum = valueByCode.get(code);
+            if (!datum) return [];
+            const [x, y] = pathGenerator.centroid(feature as Feature<Geometry>);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return [];
+            return [{ name: formatNumber(datum.value), x, y, code }];
+        });
+    }, [showAreaValues, pathGenerator, geoData, valueByCode, codeProperty]);
 
     // Names of the choropleth areas themselves (barris): only worth showing once zoomed into one of them.
     const zoomLabels = useMemo<AreaLabel[]>(() => {
@@ -496,6 +544,7 @@ export function ChoroplethMap({
                             </dl>
                         )}
                         <p>Consulta els registres disponibles, explora els resultats al mapa i entén millor com es distribueixen els habitatges turístics pels barris de la ciutat.</p>
+                        {panelContent}
                     </div>
 
                     {detail && <div className="choropleth-detail">{detail}</div>}
@@ -544,16 +593,18 @@ export function ChoroplethMap({
                             const isHovered = hoveredCode === code;
                             const isFocused =
                                 !focusProperty && isZoomed && focusCode !== undefined && focusCode !== null && code === normalizeCode(focusCode);
+                            const isNestedNeighborhoodView = isZoomed && filterValue === 'BARRI';
+                            const districtColor = districtColorsByCode?.[normalizeCode(feature.properties?.DISTRICTE)] ?? '#4b5563';
 
                             return (
                                 <path
                                     key={idx}
                                     d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
-                                    fill={datum ? colorScale(datum.value) : '#e5e7eb'}
-                                    fillOpacity={isFocused ? 0 : isZoomed && showBasemap ? 0.25 : 0.85}
-                                    stroke={isFocused || isHovered ? '#111827' : '#4b5563'}
-                                    strokeWidth={(isFocused ? 4 : isHovered ? 2 : 1) * unit}
-                                    strokeOpacity={isFocused ? 0.9 : isHovered ? 0.6 : 0.25}
+                                    fill={hasNestedSelection ? 'none' : datum ? colorScale(datum.value) : '#e5e7eb'}
+                                    fillOpacity={hasNestedSelection ? 0 : isZoomed && showBasemap ? 0.25 : 0.85}
+                                    stroke={isHovered && !isFocused ? '#111827' : districtColor}
+                                    strokeWidth={(isFocused ? 4 : isHovered ? 2 : isNestedNeighborhoodView ? 2.5 : 1) * unit}
+                                    strokeOpacity={isFocused ? 0.95 : isHovered ? 0.6 : isNestedNeighborhoodView ? 0.75 : 0.25}
                                     onMouseEnter={(e) => {
                                         setHoveredCode(code);
                                         setTooltip({ x: e.clientX, y: e.clientY, text: `${label}: ${value} ${metricLabel}` });
@@ -568,6 +619,25 @@ export function ChoroplethMap({
                                 />
                             );
                         })}
+                        {overlayData?.features.map((feature, idx) => {
+                            const isFocused = overlayFocusCode !== undefined &&
+                                overlayFocusCode !== null &&
+                                overlayCodeProperty !== undefined &&
+                                normalizeCode(feature.properties?.[overlayCodeProperty]) === normalizeCode(overlayFocusCode);
+                            const districtColor = districtColorsByCode?.[normalizeCode(feature.properties?.DISTRICTE)] ?? '#475569';
+
+                            return (
+                                <path
+                                    key={`overlay-${idx}`}
+                                    d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
+                                    fill="none"
+                                    stroke={districtColor}
+                                    strokeWidth={(isFocused ? 3.5 : 1) * unit}
+                                    strokeOpacity={isFocused ? 0.95 : 0.45}
+                                    style={{ pointerEvents: 'none' }}
+                                />
+                            );
+                        })}
                         {boundaryData &&
                             boundaryData.features.map((feature, idx) => {
                                 // The boundary holding the focus (e.g. the district of the address) gets a light tint.
@@ -575,16 +645,17 @@ export function ChoroplethMap({
                                     focusCode !== undefined &&
                                     focusCode !== null &&
                                     normalizeCode(feature.properties?.[focusProperty ?? codeProperty]) === normalizeCode(focusCode);
+                                const districtColor = districtColorsByCode?.[normalizeCode(feature.properties?.DISTRICTE)] ?? '#1e293b';
 
                                 return (
                                     <path
                                         key={`boundary-${idx}`}
                                         d={pathGenerator(feature as Feature<Geometry>) ?? undefined}
-                                        fill={isFocusedBoundary ? '#1e293b' : 'none'}
-                                        fillOpacity={isFocusedBoundary ? 0.12 : 0}
-                                        stroke="#1e293b"
-                                        strokeWidth={boundaryStrokeWidth * unit}
-                                        strokeOpacity={0.4}
+                                        fill="none"
+                                        fillOpacity={0}
+                                        stroke={districtColor}
+                                        strokeWidth={(isFocusedBoundary ? Math.max(4, boundaryStrokeWidth) : boundaryStrokeWidth) * unit}
+                                        strokeOpacity={isFocusedBoundary ? 0.9 : 0.4}
                                         style={{ pointerEvents: 'none' }}
                                     />
                                 );
@@ -669,6 +740,15 @@ export function ChoroplethMap({
                                 />
                             );
                         })}
+                        {areaValueLabels.map((label) => (
+                            <AreaLabelText
+                                key={`area-value-${label.code}`}
+                                label={label}
+                                fontSize={16 * unit}
+                                fill="#111827"
+                                fontWeight={700}
+                            />
+                        ))}
                     </svg>
                 ) : (
                     <div className="d-flex align-items-center justify-content-center h-100 text-gray-500" style={{ fontSize: '0.9rem' }}>

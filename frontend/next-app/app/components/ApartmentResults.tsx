@@ -5,6 +5,7 @@ import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib
 import { ApartmentDetail } from './StreetDetail';
 import { ChoroplethMap, type ChoroplethPoint } from './ChoroplethMap';
 import { EPSG_25831 } from '../lib/geoUtils';
+import { getDistrictColor, hashStringToHue } from '../lib/districtColors';
 import { FaChevronRight } from 'react-icons/fa6';
 
 
@@ -126,9 +127,33 @@ const formatAddress = (group: AddressGroup, streetName?: string) => {
 const formatArea = (group: AddressGroup) =>
   [group.nom_districte, group.nom_barri].filter(Boolean) as string[];
 
+function SelectedAddressAnnotation({
+  address,
+  streetName,
+}: {
+  address: AddressGroup | null;
+  streetName?: string;
+}) {
+  if (!address) return null;
+
+  return (
+    <p className="small text-gray-600 mb-2">
+      Adreça seleccionada: <strong>{formatAddress(address, streetName)}</strong>
+    </p>
+  );
+}
+
 const STREET_MAP_GEOJSON = '/geo/barcelona-barris.geojson';
 
-function StreetAddressMap({ groups, streetName }: { groups: AddressGroup[]; streetName?: string }) {
+function StreetAddressMap({
+  groups,
+  streetName,
+  selectedAddress,
+}: {
+  groups: AddressGroup[];
+  streetName?: string;
+  selectedAddress: AddressGroup | null;
+}) {
   const locatedAddresses = groups.filter(
     (group) =>
       group.total_places > 0 &&
@@ -140,14 +165,18 @@ function StreetAddressMap({ groups, streetName }: { groups: AddressGroup[]; stre
 
   if (locatedAddresses.length === 0) return null;
 
-  const points: ChoroplethPoint[] = locatedAddresses.map((group) => ({
-    longitude: group.longitud_x as number,
-    latitude: group.latitud_y as number,
-    label: `${formatAddress(group)} (${group.apartments_count} habitatges, ${group.total_places} places)`,
-    radius: 4,
-    color: '#dc2626',
-    stroke: '#ffffff',
-  }));
+  const selectedAddressKey = selectedAddress ? getAddressGroupKey(selectedAddress) : null;
+  const points: ChoroplethPoint[] = locatedAddresses.map((group) => {
+    const isSelected = getAddressGroupKey(group) === selectedAddressKey;
+    return {
+      longitude: group.longitud_x as number,
+      latitude: group.latitud_y as number,
+      label: `${formatAddress(group)} (${group.apartments_count} habitatges, ${group.total_places} places)`,
+      radius: isSelected ? 6 : 4,
+      color: isSelected ? '#111827' : '#aa9465',
+      ...(isSelected ? { stroke: '#111827' } : {}),
+    };
+  });
   const focusPoints = locatedAddresses.map(
     (group): [number, number] => [group.longitud_x as number, group.latitud_y as number]
   );
@@ -165,6 +194,7 @@ function StreetAddressMap({ groups, streetName }: { groups: AddressGroup[]; stre
         data={[]}
         points={points}
         focusPoints={focusPoints}
+        focusPointZoom={1.1}
         showAreaLabels={false}
         showBasemap
         showLegend={false}
@@ -179,15 +209,6 @@ const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
   const bNum = b.num1 ?? Number.POSITIVE_INFINITY;
   if (aNum !== bNum) return aNum - bNum;
   return (a.lletra1 || '').localeCompare(b.lletra1 || '', 'ca');
-};
-
-// Each district gets a fixed hue; neighbourhoods within it are shades (gradient) of that hue.
-const hashStringToHue = (value: string): number => {
-  let hash = 0;
-  for (let i = 0; i < value.length; i++) {
-    hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-  }
-  return hash % 360;
 };
 
 function buildDistrictColorScale(groups: AddressGroup[]) {
@@ -234,6 +255,7 @@ type DistributionBar = {
   num: number;
   apartments: number;
   places: number;
+  isSelected: boolean;
   district: string;
   neighborhood: string;
 };
@@ -264,7 +286,7 @@ function buildSharedColumns(nums: number[], startNum: number): DistributionColum
   const columns: DistributionColumn[] = [];
 
   if (sorted.length === 0 || sorted[0] !== startNum) {
-    columns.push({ type: 'bar', bar: { key: String(startNum), num: startNum, apartments: 0, places: 0, district: '', neighborhood: '' } });
+    columns.push({ type: 'bar', bar: { key: String(startNum), num: startNum, apartments: 0, places: 0, isSelected: false, district: '', neighborhood: '' } });
   }
 
   let prevNum: number | null = columns.length ? startNum : null;
@@ -272,7 +294,7 @@ function buildSharedColumns(nums: number[], startNum: number): DistributionColum
     if (prevNum !== null && num - prevNum > MAX_NUMBER_GAP_BEFORE_ELLIPSIS) {
       columns.push({ type: 'ellipsis' });
     }
-    columns.push({ type: 'bar', bar: { key: String(num), num, apartments: 0, places: 0, district: '', neighborhood: '' } });
+    columns.push({ type: 'bar', bar: { key: String(num), num, apartments: 0, places: 0, isSelected: false, district: '', neighborhood: '' } });
     prevNum = num;
   });
 
@@ -318,6 +340,7 @@ function DistributionChart({
   colorFor,
   maxValue,
   metric,
+  selectedAddressLabel,
   invertY = false,
 }: {
   title: string;
@@ -326,6 +349,7 @@ function DistributionChart({
   colorFor: (district: string, neighborhood: string) => string;
   maxValue: number;
   metric: DistributionMetric;
+  selectedAddressLabel?: string;
   invertY?: boolean;
 }) {
   const chartHeight = 110;
@@ -335,6 +359,8 @@ function DistributionChart({
   );
 
   const titleEl = <div className="text-sm text-gray-600 mb-1">{title}</div>;
+  const selectedColumnIndex = columns.findIndex((column) => column.type === 'bar' && column.bar.isSelected);
+  const selectedLabelOnRight = selectedColumnIndex < columns.length / 2;
 
   return (
     <div className="mt-2">
@@ -400,17 +426,50 @@ function DistributionChart({
                 <div
                   key={`${bar.key}-${idx}`}
                   title={
-                    bar.district
-                      ? `Núm ${bar.key}: ${value} ${METRIC_LABELS[metric]} · ${bar.district} · ${bar.neighborhood}`
-                      : `Núm ${bar.key}`
+                    bar.isSelected && selectedAddressLabel
+                      ? `Adreça seleccionada: ${selectedAddressLabel}`
+                      : bar.district
+                        ? `Núm ${bar.key}: ${value} ${METRIC_LABELS[metric]} · ${bar.district} · ${bar.neighborhood}`
+                        : `Núm ${bar.key}`
                   }
                   style={{
                     flex: `0 0 ${BAR_COLUMN_WIDTH}px`,
                     height: `${heightPct}%`,
-                    background: bar.district ? colorFor(bar.district, bar.neighborhood) : 'transparent',
+                    background: bar.isSelected
+                      ? '#111827'
+                      : bar.district
+                        ? colorFor(bar.district, bar.neighborhood)
+                        : 'transparent',
                     borderRadius: invertY ? '0 0 2px 2px' : '2px 2px 0 0',
+                    outline: bar.isSelected ? '2px solid #ffffff' : undefined,
+                    outlineOffset: '-1px',
+                    position: bar.isSelected ? 'relative' : undefined,
+                    zIndex: bar.isSelected ? 4 : undefined,
                   }}
-                />
+                >
+                  {bar.isSelected && selectedAddressLabel && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        ...(selectedLabelOnRight
+                          ? { left: 'calc(100% + 6px)' }
+                          : { right: 'calc(100% + 6px)' }),
+                        zIndex: 5,
+                        padding: '4px 8px',
+                        color: '#ffffff',
+                        background: '#111827',
+                        borderRadius: 2,
+                        fontSize: '0.75rem',
+                        lineHeight: 1.2,
+                        whiteSpace: 'nowrap',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {selectedAddressLabel}
+                    </span>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -421,8 +480,18 @@ function DistributionChart({
   );
 }
 
-function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) {
+function AddressNumberDistributionChart({
+  groups,
+  streetName,
+  selectedAddress,
+}: {
+  groups: AddressGroup[];
+  streetName?: string;
+  selectedAddress: AddressGroup | null;
+}) {
   const [metric, setMetric] = useState<DistributionMetric>('apartments');
+  const selectedAddressKey = selectedAddress ? getAddressGroupKey(selectedAddress) : null;
+  const selectedAddressLabel = selectedAddress ? formatAddress(selectedAddress, streetName) : undefined;
 
   const bars: DistributionBar[] = groups
     .filter((group) => group.num1 !== undefined && group.num1 !== null)
@@ -431,6 +500,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
       num: group.num1 as number,
       apartments: group.apartments_count,
       places: group.total_places,
+      isSelected: getAddressGroupKey(group) === selectedAddressKey,
       district: group.nom_districte || 'Sense districte',
       neighborhood: group.nom_barri || 'Sense barri',
     }));
@@ -447,6 +517,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
 
   return (
     <div className="mb-3 p-4 border border-gray-200 bg-gray-50">
+      <SelectedAddressAnnotation address={selectedAddress} streetName={streetName} />
       <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
         <h5 className="text-sm text-gray-600">Distribució dels habitatges d&apos;ús turístic al carrer {groups[0] ? formatStreetName(groups[0]) : ''}</h5>
         <div className="btn-group rounded-0" role="group" aria-label="Mètrica de la distribució">
@@ -468,7 +539,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
       </div>
       {/* Single shared horizontal scrollbar for all three rows, so they always stay in sync and use the full available width before scrolling. */}
       <div style={{ overflowX: 'auto' }}>
-        <DistributionChart title="Números senars" columns={oddColumns} colorFor={colorFor} maxValue={maxValue} metric={metric} />
+        <DistributionChart title="Números senars" columns={oddColumns} colorFor={colorFor} maxValue={maxValue} metric={metric} selectedAddressLabel={selectedAddressLabel} />
         <NumberAxisLabels columns={sharedColumns} />
         <DistributionChart
           title="Números parells"
@@ -477,6 +548,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
           colorFor={colorFor}
           maxValue={maxValue}
           metric={metric}
+          selectedAddressLabel={selectedAddressLabel}
           invertY
         />
       </div>
@@ -487,7 +559,7 @@ function AddressNumberDistributionChart({ groups }: { groups: AddressGroup[] }) 
           <div key={district} className="d-flex align-items-center flex-wrap gap-2">
             <span
               className="d-inline-block rounded-sm"
-              style={{ width: '10px', height: '10px', background: `hsl(${districtHues.get(district)}, 60%, 45%)`, flexShrink: 0 }}
+              style={{ width: '10px', height: '10px', background: getDistrictColor(district), flexShrink: 0 }}
             />
             <span className="text-sm text-gray-700 fw-semibold">{district}</span>
             <span className="d-flex align-items-center flex-wrap gap-2 ms-2">
@@ -529,6 +601,7 @@ export function ApartmentResults({
   );
 
   const searchedKeys = useMemo(() => new Set(displayGroups.map(getAddressGroupKey)), [displayGroups]);
+  const selectedAddress = chartGroups.find((group) => searchedKeys.has(getAddressGroupKey(group))) ?? displayGroups[0] ?? null;
 
   if (loading) {
     return (
@@ -575,7 +648,7 @@ export function ApartmentResults({
       })}
 
       {chartGroups.length > 1 && (
-        <section className="street-addresses container w-50">
+        <section className="street-addresses container w-50 mb-5">
           <h4 className="fw-normal">Altres adreces al carrer <strong>{streetName}</strong> amb habitatges amb llicència d&apos;us turístic</h4>
           <ul className="list-group rounded-0">
             {chartGroups.map((group) => {
@@ -614,8 +687,8 @@ export function ApartmentResults({
 
       {chartGroups.length > 1 && (
         <>
-          <StreetAddressMap groups={chartGroups} streetName={streetName} />
-          <AddressNumberDistributionChart groups={chartGroups} />
+          <StreetAddressMap groups={chartGroups} streetName={streetName} selectedAddress={selectedAddress} />
+          <AddressNumberDistributionChart groups={chartGroups} streetName={streetName} selectedAddress={selectedAddress} />
         </>
       )}
 
