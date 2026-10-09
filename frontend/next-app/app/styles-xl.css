@@ -1,9 +1,0 @@
-@media (min-width: 1200px) {
-    .choropleth-subdetail {
-        animation: choropleth-detail-in 0.25s ease;
-    }
-
-    .choropleth-subdetail .choropleth-detail__list {
-        max-height: none;
-    }
-}

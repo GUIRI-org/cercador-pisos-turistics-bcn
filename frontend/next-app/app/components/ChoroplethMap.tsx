@@ -7,6 +7,7 @@ import { geoPath, geoMercator } from 'd3-geo';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 import type { Map as LeafletMap } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import './ChoroplethMap.css';
 import { filterFeaturesByProperty, prepareLayer, summarizeFeaturesByProperty, toFeatureCollection } from '../lib/geoUtils';
 
 export interface ChoroplethDatum {

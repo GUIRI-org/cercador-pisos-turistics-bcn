@@ -5,7 +5,6 @@ import type { SelectInstance } from 'react-select';
 import { useRouter, useSearchParams } from 'next/navigation';
 import './styles.css';
 import './styles-md.css';
-import './styles-xl.css';
 import { fetchPortalsByVia, searchApartments, searchCarrers } from '@/lib/api';
 import { AddressGroup, CarrerVia } from '@/lib/types';
 import { AboutSection } from './components/AboutSection';

@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import '../styles.css';
 import '../styles-md.css';
-import '../styles-xl.css';
 import { AppNavbar } from '../components/AppNavbar';
 import { DashboardContent } from './DashboardContent';
 
