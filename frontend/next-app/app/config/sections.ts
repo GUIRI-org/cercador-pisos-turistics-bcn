@@ -3,5 +3,6 @@ export const homeSections = [
   { id: 'seccio-cerca', title: 'Cerca' },
   { id: 'seccio-resultats', title: 'Resultats' },
   { id: 'seccio-about', title: 'About' },
-  { id: 'seccio-mapa', title: 'Mapa' },
 ];
+
+export const mapPage = { href: '/map', title: 'Mapa' };

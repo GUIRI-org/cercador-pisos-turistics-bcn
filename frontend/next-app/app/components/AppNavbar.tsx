@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { homeSections } from '../config/sections';
+import { homeSections, mapPage } from '../config/sections';
 
 export function AppNavbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
   const isMainActive = pathname === '/';
+  const isMapActive = pathname === mapPage.href;
 
   const closeMenu = () => {
     setIsOpen(false);
@@ -45,6 +46,16 @@ export function AppNavbar() {
                 {section.title}
               </Link>
             ))}
+            {/* 
+            I hide the map link temporarily
+            <Link
+              className={`nav-link nav-link--page ${isMapActive ? 'active' : ''}`}
+              href={mapPage.href}
+              aria-current={isMapActive ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              {mapPage.title}
+            </Link> */}
           </div>
         </div>
       </div>

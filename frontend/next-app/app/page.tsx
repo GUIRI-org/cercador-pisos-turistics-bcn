@@ -1,16 +1,23 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { SelectInstance } from 'react-select';
 import { useRouter, useSearchParams } from 'next/navigation';
 import './styles.css';
+import './styles-md.css';
+import './styles-xl.css';
 import { fetchPortalsByVia, searchApartments, searchCarrers } from '@/lib/api';
 import { AddressGroup, CarrerVia } from '@/lib/types';
+import { AboutSection } from './components/AboutSection';
 import { AppNavbar } from './components/AppNavbar';
-import { ApartmentResults } from './components/ApartmentResults';
+import { AddressNumberDistributionChart, ApartmentResults, StreetAddressMap } from './components/ApartmentResults';
+import { BuildingList } from './components/BuildingList';
 import { CountdownBanner } from './components/CountdownBanner';
-import { MapComponent } from './components/MapComponent';
+import { IntroSection } from './components/IntroSection';
 import { SearchForm } from './components/SearchForm';
+import { SiteFooter } from './components/SiteFooter';
+import { TopAddressesRanking } from './components/TopAddressesRanking';
+import { compareByStreetNumber, dedupeAddressGroups, getAddressGroupKey } from './lib/addressGroups';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
 
@@ -252,7 +259,10 @@ function HomeSearch() {
     setNum('');
 
     // The number input is only enabled once a street is selected, so wait for the re-render.
-    requestAnimationFrame(() => numInputRef.current?.focus());
+    requestAnimationFrame(() => {
+      numInputRef.current?.focus();
+      numInputRef.current?.openMenu('first');
+    });
   };
 
   const carrerName = selectedCarrer?.nom ?? queryCarrer;
@@ -261,6 +271,18 @@ function HomeSearch() {
   const carrerError = touched.carrer && !carrerName;
   const numError = touched.num && !num;
   const canSearch = Boolean(carrerName) && num.trim().length > 0;
+
+  // The street view needs every number on the street; `results` only holds the searched address.
+  const searchedGroups = useMemo(
+    () => dedupeAddressGroups(results).sort(compareByStreetNumber),
+    [results]
+  );
+  const chartGroups = useMemo(
+    () => dedupeAddressGroups(streetResults.length ? streetResults : results).sort(compareByStreetNumber),
+    [streetResults, results]
+  );
+  const searchedKeys = useMemo(() => new Set(searchedGroups.map(getAddressGroupKey)), [searchedGroups]);
+  const selectedAddress = chartGroups.find((group) => searchedKeys.has(getAddressGroupKey(group))) ?? searchedGroups[0] ?? null;
 
   const pushSearch = useCallback(
     (values: { tipusVia?: string; carrer: string; num: string; escala?: string; pis?: string; porta?: string }) => {
@@ -332,139 +354,75 @@ function HomeSearch() {
   );
 
   return (
-    <>
-      <main className="" style={{ minHeight: '100vh' }}>
+    <main className="app-wrapper" style={{ minHeight: '100vh' }}>
 
-        <AppNavbar />
+      <AppNavbar />
 
-        <section id="seccio-introduccio" className='section-introdution'>
-          <div className="container intro-container w-50">
-            <h1 className="intro-title mb-5">apartament</h1>
-            <p className="fs-4 text-gray-600 lh-base">
-              L’Ajuntament de Barcelona va anunciar el passat mes de setembre que “a Barcelona, el 2028, s’eliminaran les llicències d’habitatges d’ús turístic”
-            </p>
-            <p className="text-gray-600">
-              El departament d’<a href="https://ajuntament.barcelona.cat/urbanisme-accio-climatica-mobilitat-pla-barris-serveis-urbans/ca" target="_blank" rel="noopener noreferrer">Urbanisme, Acció Climàtica, Mobilitat, Pla de Barris i Serveis Urbans</a> ha publicat recentment una nova secció al seu portal web de l’Ajuntament per informar d’aquesta nova iniciativa politica del <a href="https://www.barcelona.cat/habitatge/ca/pla-viure/en-que-consisteix" target="_blank" rel="noopener noreferrer">pla “VIURE”</a>.
-            </p>
-          </div>
-        </section>
+      <IntroSection />
 
-        <section id="seccio-cerca" className='section-search'>
-          <div className="container">
-            <SearchForm
-              carrerSeed={carrerSeed}
-              selectedCarrer={selectedCarrer}
-              num={num}
-              numOptions={numOptions}
-              carrerError={carrerError}
-              numError={numError}
-              canSearch={canSearch}
-              carrerInputRef={carrerInputRef}
-              numLoading={numLoading}
-              numInputRef={numInputRef}
-              searchButtonRef={searchButtonRef}
-              onSubmit={handleSubmit}
-              onCarrerEdit={handleCarrerEdit}
-              onSelectCarrer={handleSelectCarrer}
-              onNumChange={setNum}
-              onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
-              onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
-              showReset={showResults}
-              onHandleResetSearch={handleResetSearch}
+      <SearchForm
+        carrerSeed={carrerSeed}
+        selectedCarrer={selectedCarrer}
+        num={num}
+        numOptions={numOptions}
+        carrerError={carrerError}
+        numError={numError}
+        canSearch={canSearch}
+        carrerInputRef={carrerInputRef}
+        numLoading={numLoading}
+        numInputRef={numInputRef}
+        searchButtonRef={searchButtonRef}
+        onSubmit={handleSubmit}
+        onCarrerEdit={handleCarrerEdit}
+        onSelectCarrer={handleSelectCarrer}
+        onNumChange={setNum}
+        onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
+        onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
+        showReset={showResults}
+        onHandleResetSearch={handleResetSearch}
+      />
+
+      {showResults ? (
+        <ApartmentResults
+          title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
+          streetName={carrerDisplayName}
+          addressGroups={results}
+          reference={resultsSectionRef}
+          loading={loading || streetNameLoading}
+          onResetSearch={handleResetSearch}
+        />
+      )
+        : (
+          <TopAddressesRanking onSelectAddress={handleSelectAddress} />
+        )
+      }
+
+      {showResults && !loading && !streetNameLoading && chartGroups.length > 1 && (
+        <section id="seccio-carrer" className="bg-transparent pt-0">
+          <div className="search-results-container container results-extra pt-5">
+            <BuildingList
+              className="street-addresses"
+              groups={chartGroups}
+              streetName={carrerDisplayName}
+              selectedKeys={searchedKeys}
+              onSelectAddress={handleSelectAddress}
+              title={<h4 className="fw-normal">Altres adreces al carrer <strong>{carrerDisplayName}</strong> amb habitatges amb llicència d&apos;us turístic</h4>}
+              placesDisplay="waffle"
             />
-
-          </div>
-
-
-          {/* <!-- end of the search form --> */}
-        </section>
-
-        <section id="seccio-resultats" ref={resultsSectionRef} className='bg-transparent'>
-          {showResults && (
-            <div className="search-results-container">
-                <ApartmentResults
-                  title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
-                  streetName={carrerDisplayName}
-                  addressGroups={results}
-                  streetGroups={streetResults}
-                  loading={loading || streetNameLoading}
-                  onResetSearch={handleResetSearch}
-                  onSelectAddress={handleSelectAddress}
-                />
-            </div>
-          )}
-        </section>
-
-        <section id="seccio-about">
-          <div className='container w-50'>
-            <h1>Una eina ciutadana, amb context</h1>
-            <p className="fs-5 text-gray-600 lh-base">
-              El projecte acosta la informació pública sobre habitatges d&apos;ús turístic a una consulta quotidiana: què hi ha registrat a la meva finca i al meu entorn?
-            </p>
-            <div className="row gy-4 mt-2">
-              <div className="col-12 col-md-4">
-                <h2>Consulta local</h2>
-                <p className="text-gray-600">Busca per carrer i número per revisar els registres associats a una adreça de Barcelona.</p>
-              </div>
-              <div className="col-12 col-md-4">
-                <h2>Dades obertes</h2>
-                <p className="text-gray-600">La informació es presenta a partir de registres públics i es relaciona amb el mapa dels barris.</p>
-              </div>
-              <div className="col-12 col-md-4">
-                <h2>Lectura responsable</h2>
-                <p className="text-gray-600">Les dades poden tenir mancances o desfasaments. No trobar un registre no és, per si sol, una determinació sobre la legalitat d&apos;un habitatge.</p>
-              </div>
-            </div>
+            <StreetAddressMap groups={chartGroups} streetName={carrerDisplayName} selectedAddress={selectedAddress} />
+            <AddressNumberDistributionChart groups={chartGroups} streetName={carrerDisplayName} selectedAddress={selectedAddress} />
           </div>
         </section>
+      )}
 
-        <section id="seccio-mapa">
-          <div className='map-container'>
-            <MapComponent
-            />
-          </div>
-        </section>
+      <AboutSection />
 
-      </main>
       <CountdownBanner />
-      <footer className="site-footer bg-white">
-        <div className="container py-5">
-          <div className="row g-4">
-            <div className="col-12 col-md-5">
-              <a className="site-footer__brand" href="#seccio-introduccio">El Guiri</a>
-              <p className="site-footer__summary">
-                Informació ciutadana sobre habitatges d&apos;ús turístic a Barcelona, a partir de dades obertes.
-              </p>
-            </div>
 
-            <nav className="col-6 col-md-3" aria-label="Navegació del peu de pàgina">
-              <h2 className="site-footer__heading">Explora</h2>
-              <ul className="site-footer__links">
-                <li><a href="#seccio-cerca">Cerca una adreça</a></li>
-                <li><a href="#seccio-resultats">Resultats</a></li>
-                <li><a href="#seccio-mapa">Mapa de Barcelona</a></li>
-                <li><a href="#seccio-about">Sobre el projecte</a></li>
-              </ul>
-            </nav>
+      <SiteFooter />
+    </main >
 
-            <div className="col-6 col-md-4">
-              <h2 className="site-footer__heading">Contacte</h2>
-              <p className="site-footer__summary">Tens preguntes o vols compartir informació?</p>
-              <a className="site-footer__link" href="mailto:contacte@elguiri.cat">contacte@elguiri.cat</a>
-            </div>
-          </div>
 
-          <div className="site-footer__bottom">
-            <span>&copy; 2026 El Guiri. Tots els drets reservats.</span>
-            <div className="site-footer__legal" aria-label="Informació legal">
-              <span>Avís legal</span>
-              <span>Privacitat</span>
-              <span>Accessibilitat</span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </>
   );
 }
 

@@ -518,7 +518,7 @@ export function ChoroplethMap({
 
     return (
         <div
-            className={`${fillsParent ? '' : 'container-fluid '}choropleth-wrapper d-flex flex-column gap-2 position-relative`}
+            className={`${fillsParent ? '' : 'container-fluid '}choropleth-wrapper bg-white d-flex flex-column gap-2 position-relative`}
             style={fillsParent ? { height: '100%' } : undefined}
         >
             {(showLegend || detail) && (

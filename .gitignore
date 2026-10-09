@@ -95,3 +95,5 @@ infra/frontend_build/**/*
 data/raw/
 
 # data/processed/topic-modeling
+
+sandbox/

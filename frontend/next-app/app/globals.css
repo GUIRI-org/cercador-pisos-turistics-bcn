@@ -55,23 +55,26 @@ body {
 }
 
 .geo-plane-mid {
-  --building-width: clamp(128px, 24vw, 180px);
-  --building-visible-width: calc(var(--building-width) * 0.34);
-  --building-side-offset: calc(var(--building-visible-width) - var(--building-width));
-  --building-scroll-offset: 0px;
+  /* Strip of each image that stays on screen; it may sit behind the centre content. */
+  --building-visible-width: clamp(56px, 14vw, 280px);
+  /* Zoomed width, independent from the visible strip. */
+  --building-width-left: clamp(340px, 38vw, 640px);
+  --building-width-right: clamp(400px, 46vw, 770px);
+  --building-start-left: 0px;
+  --building-start-right: -2100px;
+  --building-scroll-left: 0px;
+  --building-scroll-right: 0px;
   z-index: 2;
   background-repeat: repeat-y, repeat-y;
-  background-size: var(--building-width) auto, var(--building-width) auto;
+  background-size: var(--building-width-left) auto, var(--building-width-right) auto;
   background-position:
-    left var(--building-side-offset) top var(--building-scroll-offset),
-    right var(--building-side-offset) top var(--building-scroll-offset);
+    left calc(var(--building-visible-width) - var(--building-width-left))
+      top calc(var(--building-start-left) + var(--building-scroll-left)),
+    right calc(var(--building-visible-width) - var(--building-width-right))
+      top calc(var(--building-start-right) + var(--building-scroll-right));
   will-change: background-position;
 }
 
-.parallax-content main > section > .container.w-50 {
-  width: 75% !important;
-  max-width: none;
-}
 
 .geo-plane-third {
   z-index: 1;
@@ -113,18 +116,6 @@ body {
 .intro-title {
   font-size: min(5.5rem, 17cqi);
   letter-spacing: 0;
-}
-
-@media (min-width: 768px) {
-  .geo-plane-mid {
-    --building-width: clamp(150px, 15vw, 360px);
-    --building-side-offset: 0px;
-  }
-
-  .parallax-content main > section > .container.w-50 {
-    width: 50% !important;
-    max-width: 1320px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

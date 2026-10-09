@@ -16,8 +16,8 @@ export function ParallaxContainer({ children }: { children: React.ReactNode }) {
       const scrollY = window.scrollY;
       const midPlane = midPlaneRef.current;
       if (midPlane) {
-        const verticalOffset = (scrollY * 0.18).toFixed(2);
-        midPlane.style.setProperty('--building-scroll-offset', `${verticalOffset}px`);
+        midPlane.style.setProperty('--building-scroll-left', `${(scrollY * 0.18).toFixed(2)}px`);
+        midPlane.style.setProperty('--building-scroll-right', `${(scrollY * 0.13).toFixed(2)}px`);
       }
 
       const cloudPlane = cloudPlaneRef.current;

@@ -538,7 +538,7 @@ export const MapComponent = memo(function MapComponent({
                             onClick={() => setSelectedAddress(null)}
                         />
                     </div>
-                    <ApartmentDetail group={selectedAddress} showSummaryAlert={false} />
+                    <ApartmentDetail group={selectedAddress} />
                 </div>
             )}
         </>

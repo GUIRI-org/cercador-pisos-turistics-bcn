@@ -71,8 +71,8 @@ main > section {
     padding-right: 3rem;
     color: inherit;
     font-size: clamp(3rem, 10.5vw, 9.375rem);
-    font-weight: 700;
-    line-height: 0.95;
+    font-weight: 400;
+    line-height: 1.2;
     white-space: nowrap;
 }
 
@@ -135,7 +135,18 @@ label {
 
 .search-form .number-select__control--is-focused {
     border-color: var(--bs-primary);
-    box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb), 0.2);
+    border-width: 2px;
+    box-shadow: 0 0 0 4px rgba(var(--bs-primary-rgb), 0.35), 0 4px 14px rgba(var(--bs-primary-rgb), 0.3);
+}
+
+.search-form .number-select__control--is-focused:hover {
+    border-color: var(--bs-primary);
+}
+
+.search-form .number-select__menu {
+    border: 2px solid var(--bs-primary);
+    border-radius: 0;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 .search-form .number-select__control--is-disabled {
@@ -301,14 +312,23 @@ label {
     max-width: var(--search-number-max-width);
 }
 
-.section-search {
-    background: white;
-    padding-top: 24px;
-    padding-bottom: 24px;
+
+/* Link to a separate page, styled as a pill to stand apart from the anchored section links. */
+.navbar .nav-link--page {
+    align-self: center;
+    margin-left: 0.5rem;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    background: var(--bs-primary);
+    color: #fff;
+    font-weight: 600;
 }
 
-.section-search>.container {
-    width: 100%;
+.navbar .nav-link--page:hover,
+.navbar .nav-link--page:focus-visible,
+.navbar .nav-link--page.active {
+    background: var(--bs-body-color);
+    color: #fff;
 }
 
 /* Compact, pinned version of the search block shown while results are on screen. */
@@ -323,9 +343,6 @@ label {
     text-decoration: underline;
 }
 
-.search-results {
-    margin-top: 1.5rem;
-}
 
 .site-footer__brand {
     display: inline-block;
@@ -437,6 +454,42 @@ label {
     .street-addresses__chevron {
         transition: none;
     }
+}
+
+.places-waffle {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    gap: 6px;
+}
+
+.places-waffle__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.places-waffle__floor {
+    flex: 0 0 4.5em;
+    font-size: 0.65rem;
+    line-height: 8px;
+    text-align: right;
+    color: var(--bs-secondary-color);
+}
+
+.places-waffle__cells {
+    display: grid;
+    gap: 2px;
+}
+
+.places-waffle__cell {
+    width: 8px;
+    height: 8px;
+    background: #aa9465;
+}
+
+.places-waffle__cell--empty {
+    background: rgba(var(--bs-secondary-rgb), 0.15);
 }
 
 /* Floating panel over the choropleth: left sliding column on desktop, in-flow block on mobile. */
@@ -723,84 +776,4 @@ label {
 
 .choropleth-subdetail .choropleth-detail__list {
     max-height: 30vh;
-}
-
-@media (min-width: 768px) {
-    .search-form {
-        --search-field-width: auto;
-        --search-number-max-width: 100px;
-        --search-field-margin: 0;
-        --search-form-padding: 3rem;
-    }
-
-    .search-form .tipus-via-carrer>div {
-        background: #f4f6f8;
-    }
-
-    .choropleth-panel,
-    .choropleth-detail {
-        position: absolute;
-        margin-top: 0;
-    }
-
-    .choropleth-panel {
-        width: min(33%, calc(100% - 2rem));
-    }
-
-    .choropleth-panel__body {
-        max-height: calc(100% - 2rem);
-        overflow-y: auto;
-    }
-
-    .choropleth-panel--collapsed {
-        transform: translateX(calc(-100% + 1rem));
-    }
-
-    .choropleth-panel__toggle {
-        position: absolute;
-        float: none;
-    }
-
-    .choropleth-panel--collapsed .choropleth-panel__body {
-        display: flex;
-    }
-
-    .choropleth-detail {
-        width: 100%;
-        border: none;
-        animation: choropleth-detail-in 0.25s ease;
-    }
-
-    .choropleth-detail__list {
-        max-height: none;
-    }
-
-    .choropleth-legend {
-        position: absolute;
-        width: 240px;
-        margin-top: 0;
-        padding: 2rem;
-    }
-
-    .section-search {
-        background: transparent;
-        padding: 0px;
-
-    }
-
-    .section-search>.container {
-        width: 50%;
-    }
-}
-
-@media (min-width: 992px) {}
-
-@media (min-width: 1200px) {
-    .choropleth-subdetail {
-        animation: choropleth-detail-in 0.25s ease;
-    }
-
-    .choropleth-subdetail .choropleth-detail__list {
-        max-height: none;
-    }
 }

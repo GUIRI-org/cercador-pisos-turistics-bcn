@@ -1,131 +1,22 @@
 'use client';
 
-import { memo, useMemo, useState } from 'react';
-import type { AddressGroup, ApartmentDetail as ApartmentDetailType } from '@/lib/types';
+import { memo, useMemo, useState, type RefObject } from 'react';
+import type { AddressGroup } from '@/lib/types';
 import { ApartmentDetail } from './StreetDetail';
 import { ChoroplethMap, type ChoroplethPoint } from './ChoroplethMap';
 import { EPSG_25831 } from '../lib/geoUtils';
 import { getDistrictColor, hashStringToHue } from '../lib/districtColors';
-import { FaChevronRight } from 'react-icons/fa6';
+import { dedupeAddressGroups, compareByStreetNumber, formatAddress, formatStreetName, getAddressGroupKey } from '../lib/addressGroups';
 
 
 interface ApartmentResultsProps {
   title: string;
   streetName?: string;
   addressGroups: AddressGroup[];
-  streetGroups?: AddressGroup[];
+  reference?: RefObject<HTMLElement | null>;
   loading?: boolean;
   onResetSearch?: () => void;
-  /** Runs a new search for the clicked address of the street. */
-  onSelectAddress?: (group: AddressGroup) => void;
 }
-
-const normalizePart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
-
-const normalizePis = (value: string | number | null | undefined) => {
-  const rawValue = String(value ?? '').trim();
-  if (!rawValue) return '-';
-
-  if (/^\d+$/.test(rawValue)) {
-    return rawValue.padStart(2, '0');
-  }
-
-  return rawValue;
-};
-
-const getAddressGroupKey = (group: AddressGroup) => {
-  return [
-    normalizePart(group.tipus_carrer),
-    normalizePart(group.carrer),
-    normalizePart(group.num1),
-    normalizePart(group.lletra1),
-    normalizePart(group.num2),
-    normalizePart(group.lletra2),
-    normalizePart(group.address),
-    normalizePart(group.latitud_y),
-    normalizePart(group.longitud_x),
-  ].join('|');
-};
-
-const getApartmentKey = (apt: ApartmentDetailType) => {
-  return [
-    normalizePart(apt.expedient),
-    normalizePart(apt.registre_generalitat),
-    normalizePart(apt.bloc),
-    normalizePart(apt.portal),
-    normalizePart(apt.escala),
-    normalizePart(normalizePis(apt.pis)),
-    normalizePart(apt.porta),
-    normalizePart(apt.year),
-    normalizePart(apt.num_places),
-  ].join('|');
-};
-
-const dedupeAddressGroups = (groups: AddressGroup[]): AddressGroup[] => {
-  const merged = new Map<string, AddressGroup>();
-
-  groups.forEach((group) => {
-    const groupKey = getAddressGroupKey(group);
-    const existing = merged.get(groupKey);
-
-    if (!existing) {
-      merged.set(groupKey, {
-        ...group,
-        apartments: [...group.apartments],
-      });
-      return;
-    }
-
-    const apartmentsByKey = new Map<string, ApartmentDetailType>();
-    [...existing.apartments, ...group.apartments].forEach((apt) => {
-      apartmentsByKey.set(getApartmentKey(apt), apt);
-    });
-
-    const uniqueApartments = Array.from(apartmentsByKey.values());
-    const hasApartments = uniqueApartments.length > 0;
-    const dedupedTotalPlaces = uniqueApartments.reduce((sum, apt) => sum + (apt.num_places || 0), 0);
-
-    merged.set(groupKey, {
-      ...existing,
-      address: existing.address || group.address,
-      tipus_carrer: existing.tipus_carrer ?? group.tipus_carrer,
-      carrer: existing.carrer ?? group.carrer,
-      num1: existing.num1 ?? group.num1,
-      lletra1: existing.lletra1 ?? group.lletra1,
-      num2: existing.num2 ?? group.num2,
-      lletra2: existing.lletra2 ?? group.lletra2,
-      codi_districte: existing.codi_districte ?? group.codi_districte,
-      nom_districte: existing.nom_districte ?? group.nom_districte,
-      codi_barri: existing.codi_barri ?? group.codi_barri,
-      nom_barri: existing.nom_barri ?? group.nom_barri,
-      longitud_x: existing.longitud_x ?? group.longitud_x,
-      latitud_y: existing.latitud_y ?? group.latitud_y,
-      apartments: uniqueApartments,
-      apartments_count: hasApartments
-        ? uniqueApartments.length
-        : Math.max(existing.apartments_count, group.apartments_count),
-      total_places: hasApartments
-        ? dedupedTotalPlaces
-        : Math.max(existing.total_places, group.total_places),
-    });
-  });
-
-  return Array.from(merged.values());
-};
-
-const formatStreetName = (group: AddressGroup, streetName?: string) =>
-  streetName || `${group.tipus_carrer || ''} ${group.carrer || ''}`.trim();
-
-const formatAddress = (group: AddressGroup, streetName?: string) => {
-  const street = formatStreetName(group, streetName);
-  const number = `${group.num1 ?? ''}${group.lletra1 || ''}`.trim();
-  if (street && number) return `${street}, ${number}`;
-  // Falls back to the raw address, adding the comma before its first number.
-  return (group.address || '').replace(/\s+(\d)/, ', $1');
-};
-
-const formatArea = (group: AddressGroup) =>
-  [group.nom_districte, group.nom_barri].filter(Boolean) as string[];
 
 function SelectedAddressAnnotation({
   address,
@@ -145,7 +36,7 @@ function SelectedAddressAnnotation({
 
 const STREET_MAP_GEOJSON = '/geo/barcelona-barris.geojson';
 
-function StreetAddressMap({
+export function StreetAddressMap({
   groups,
   streetName,
   selectedAddress,
@@ -182,34 +73,25 @@ function StreetAddressMap({
   );
 
   return (
-    <section className="street-address-map bg-light">
-      <ChoroplethMap
-        geoJsonUrl={STREET_MAP_GEOJSON}
-        sourceCrs={EPSG_25831}
-        filterProperty="TIPUS_UA"
-        filterValue="BARRI"
-        boundaryFilterValue="DISTRICTE"
-        codeProperty="BARRI"
-        labelProperty="NOM"
-        data={[]}
-        points={points}
-        focusPoints={focusPoints}
-        focusPointZoom={1.1}
-        showAreaLabels={false}
-        showBasemap
-        showLegend={false}
-        height={420}
-      />
-    </section>
+    <ChoroplethMap
+      geoJsonUrl={STREET_MAP_GEOJSON}
+      sourceCrs={EPSG_25831}
+      filterProperty="TIPUS_UA"
+      filterValue="BARRI"
+      boundaryFilterValue="DISTRICTE"
+      codeProperty="BARRI"
+      labelProperty="NOM"
+      data={[]}
+      points={points}
+      focusPoints={focusPoints}
+      focusPointZoom={1.1}
+      showAreaLabels={false}
+      showBasemap
+      showLegend={false}
+      height={420}
+    />
   );
 }
-
-const compareByStreetNumber = (a: AddressGroup, b: AddressGroup) => {
-  const aNum = a.num1 ?? Number.POSITIVE_INFINITY;
-  const bNum = b.num1 ?? Number.POSITIVE_INFINITY;
-  if (aNum !== bNum) return aNum - bNum;
-  return (a.lletra1 || '').localeCompare(b.lletra1 || '', 'ca');
-};
 
 function buildDistrictColorScale(groups: AddressGroup[]) {
   const districtHues = new Map<string, number>();
@@ -480,7 +362,7 @@ function DistributionChart({
   );
 }
 
-function AddressNumberDistributionChart({
+export function AddressNumberDistributionChart({
   groups,
   streetName,
   selectedAddress,
@@ -584,114 +466,81 @@ export const ApartmentResults = memo(function ApartmentResults({
   title,
   streetName,
   addressGroups,
-  streetGroups,
+  reference,
   loading,
   onResetSearch,
-  onSelectAddress,
 }: ApartmentResultsProps) {
   const displayGroups = useMemo(
     () => dedupeAddressGroups(addressGroups).sort(compareByStreetNumber),
     [addressGroups]
   );
 
-  // The chart needs every number on the street; the result list only holds the searched address.
-  const chartGroups = useMemo(
-    () => dedupeAddressGroups(streetGroups?.length ? streetGroups : addressGroups).sort(compareByStreetNumber),
-    [streetGroups, addressGroups]
-  );
-
-  const searchedKeys = useMemo(() => new Set(displayGroups.map(getAddressGroupKey)), [displayGroups]);
-  const selectedAddress = chartGroups.find((group) => searchedKeys.has(getAddressGroupKey(group))) ?? displayGroups[0] ?? null;
+  const selectedAddress = displayGroups[0] ?? null;
 
   if (loading) {
     return (
-      <div className="container rounded-lg border border-white/40 bg-transparent p-4 backdrop-blur-sm">
+      <div className="container border border-white/40 bg-transparent p-4 backdrop-blur-sm">
         <p className="mt-2 text-gray-600">Cercant habitatges turístics...</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-transparent">
+    <section id="seccio-resultats" ref={reference} className='bg-transparent'>
+      <div className="search-results-container container">
+        {/* At the first place the result of the search */}
+        <div className="search-results-header">
+          {!displayGroups.length ? (
+            <div className="alert alert-warning p-4 rounded-0 mb-0">
+              <h4 className="alert-heading fw-normal">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
+              <p className="mb-0">Probablement el pis que busques és il·legal</p>
+              <hr></hr>
+              <div className="d-flex align-items-start gap-3">
+                <button type="button" className="btn btn-outline-secondary rounded-0 ms-auto" onClick={onResetSearch}>
+                  Esborrar cerca
+                </button>
+                <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-outline-secondary rounded-0">
+                  Avisa&apos;ns
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="alert alert-info p-4 rounded-0" role="alert">
+              <h4 className="alert-heading fw-normal">
+                <strong>{selectedAddress ? formatAddress(selectedAddress) : 'Adreça no disponible'}</strong>
+                {/* {totalDoors === 1 ? 's\'ha trobat' : 's\'han trobat'} <strong>{totalDoors}&nbsp;{totalDoors === 1 ? 'habitatge' : 'habitatges'}</strong>&nbsp;amb llicencia d&apos;ús turístic para un total de <strong>{group.total_places || 0}&nbsp;plaçes</strong>. */}
+              </h4>
 
-
-      {!displayGroups.length && (
-        <div className="alert alert-warning p-4 rounded-0 border container w-50">
-          <h4 className="alert-heading fw-normal">No s&apos;han trobat habitatges d&apos;us turistic en <strong>{title}</strong></h4>
-          <p className="mb-0">Probablement el pis que busques és il·legal</p>
-          <hr></hr>
-
-          <div className="d-flex align-items-start gap-3">
-            <button type="button" className="btn btn-outline-secondary rounded-0 ms-auto" onClick={onResetSearch}>
-              Esborrar cerca
-            </button>
-            <a href="https://atencioenlinia.ajuntament.barcelona.cat/ca/fitxa/alta?cbDetall=3205"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-outline-secondary rounded-0">
-              Avisa&apos;ns
-            </a>
-          </div>
+              <p className="mb-0">
+                Si la teva adreça apareix a la llista, l&apos;habitatge disposa de llicència municipal.
+              </p>
+              {onResetSearch && (
+                <>
+                  <hr></hr>
+                  <div className="d-flex align-items-start gap-3">
+                    <button type="button" className="btn btn-outline-secondary rounded-0 ms-auto" onClick={onResetSearch}>
+                      Esborrar cerca
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )
+          }
         </div>
-      )}
+        {/* At the first place the result of the search */}
+        {displayGroups.length > 0 && (
+          displayGroups.map((group, idx) => {
+            return (
+              <ApartmentDetail key={idx} group={group} streetName={streetName} onResetSearch={onResetSearch} />
+            );
+          })
+        )}
 
-      {displayGroups.map((group, idx) => {
-        return (
-          <div
-            key={idx}
-            className="bg-transparent container w-50"
-          >
-            <ApartmentDetail group={group} streetName={streetName} onResetSearch={onResetSearch} />
-
-          </div>
-        );
-      })}
-
-      {chartGroups.length > 1 && (
-        <section className="street-addresses container w-50 mb-5">
-          <h4 className="fw-normal">Altres adreces al carrer <strong>{streetName}</strong> amb habitatges amb llicència d&apos;us turístic</h4>
-          <ul className="list-group rounded-0">
-            {chartGroups.map((group) => {
-              const isSearched = searchedKeys.has(getAddressGroupKey(group));
-              const areas = formatArea(group);
-              return (
-                <li
-                  key={getAddressGroupKey(group)}
-                  className={`list-group-item p-0 street-addresses__item${isSearched ? ' street-addresses__item--selected' : ''}`}
-                >
-                  <button
-                    type="button"
-                    className="street-addresses__button"
-                    aria-current={isSearched ? 'true' : undefined}
-                    onClick={() => onSelectAddress?.(group)}
-                  >
-                    <span className="d-flex flex-row align-items-center gap-2">
-                      <span className="d-flex flex-column gap-0">
-                        {areas.length > 0 && (
-                          <small className="text-body-secondary">{areas.join(' · ')}</small>
-                        )}
-                        <span className="fw-normal fs-5">{formatAddress(group, streetName)}</span>
-                      </span>
-                      <span className="badge bg-secondary rounded-0 ms-auto me-2">
-                        {group.apartments_count} habitatges · {group.total_places} places
-                      </span>
-                      <FaChevronRight className="street-addresses__chevron" aria-hidden="true" />
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      {chartGroups.length > 1 && (
-        <>
-          <StreetAddressMap groups={chartGroups} streetName={streetName} selectedAddress={selectedAddress} />
-          <AddressNumberDistributionChart groups={chartGroups} streetName={streetName} selectedAddress={selectedAddress} />
-        </>
-      )}
-
-    </div>
+      </div>
+    </section>
   );
 });
