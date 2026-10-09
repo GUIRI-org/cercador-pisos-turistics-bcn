@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import '../styles.css';
-import { AppNavbar } from '../components/AppNavbar';
 import { MapComponent } from '../components/MapComponent';
 
 export const metadata: Metadata = {
@@ -11,11 +10,8 @@ export const metadata: Metadata = {
 export default function MapPage() {
   return (
     <main style={{ minHeight: '100vh' }}>
-      <AppNavbar />
-      <section id="seccio-mapa">
-        <div className="map-container">
-          <MapComponent />
-        </div>
+      <section id="seccio-mapa" className='py-0 h-100' style={{minHeight: '100vh'}}>
+        <MapComponent />
       </section>
     </main>
   );
