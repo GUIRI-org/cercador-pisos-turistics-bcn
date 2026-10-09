@@ -6,3 +6,5 @@ export const homeSections = [
 ];
 
 export const mapPage = { href: '/map', title: 'Mapa' };
+
+export const dashboardPage = { href: '/dashboard', title: 'Dashboard' };

@@ -1,6 +1,20 @@
+'use client';
+
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 export function SiteFooter() {
+  const searchParams = useSearchParams();
+
+  // The dashboard only reads the street and number, so unit filters are not forwarded.
+  const dashboardParams = new URLSearchParams();
+  for (const key of ['tipus_via', 'carrer', 'num']) {
+    const value = searchParams.get(key)?.trim();
+    if (value) dashboardParams.set(key, value);
+  }
+  const dashboardQuery = dashboardParams.toString();
+  const dashboardHref = dashboardQuery ? `/dashboard?${dashboardQuery}` : '/dashboard';
+
   return (
     <footer className="site-footer bg-white">
       <div className="container py-5">
@@ -15,10 +29,8 @@ export function SiteFooter() {
           <nav className="col-6 col-md-3" aria-label="Navegació del peu de pàgina">
             <h2 className="site-footer__heading">Explora</h2>
             <ul className="site-footer__links">
-              <li><a href="#seccio-cerca">Cerca una adreça</a></li>
-              <li><a href="#seccio-resultats">Resultats</a></li>
               <li><Link href="/map">Mapa de Barcelona</Link></li>
-              <li><a href="#seccio-about">Sobre el projecte</a></li>
+              <li><Link href={dashboardHref}>Tauler de control</Link></li>
             </ul>
           </nav>
 

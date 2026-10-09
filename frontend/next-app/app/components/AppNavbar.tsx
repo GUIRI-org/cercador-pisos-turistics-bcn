@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { homeSections, mapPage } from '../config/sections';
+import { dashboardPage, homeSections, mapPage } from '../config/sections';
 
 export function AppNavbar() {
   const pathname = usePathname();
@@ -11,6 +11,7 @@ export function AppNavbar() {
 
   const isMainActive = pathname === '/';
   const isMapActive = pathname === mapPage.href;
+  const isDashboardActive = pathname === dashboardPage.href;
 
   const closeMenu = () => {
     setIsOpen(false);
@@ -46,6 +47,14 @@ export function AppNavbar() {
                 {section.title}
               </Link>
             ))}
+            {/* <Link
+              className={`nav-link nav-link--page ${isDashboardActive ? 'active' : ''}`}
+              href={dashboardPage.href}
+              aria-current={isDashboardActive ? 'page' : undefined}
+              onClick={closeMenu}
+            >
+              {dashboardPage.title}
+            </Link> */}
             {/* 
             I hide the map link temporarily
             <Link

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { SelectInstance } from 'react-select';
 import { useRouter, useSearchParams } from 'next/navigation';
 import './styles.css';
@@ -10,26 +10,13 @@ import { fetchPortalsByVia, searchApartments, searchCarrers } from '@/lib/api';
 import { AddressGroup, CarrerVia } from '@/lib/types';
 import { AboutSection } from './components/AboutSection';
 import { AppNavbar } from './components/AppNavbar';
-import { AddressNumberDistributionChart, ApartmentResults, StreetAddressMap } from './components/ApartmentResults';
-import { BuildingList } from './components/BuildingList';
+import { ApartmentResults } from './components/ApartmentResults';
 import { CountdownBanner } from './components/CountdownBanner';
 import { IntroSection } from './components/IntroSection';
 import { SearchForm } from './components/SearchForm';
 import { SiteFooter } from './components/SiteFooter';
-import { TopAddressesRanking } from './components/TopAddressesRanking';
-import { compareByStreetNumber, dedupeAddressGroups, getAddressGroupKey } from './lib/addressGroups';
 
 const normalizeAddressPart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
-
-// Geoportal street names don't always match how they're stored in the GUIRI DB — add exceptions here as they're found.
-const CARRER_NAME_OVERRIDES: Record<string, string> = {
-  'PARAL·LEL': 'PARAL.LEL',
-};
-
-const normalizeCarrerForApi = (carrer: string): string => {
-  const upper = carrer.trim().toUpperCase();
-  return CARRER_NAME_OVERRIDES[upper] ?? carrer;
-};
 
 const RESULTS_ANCHOR_ID = 'seccio-resultats';
 
@@ -93,7 +80,6 @@ function HomeSearch() {
 
   const [touched, setTouched] = useState<{ carrer?: boolean; num?: boolean }>({});
   const [results, setResults] = useState<AddressGroup[]>([]);
-  const [streetResults, setStreetResults] = useState<AddressGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [streetNameLoading, setStreetNameLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -139,7 +125,7 @@ function HomeSearch() {
         response,
       });
 
-      const normalizedQuery = normalizeAddressPart(normalizeCarrerForApi(queryCarrer));
+      const normalizedQuery = normalizeAddressPart(queryCarrer);
       const via = response.vies.find(
         (candidate) =>
           normalizeAddressPart(candidate.nom) === normalizedQuery ||
@@ -164,7 +150,6 @@ function HomeSearch() {
       pendingResultsScrollRef.current = false;
       setShowResults(false);
       setResults([]);
-      setStreetResults([]);
       setLoading(false);
       setStreetNameLoading(false);
       return;
@@ -177,23 +162,18 @@ function HomeSearch() {
     setShowResults(true);
     setLoading(true);
 
-    const carrer = normalizeCarrerForApi(queryCarrer);
+    const carrer = queryCarrer;
     const tipusCarrer = queryTipusVia || null;
     let cancelled = false;
 
-    Promise.all([
-      searchApartments({ carrer, tipus_carrer: tipusCarrer, num1: queryNum }),
-      searchApartments({ carrer, tipus_carrer: tipusCarrer }),
-    ])
-      .then(([exact, street]) => {
+    searchApartments({ carrer, tipus_carrer: tipusCarrer, num1: queryNum })
+      .then((exact) => {
         if (cancelled) return;
         setResults(filterGroupsByUnit(exact, { escala: queryEscala, pis: queryPis, porta: queryPorta }));
-        setStreetResults(street);
       })
       .catch(() => {
         if (cancelled) return;
         setResults([]);
-        setStreetResults([]);
       })
       .finally(() => {
         if (!cancelled) {
@@ -272,18 +252,6 @@ function HomeSearch() {
   const numError = touched.num && !num;
   const canSearch = Boolean(carrerName) && num.trim().length > 0;
 
-  // The street view needs every number on the street; `results` only holds the searched address.
-  const searchedGroups = useMemo(
-    () => dedupeAddressGroups(results).sort(compareByStreetNumber),
-    [results]
-  );
-  const chartGroups = useMemo(
-    () => dedupeAddressGroups(streetResults.length ? streetResults : results).sort(compareByStreetNumber),
-    [streetResults, results]
-  );
-  const searchedKeys = useMemo(() => new Set(searchedGroups.map(getAddressGroupKey)), [searchedGroups]);
-  const selectedAddress = chartGroups.find((group) => searchedKeys.has(getAddressGroupKey(group))) ?? searchedGroups[0] ?? null;
-
   const pushSearch = useCallback(
     (values: { tipusVia?: string; carrer: string; num: string; escala?: string; pis?: string; porta?: string }) => {
       if (!values.carrer || !values.num.trim()) return;
@@ -307,21 +275,6 @@ function HomeSearch() {
     pushSearch({ tipusVia: tipusViaName, carrer: carrerName, num, escala, pis, porta });
   }, [pushSearch, carrerName, tipusViaName, num, escala, pis, porta]);
 
-  const handleSelectAddress = useCallback(
-    (group: AddressGroup) => {
-      setResults([]);
-      setStreetResults([]);
-      setShowResults(true);
-      setLoading(true);
-      pushSearch({
-        tipusVia: group.tipus_carrer ?? '',
-        carrer: group.carrer ?? '',
-        num: `${group.num1 ?? ''}`,
-      });
-    },
-    [pushSearch]
-  );
-
   const handleResetSearch = useCallback(() => {
     pendingResultsScrollRef.current = false;
     portalsAbortRef.current?.abort();
@@ -337,7 +290,6 @@ function HomeSearch() {
     setPis('');
     setPorta('');
     setResults([]);
-    setStreetResults([]);
     setShowResults(false);
     setLoading(false);
     setStreetNameLoading(false);
@@ -382,7 +334,7 @@ function HomeSearch() {
         onHandleResetSearch={handleResetSearch}
       />
 
-      {showResults ? (
+      {showResults && (
         <ApartmentResults
           title={`${carrerDisplayName}${num ? `, ${num}` : ''}`.trim()}
           streetName={carrerDisplayName}
@@ -391,28 +343,6 @@ function HomeSearch() {
           loading={loading || streetNameLoading}
           onResetSearch={handleResetSearch}
         />
-      )
-        : (
-          <TopAddressesRanking onSelectAddress={handleSelectAddress} />
-        )
-      }
-
-      {showResults && !loading && !streetNameLoading && chartGroups.length > 1 && (
-        <section id="seccio-carrer" className="bg-transparent pt-0">
-          <div className="search-results-container container results-extra pt-5">
-            <BuildingList
-              className="street-addresses"
-              groups={chartGroups}
-              streetName={carrerDisplayName}
-              selectedKeys={searchedKeys}
-              onSelectAddress={handleSelectAddress}
-              title={<h4 className="fw-normal">Altres adreces al carrer <strong>{carrerDisplayName}</strong> amb habitatges amb llicència d&apos;us turístic</h4>}
-              placesDisplay="waffle"
-            />
-            <StreetAddressMap groups={chartGroups} streetName={carrerDisplayName} selectedAddress={selectedAddress} />
-            <AddressNumberDistributionChart groups={chartGroups} streetName={carrerDisplayName} selectedAddress={selectedAddress} />
-          </div>
-        </section>
       )}
 
       <AboutSection />
@@ -420,9 +350,6 @@ function HomeSearch() {
       <CountdownBanner />
 
       <SiteFooter />
-    </main >
-
-
+    </main>
   );
 }
-
