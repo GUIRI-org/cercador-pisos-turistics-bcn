@@ -1,17 +1,19 @@
 # Deployment Workflow
 #
-# Branch convention (configured in the `env` block below):
+# Branch convention:
 #   - PRODUCTION_BRANCH (`production`) → deploys to production environment (required)
-#   - STAGING_BRANCH (`main`)          → deploys to staging environment (OPTIONAL)
+#   - `main`                           → deploys to staging environment (optional)
 #
-# If your staging branch is named differently (e.g. `staging`), change STAGING_BRANCH
-# and the branch in `on.push.branches`.
+# If your staging branch is named differently (e.g. `staging`), change it in `on.push.branches`.
 #
 # If your project does NOT have a staging environment:
 #   1. Remove the staging branch from the push branches list
 #   2. Remove `staging` from the workflow_dispatch options
 #
 # Frontend is deployed via SFTP, backend via SSH + Docker Compose.
+#
+# Required Variables (Repository or organization level):
+#   - MAIN_DOMAIN: Public domain used for health checks and deployment summary
 #
 # Required Variables (Environment level - per environment):
 #   - SERVER_URL: Server IP address (e.g., 78.46.41.12)
@@ -32,7 +34,7 @@ on:
   push:
     branches:
       - production
-      - main  # Staging branch (must match STAGING_BRANCH); remove if project has no staging environment
+      - main  # Staging branch; remove if project has no staging environment
   workflow_dispatch:
     inputs:
       environment:
@@ -47,11 +49,8 @@ on:
 env:
   PROJECT_NAME: guiri-apartamento
   FRONTEND_PATH: frontend/next-app
-  # Environment → branch and public domain mapping
+  # Branch used to identify production pushes
   PRODUCTION_BRANCH: production
-  STAGING_BRANCH: main
-  PRODUCTION_DOMAIN: apartamento.guiri.org
-  STAGING_DOMAIN: staging-apartamento.guiri.org
 
 jobs:
   # ============================================================
@@ -75,13 +74,8 @@ jobs:
             ENV="staging"
           fi
 
-          if [ "$ENV" == "production" ]; then
-            BRANCH="$PRODUCTION_BRANCH"
-            DOMAIN="$PRODUCTION_DOMAIN"
-          else
-            BRANCH="$STAGING_BRANCH"
-            DOMAIN="$STAGING_DOMAIN"
-          fi
+          BRANCH="${{ github.ref_name }}"
+          DOMAIN="${{ vars.MAIN_DOMAIN }}"
 
           echo "environment=$ENV" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
