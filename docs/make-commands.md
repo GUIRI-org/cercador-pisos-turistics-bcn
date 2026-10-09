@@ -52,8 +52,10 @@ make cicd-deploy
 1. Stop existing containers (`infra_undeploy.sh`)
 2. Pull latest base images (`infra_pull.sh`)
 3. Build and start containers (`infra_deploy.sh`)
-4. Run health checks (PostgreSQL ready, Nginx config valid)
+4. Run health checks (PostgreSQL ready within 60 seconds, Nginx config valid)
 5. Display container status
+
+Any failing step aborts the deployment with a non-zero exit code.
 
 **Use when:**
 - Deploying to staging or production server
@@ -74,28 +76,6 @@ make cicd-deploy-recreate
 - Environment variables have changed
 - You suspect container state issues
 - After infrastructure configuration changes
-
----
-
-### `make cicd-deploy-full`
-
-Full deployment including the frontend Next.js container.
-
-```bash
-make cicd-deploy-full
-```
-
-**Note:** The frontend container is typically only needed for development. In production, static files are deployed via SFTP.
-
----
-
-### `make cicd-deploy-full-recreate`
-
-Full deployment with frontend container and force-recreate.
-
-```bash
-make cicd-deploy-full-recreate
-```
 
 ---
 
@@ -123,12 +103,12 @@ make infra-deploy
 
 ---
 
-### `make infra-deploy-full`
+### `make infra-deploy-frontend`
 
 Start all infrastructure including the Next.js frontend container.
 
 ```bash
-make infra-deploy-full
+make infra-deploy-frontend
 ```
 
 **Additional container:**
@@ -146,12 +126,12 @@ make infra-deploy-recreate
 
 ---
 
-### `make infra-deploy-full-recreate`
+### `make infra-deploy-frontend-recreate`
 
 Start all infrastructure including frontend with force-recreate.
 
 ```bash
-make infra-deploy-full-recreate
+make infra-deploy-frontend-recreate
 ```
 
 ---

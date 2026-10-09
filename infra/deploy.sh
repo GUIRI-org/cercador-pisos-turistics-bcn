@@ -64,11 +64,11 @@ log_info "Starting deployment: ${PROJECT_NAME} (${DEPLOY_ENV})"
 
 # Step 1: Stop existing containers
 log_info "Stopping existing containers..."
-./infra_undeploy.sh 2>/dev/null || true
+./infra_undeploy.sh
 
 # Step 2: Pull latest images
 log_info "Pulling base images..."
-./infra_pull.sh 2>/dev/null || log_warn "Some images couldn't be pulled"
+./infra_pull.sh
 
 # Step 3: Build and start
 log_info "Building and starting containers..."
@@ -81,24 +81,30 @@ fi
 # -----------------------------------------------------------------------------
 # Health checks
 # -----------------------------------------------------------------------------
-log_info "Waiting for services to start..."
-sleep 10
-
 # Container names are computed from DOCKER_BASE_NAME
 NGINX_CONTAINER="${DOCKER_BASE_NAME}-nginx"
 DB_CONTAINER="${DOCKER_BASE_NAME}-pgsql"
 
-if docker exec "$DB_CONTAINER" pg_isready -U "${GLOBAL_DB_USER:-postgres}" &>/dev/null; then
-    log_success "PostgreSQL ready"
-else
-    log_warn "PostgreSQL not ready yet"
+log_info "Waiting for PostgreSQL..."
+pg_ready=false
+for _ in $(seq 1 30); do
+    if docker exec "$DB_CONTAINER" pg_isready -U "${GLOBAL_DB_USER:-postgres}" &>/dev/null; then
+        pg_ready=true
+        break
+    fi
+    sleep 2
+done
+if [ "$pg_ready" != true ]; then
+    log_error "PostgreSQL not ready after 60 seconds"
+    exit 1
 fi
+log_success "PostgreSQL ready"
 
-if docker exec "$NGINX_CONTAINER" nginx -t &>/dev/null 2>&1; then
-    log_success "Nginx config valid"
-else
-    log_warn "Nginx config check failed"
+if ! docker exec "$NGINX_CONTAINER" nginx -t &>/dev/null; then
+    log_error "Nginx config check failed"
+    exit 1
 fi
+log_success "Nginx config valid"
 
 # -----------------------------------------------------------------------------
 # Summary

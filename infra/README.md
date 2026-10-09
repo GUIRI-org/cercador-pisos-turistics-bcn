@@ -125,12 +125,10 @@ From the project root directory:
 # CI/CD deployment (full sequence: stop → pull → build → start → health check)
 make cicd-deploy              # Standard deployment
 make cicd-deploy-recreate     # Force recreate all containers
-make cicd-deploy-full         # Include frontend container
-make cicd-deploy-full-recreate # Frontend + force recreate
 
 # Local development (quick start/stop)
 make infra-deploy             # Start backend services
-make infra-deploy-full        # Include frontend container
+make infra-deploy-frontend    # Include frontend container
 make infra-undeploy           # Stop all containers
 make infra-logs-follow        # Stream logs
 ```

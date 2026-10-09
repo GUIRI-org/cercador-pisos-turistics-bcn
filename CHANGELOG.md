@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Changed
+- `infra/deploy.sh` now aborts on failed undeploy, image pull, or health checks. PostgreSQL is polled for up to 60 seconds before the deployment fails.
+- Renamed make commands: "make infra-deploy-full" is now "make infra-deploy-frontend"
+
+### Removed
+- `make cicd-deploy-full` and `make cicd-deploy-full-recreate`. The frontend container is dev-only; `deploy.sh --run-frontend` remains available for manual use.
+
 ## v0.1.1 - 9th of October 2026
 
 ### Added
