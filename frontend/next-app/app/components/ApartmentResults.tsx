@@ -75,6 +75,7 @@ export function StreetAddressMap({
   return (
     <ChoroplethMap
       geoJsonUrl={STREET_MAP_GEOJSON}
+      bcnAreas
       sourceCrs={EPSG_25831}
       filterProperty="TIPUS_UA"
       filterValue="BARRI"

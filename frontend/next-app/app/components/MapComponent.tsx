@@ -6,6 +6,7 @@ import { ChoroplethMap, ChoroplethDatum, ChoroplethPoint, ChoroplethSelection, C
 import { ApartmentDetail } from './StreetDetail';
 import { SAMPLE_DISTRICT_DATA, SAMPLE_NEIGHBOURHOOD_DATA } from '../data/sampleChoroplethData';
 import { EPSG_25831 } from '../lib/geoUtils';
+import { useIlles, type IllaPoint } from '../lib/useIlles';
 import { getDistrictColor } from '../lib/districtColors';
 import { fetchApartmentMap, fetchDistrictStats, fetchNeighborhoodStats } from '@/lib/api';
 import type { AddressGroup } from '@/lib/types';
@@ -21,8 +22,8 @@ interface MapComponentProps {
     focusAddress?: AddressGroup | null;
 }
 
-// One official GeoJSON holds every administrative level (TERME/DISTRICTE/BARRI/AEB) —
-// pick the level via the TIPUS_UA property instead of swapping between separate files.
+// Districts and barris come from GeoBCN; this local file (one GeoJSON holding every administrative
+// level, picked via TIPUS_UA) is only the fallback when that API is unreachable.
 const GEOJSON_URL = '/geo/barcelona-barris.geojson';
 // Comarca boundaries around Barcelona, already lon/lat. Drawn as context only — the main
 // layer above still drives fitSize, so the viewport stays zoomed on Barcelona city.
@@ -35,6 +36,7 @@ const COMARQUES_CONTEXT: ContextLayer = {
 
 interface LevelConfig {
     geoJsonUrl: string;
+    bcnAreas?: boolean;
     sourceCrs?: string;
     codeProperty: string;
     labelProperty?: string;
@@ -48,6 +50,7 @@ interface LevelConfig {
 const LEVEL_CONFIG: Record<ChoroplethLevel, LevelConfig> = {
     district: {
         geoJsonUrl: GEOJSON_URL,
+        bcnAreas: true,
         sourceCrs: EPSG_25831,
         codeProperty: 'DISTRICTE',
         labelProperty: 'NOM',
@@ -58,6 +61,7 @@ const LEVEL_CONFIG: Record<ChoroplethLevel, LevelConfig> = {
     },
     neighbourhood: {
         geoJsonUrl: GEOJSON_URL,
+        bcnAreas: true,
         sourceCrs: EPSG_25831,
         codeProperty: 'BARRI',
         labelProperty: 'NOM',
@@ -77,6 +81,16 @@ interface AreaStat {
     apartments: number;
     places: number;
 }
+
+interface IllaStat {
+    code: string;
+    label: string;
+    apartments: number;
+    places: number;
+}
+
+// Addresses at the same coordinates share one illa lookup.
+const coordinateKey = (group: AddressGroup) => `${group.longitud_x},${group.latitud_y}`;
 
 // Counts one entry per street+number, which is what the address metric aggregates.
 const formatNumber = (value: number) => new Intl.NumberFormat('ca-ES').format(value);
@@ -102,7 +116,7 @@ const addressKey = (group?: AddressGroup | null) => {
 export const MapComponent = memo(function MapComponent({
     data,
     points = [],
-    height = '75vh',
+    height = '100vh',
     defaultLevel = 'neighbourhood',
     focusAddress = null,
 }: MapComponentProps) {
@@ -113,6 +127,7 @@ export const MapComponent = memo(function MapComponent({
     const [selection, setSelection] = useState<ChoroplethSelection | null>(null);
     const [selectionLevel, setSelectionLevel] = useState<ChoroplethLevel | null>(null);
     const [selectedNeighborhood, setSelectedNeighborhood] = useState<AreaStat | null>(null);
+    const [selectedIlla, setSelectedIlla] = useState<string | null>(null);
     const [selectedAddress, setSelectedAddress] = useState<AddressGroup | null>(null);
     const [colorDotsByDistrict, setColorDotsByDistrict] = useState(true);
     const pendingDistrictSelectionRef = useRef<ChoroplethSelection | null>(null);
@@ -190,6 +205,7 @@ export const MapComponent = memo(function MapComponent({
         setSelection(pendingSelection);
         setSelectionLevel(pendingSelection ? 'district' : null);
         setSelectedNeighborhood(null);
+        setSelectedIlla(null);
         setSelectedAddress(null);
     }, [level]);
 
@@ -203,6 +219,7 @@ export const MapComponent = memo(function MapComponent({
 
     useEffect(() => {
         setSelectedNeighborhood(null);
+        setSelectedIlla(null);
         setSelectedAddress(null);
     }, [selection]);
 
@@ -350,6 +367,7 @@ export const MapComponent = memo(function MapComponent({
         const nextSelection = { code: district.code, label: district.label };
         setSelectionLevel('district');
         setSelectedNeighborhood(null);
+        setSelectedIlla(null);
         setSelectedAddress(null);
         if (level !== 'neighbourhood') {
             pendingDistrictSelectionRef.current = nextSelection;
@@ -361,6 +379,7 @@ export const MapComponent = memo(function MapComponent({
 
     const selectNeighborhood = (neighborhood: AreaStat) => {
         setSelectedNeighborhood(neighborhood);
+        setSelectedIlla(null);
         setSelectedAddress(null);
     };
 
@@ -368,12 +387,20 @@ export const MapComponent = memo(function MapComponent({
         setSelection(nextSelection);
         setSelectionLevel(nextSelection ? level : null);
         setSelectedNeighborhood(null);
+        setSelectedIlla(null);
+        setSelectedAddress(null);
+    };
+
+    const handleIllaSelection = (nextSelection: ChoroplethSelection | null) => {
+        setSelectedIlla(nextSelection ? String(nextSelection.code) : null);
         setSelectedAddress(null);
     };
 
     const closeDetailLevel = () => {
         if (selectedAddress) {
             setSelectedAddress(null);
+        } else if (selectedIlla) {
+            setSelectedIlla(null);
         } else if (selectedNeighborhood) {
             setSelectedNeighborhood(null);
         } else {
@@ -382,10 +409,52 @@ export const MapComponent = memo(function MapComponent({
         }
     };
 
-    const displayedAddresses = useMemo(() => {
+    // A barri is active once picked from the district chart or directly on the barri map.
+    const hasActiveBarri = Boolean(selectedNeighborhood) || (selectionLevel === 'neighbourhood' && Boolean(selection));
+
+    const barriAddresses = useMemo(() => {
         if (!selectedAddresses || !selectedNeighborhood) return selectedAddresses;
         return selectedAddresses.filter((group) => sameCode(group.codi_barri, selectedNeighborhood.code));
     }, [selectedAddresses, selectedNeighborhood]);
+
+    // Illes are only resolved for one barri at a time: a district holds too many addresses to look up.
+    const illaPoints = useMemo<IllaPoint[] | null>(() => {
+        if (!hasActiveBarri || !barriAddresses) return null;
+        const byKey = new Map<string, IllaPoint>();
+        barriAddresses.forEach((group) => {
+            if (group.longitud_x === undefined || group.latitud_y === undefined) return;
+            const key = coordinateKey(group);
+            if (!byKey.has(key)) byKey.set(key, { key, longitude: group.longitud_x, latitude: group.latitud_y });
+        });
+        return byKey.size ? Array.from(byKey.values()) : null;
+    }, [hasActiveBarri, barriAddresses]);
+
+    const { illes, assignments: illaAssignments, loading: illesLoading } = useIlles(illaPoints);
+
+    const illaStats = useMemo<IllaStat[]>(() => {
+        if (!illaAssignments || !barriAddresses) return [];
+        const stats = new Map<string, IllaStat>();
+        barriAddresses.forEach((group) => {
+            const code = illaAssignments.get(coordinateKey(group));
+            if (!code) return;
+            const current = stats.get(code) ?? { code, label: `Illa ${code}`, apartments: 0, places: 0 };
+            current.apartments += group.apartments_count || 0;
+            current.places += group.total_places || 0;
+            stats.set(code, current);
+        });
+        return Array.from(stats.values()).sort((a, b) => b.apartments - a.apartments || a.code.localeCompare(b.code));
+    }, [illaAssignments, barriAddresses]);
+    const maxIllaApartments = Math.max(...illaStats.map((row) => row.apartments), 1);
+    const illaData = useMemo<ChoroplethDatum[]>(
+        () => illaStats.map((row) => ({ code: row.code, value: row.apartments, label: row.label })),
+        [illaStats]
+    );
+    const selectedIllaStat = selectedIlla ? illaStats.find((row) => row.code === selectedIlla) ?? null : null;
+
+    const displayedAddresses = useMemo(() => {
+        if (!selectedIlla || !barriAddresses) return barriAddresses;
+        return barriAddresses.filter((group) => illaAssignments?.get(coordinateKey(group)) === selectedIlla);
+    }, [barriAddresses, selectedIlla, illaAssignments]);
 
     const districtChart = sortedDistrictStats.length > 0 ? (
         <section className="choropleth-district-chart" aria-label="Habitatges per districte">
@@ -433,19 +502,20 @@ export const MapComponent = memo(function MapComponent({
         </section>
     ) : null;
 
-    const detailAreaValue = selectedAddress?.apartments_count ?? selectedNeighborhood?.apartments ?? selectedAreaValue;
+    const detailAreaValue = selectedAddress?.apartments_count ?? selectedIllaStat?.apartments ?? selectedNeighborhood?.apartments ?? selectedAreaValue;
+    const districtLabel = barriAddresses?.[0]?.nom_districte ?? selection?.label ?? '';
 
     const detail = selection ? (
         <>
             <div className="d-flex justify-content-between align-items-start gap-1">
                 <div>
-                    <strong>{selectedAddress?.address ?? selectedNeighborhood?.label ?? selection.label}</strong>
+                    <strong>{selectedAddress?.address ?? (selectedIlla ? `Illa ${selectedIlla}` : (selectedNeighborhood?.label ?? selection.label))}</strong>
                 </div>
                 {!selectedAddress && (
                     <button
                         type="button"
                         className="btn-close"
-                        aria-label={selectedNeighborhood ? 'Tanca el detall del barri' : 'Tanca el detall'}
+                        aria-label={selectedIlla ? 'Tanca el detall de l\'illa' : selectedNeighborhood ? 'Tanca el detall del barri' : 'Tanca el detall'}
                         onClick={closeDetailLevel}
                     />
                 )}
@@ -498,11 +568,48 @@ export const MapComponent = memo(function MapComponent({
                         </section>
                     )}
 
+                    {hasActiveBarri && !selectedIlla && (
+                        <section className="choropleth-district-chart" aria-label="Habitatges per illa">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <h3 className="choropleth-district-chart__title mb-0">Distribució per illa</h3>
+                                <span className="choropleth-panel__meta">
+                                    {illesLoading ? 'Carregant illes\u2026' : `${illaStats.length} illes`}
+                                </span>
+                            </div>
+                            {illaStats.length > 0 && (
+                                <div className="choropleth-district-chart__list choropleth-district-chart__list--scroll">
+                                    {illaStats.map((illa) => (
+                                        <button
+                                            key={illa.code}
+                                            type="button"
+                                            className="choropleth-district-chart__item"
+                                            onClick={() => handleIllaSelection({ code: illa.code, label: illa.label })}
+                                        >
+                                            <span className="choropleth-district-chart__meta">
+                                                <span>{illa.label}</span>
+                                                <span>{formatNumber(illa.apartments)}</span>
+                                            </span>
+                                            <span className="choropleth-district-chart__track" aria-hidden="true">
+                                                <span
+                                                    className="choropleth-district-chart__fill"
+                                                    style={{
+                                                        width: `${(illa.apartments / maxIllaApartments) * 100}%`,
+                                                        backgroundColor: getDistrictColor(districtLabel),
+                                                    }}
+                                                />
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+                    )}
+
                     {(selectedNeighborhood || level === 'neighbourhood') && (
                         displayedAddresses === null ? (
                             <span className="choropleth-panel__meta">Carregant adreces&hellip;</span>
                         ) : displayedAddresses.length === 0 ? (
-                            <span className="choropleth-panel__meta">Sense adreces registrades per aquest barri</span>
+                            <span className="choropleth-panel__meta">{selectedIlla ? 'Sense adreces registrades per aquesta illa' : 'Sense adreces registrades per aquest barri'}</span>
                         ) : (
                             <div className="choropleth-detail__list btn-group-vertical">
                                 {displayedAddresses.map((group, idx) => (
@@ -534,7 +641,7 @@ export const MapComponent = memo(function MapComponent({
                         <button
                             type="button"
                             className="btn-close ms-auto"
-                            aria-label="Torna a les adreces del barri"
+                            aria-label={selectedIlla ? 'Torna a les adreces de l\'illa' : 'Torna a les adreces del barri'}
                             onClick={() => setSelectedAddress(null)}
                         />
                     </div>
@@ -547,6 +654,7 @@ export const MapComponent = memo(function MapComponent({
     return (
         <ChoroplethMap
             geoJsonUrl={config.geoJsonUrl}
+            bcnAreas={config.bcnAreas}
             sourceCrs={config.sourceCrs}
             filterProperty={config.filterProperty}
             filterValue={config.filterValue}
@@ -566,6 +674,10 @@ export const MapComponent = memo(function MapComponent({
             metricLabel={METRIC_UNIT}
             showAreaLabels={!selection}
             showAreaValues={Boolean(selection) && level === 'neighbourhood'}
+            illes={illes}
+            illaData={illaData}
+            focusIllaCode={selectedIlla}
+            onSelectIlla={handleIllaSelection}
             height={height}
             panelContent={districtChart}
             detail={detail}
