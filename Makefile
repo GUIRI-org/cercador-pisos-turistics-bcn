@@ -1,25 +1,31 @@
 # Mark all targets as PHONY (not representing files)
-.PHONY: help cicd-deploy cicd-deploy-recreate cicd-deploy-full cicd-deploy-full-recreate infra-deploy infra-deploy-full infra-deploy-recreate infra-deploy-full-recreate infra-undeploy infra-undeploy-purge infra-logs infra-logs-follow api-test api-test-env sparql-test sparql-test-env benchmark-legacy benchmark-legacy-url benchmark-legacy-docker
+.PHONY: help cicd-deploy cicd-deploy-recreate cicd-deploy-full cicd-deploy-full-recreate infra-deploy infra-deploy-full infra-deploy-recreate infra-deploy-full-recreate infra-undeploy infra-undeploy-purge infra-logs infra-logs-follow api-test api-test-env sparql-test sparql-test-env benchmark-legacy benchmark-legacy-url benchmark-legacy-docker version-bump-patch version-bump-minor version-bump-patch-push version-bump-minor-push
 
 # Help target - displays available commands
 help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "  CI/CD Deployment (Server):"
-	@echo "    make cicd-deploy              - Full deployment: stop → pull → build → start → health check"
-	@echo "    make cicd-deploy-recreate     - Full deployment with force-recreate"
-	@echo "    make cicd-deploy-full         - Full deployment including frontend container"
-	@echo "    make cicd-deploy-full-recreate - Full deployment with frontend and force-recreate"
+	@echo "    make cicd-deploy                 - Full deployment: stop → pull → build → start → health check"
+	@echo "    make cicd-deploy-recreate        - Full deployment with force-recreate"
+	@echo "    make cicd-deploy-full            - Full deployment including frontend container"
+	@echo "    make cicd-deploy-full-recreate   - Full deployment with frontend and force-recreate"
 	@echo ""
 	@echo "  Infrastructure (Local Dev):"
-	@echo "    make infra-deploy              - Start core infrastructure (DB, Mage, API, Nginx)"
-	@echo "    make infra-deploy-full         - Start all infrastructure including frontend apps"
-	@echo "    make infra-deploy-recreate     - Start core infrastructure with force-recreate"
-	@echo "    make infra-deploy-full-recreate - Start all infrastructure with force-recreate"
-	@echo "    make infra-undeploy            - Stop infrastructure"
-	@echo "    make infra-undeploy-purge      - Stop infrastructure and remove all volumes"
-	@echo "    make infra-logs                - View infrastructure logs once"
-	@echo "    make infra-logs-follow         - View and follow infrastructure logs"
+	@echo "    make infra-deploy                - Start core infrastructure (DB, Mage, API, Nginx)"
+	@echo "    make infra-deploy-full           - Start all infrastructure including frontend apps"
+	@echo "    make infra-deploy-recreate       - Start core infrastructure with force-recreate"
+	@echo "    make infra-deploy-full-recreate  - Start all infrastructure with force-recreate"
+	@echo "    make infra-undeploy              - Stop infrastructure"
+	@echo "    make infra-undeploy-purge        - Stop infrastructure and remove all volumes"
+	@echo "    make infra-logs                  - View infrastructure logs once"
+	@echo "    make infra-logs-follow           - View and follow infrastructure logs"
+	@echo ""
+	@echo "  Versioning:"
+	@echo "    make version-bump-patch          - Bump patch version (e.g. 0.1.0 → 0.1.1)"
+	@echo "    make version-bump-minor          - Bump minor version (e.g. 0.1.0 → 0.2.0)"
+	@echo "    make version-bump-patch-push     - Bump patch version, commit, and push branch/tag"
+	@echo "    make version-bump-minor-push     - Bump minor version, commit, and push branch/tag"
 	@echo ""
 	@echo "  See docs/make-commands.md for full documentation."
 
@@ -93,3 +99,15 @@ infra-logs-follow:
 	cd infra && ./infra_logs.sh
 	@echo "Log following stopped."
 
+# Versioning targets
+version-bump-patch:
+	@./scripts/version_bump.sh patch
+
+version-bump-minor:
+	@./scripts/version_bump.sh minor
+
+version-bump-patch-push:
+	@./scripts/version_bump.sh patch --push
+
+version-bump-minor-push:
+	@./scripts/version_bump.sh minor --push

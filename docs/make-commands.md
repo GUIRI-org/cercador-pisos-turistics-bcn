@@ -21,6 +21,19 @@ make infra-undeploy        # Stop local dev environment
 make cicd-deploy           # Full server deployment (CI/CD)
 ```
 
+## Versioning Commands
+
+The bump commands update `VERSION`, the changelog heading, and the version metadata in the Next.js `package.json` and lockfile.
+
+```bash
+make version-bump-patch       # Bump 0.1.0 to 0.1.1
+make version-bump-minor       # Bump 0.1.0 to 0.2.0
+make version-bump-patch-push  # Bump, commit, push the branch, and push the release tag
+make version-bump-minor-push  # Bump, commit, push the branch, and push the release tag
+```
+
+The `*-push` commands stage the version-related files, create a conventional commit, push the current branch, then create and push the matching `vX.Y.Z` tag. Use them from the intended release branch.
+
 ---
 
 ## CI/CD Deployment Commands
