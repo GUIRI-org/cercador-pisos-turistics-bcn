@@ -329,8 +329,6 @@ function HomeSearch() {
         onNumChange={setNum}
         onCarrerBlur={() => setTouched((prev) => ({ ...prev, carrer: true }))}
         onNumBlur={() => setTouched((prev) => ({ ...prev, num: true }))}
-        showReset={showResults}
-        onHandleResetSearch={handleResetSearch}
       />
 
       {showResults && (

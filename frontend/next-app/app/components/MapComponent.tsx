@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { FaChevronRight, FaRegBuilding } from 'react-icons/fa6';
+import { FaChevronRight } from 'react-icons/fa6';
 import { ChoroplethMap, ChoroplethDatum, ChoroplethPoint, ChoroplethSelection, ContextLayer } from './ChoroplethMap';
 import { ApartmentDetail } from './StreetDetail';
 import { SAMPLE_DISTRICT_DATA, SAMPLE_NEIGHBOURHOOD_DATA } from '../data/sampleChoroplethData';
@@ -333,7 +333,7 @@ export const MapComponent = memo(function MapComponent({
                 opacity: point.highlighted ? 0.9 : Math.min(point.opacity ?? 0.5, 0.6),
             };
         });
-    }, [selectedAddresses, selectedAddress, selection, points, colorDotsByDistrict, addressGroups]);
+    }, [selectedAddress, points, colorDotsByDistrict, addressGroups]);
 
     // Every address of the selected street, so the view frames the whole street instead of one dot.
     const streetFocusPoints = useMemo<[number, number][]>(() => {

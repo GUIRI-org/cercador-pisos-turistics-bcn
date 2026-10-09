@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { RefObject } from 'react';
 import Select, { components } from 'react-select';
 import type { InputProps, SelectInstance } from 'react-select';
-import { FaArrowRotateLeft, FaCircleInfo } from 'react-icons/fa6';
-import { TfiClose } from "react-icons/tfi";
+import { FaCircleInfo } from 'react-icons/fa6';
 import type { CarrerVia } from '@/lib/types';
 import { MIN_STREET_QUERY_LENGTH, useStreetSuggestions } from '../hooks/useStreetSuggestions';
 
@@ -42,8 +41,6 @@ interface SearchFormProps {
   onNumChange: (value: string) => void;
   onCarrerBlur: () => void;
   onNumBlur: () => void;
-  showReset: boolean;
-  onHandleResetSearch: () => void;
 }
 
 export function SearchForm({
@@ -64,8 +61,6 @@ export function SearchForm({
   onNumChange,
   onCarrerBlur,
   onNumBlur,
-  showReset,
-  onHandleResetSearch,
 }: SearchFormProps) {
   const [showAccessKeysInfo, setShowAccessKeysInfo] = useState(false);
   const street = useStreetSuggestions();

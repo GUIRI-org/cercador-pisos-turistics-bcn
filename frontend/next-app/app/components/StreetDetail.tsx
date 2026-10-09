@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import type { AddressGroup } from '@/lib/types';
 
 import { PIS_LABELS, comparePis, formatPisAddressDisplay, normalizePis } from '../lib/floors';
@@ -11,7 +10,6 @@ import { BuildingList } from './BuildingList';
 interface ApartmentDetailProps {
   group: AddressGroup;
   streetName?: string;
-  onResetSearch?: () => void;
 }
 
 // Renders a normalized pis key (e.g. "01") as an ordinal (e.g. "1º"); named/non-numeric keys are mapped or left untouched.
@@ -38,7 +36,6 @@ const formatAddress = (group: AddressGroup, streetName?: string) => {
 export function ApartmentDetail({
   group,
   streetName,
-  onResetSearch,
 }: ApartmentDetailProps) {
   const pisosGrouped = group.apartments.reduce<
     Record<string, { totalPlaces: number; portes: Record<string, number> }>
@@ -56,8 +53,6 @@ export function ApartmentDetail({
 
     return acc;
   }, {});
-
-  const totalDoors = Object.values(pisosGrouped).reduce((acc, pisData) => acc + Object.keys(pisData.portes).length, 0);
 
   return (
     <div className="street-detail-content">

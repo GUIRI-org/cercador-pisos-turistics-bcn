@@ -1,6 +1,6 @@
 import type { AddressGroup, ApartmentDetail } from '@/lib/types';
 
-export const normalizePart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
+const normalizePart = (value: string | number | null | undefined) => String(value ?? '').trim().toLowerCase();
 
 export const getAddressGroupKey = (group: AddressGroup) => {
   return [

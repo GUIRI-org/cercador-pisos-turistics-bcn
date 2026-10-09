@@ -1,5 +1,5 @@
 // Barcelona territory API types
-export interface TipusVia {
+interface TipusVia {
   codi: string;
   abreviatura: string;
   nom: string;

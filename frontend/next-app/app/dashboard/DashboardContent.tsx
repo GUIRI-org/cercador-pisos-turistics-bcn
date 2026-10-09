@@ -86,7 +86,7 @@ export function DashboardContent() {
                             title={<h4 className="fw-normal">Altres adreces al carrer <strong>{streetName}</strong> amb habitatges amb llicència d&apos;us turístic</h4>}
                             placesDisplay="waffle"
                         />
-                        <StreetAddressMap groups={chartGroups} streetName={streetName} selectedAddress={selectedAddress} />
+                        <StreetAddressMap groups={chartGroups} selectedAddress={selectedAddress} />
                         <AddressNumberDistributionChart groups={chartGroups} streetName={streetName} selectedAddress={selectedAddress} />
                     </div>
                 </section>

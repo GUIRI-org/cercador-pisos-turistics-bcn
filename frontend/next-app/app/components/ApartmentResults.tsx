@@ -38,11 +38,9 @@ const STREET_MAP_GEOJSON = '/geo/barcelona-barris.geojson';
 
 export function StreetAddressMap({
   groups,
-  streetName,
   selectedAddress,
 }: {
   groups: AddressGroup[];
-  streetName?: string;
   selectedAddress: AddressGroup | null;
 }) {
   const locatedAddresses = groups.filter(
@@ -130,7 +128,7 @@ function buildDistrictColorScale(groups: AddressGroup[]) {
     return `hsl(${hue}, 60%, ${lightness}%)`;
   };
 
-  return { districtHues, neighborhoodsByDistrict, colorFor };
+  return { neighborhoodsByDistrict, colorFor };
 }
 
 type DistributionBar = {
@@ -390,7 +388,7 @@ export function AddressNumberDistributionChart({
 
   if (bars.length < 2) return null;
 
-  const { districtHues, neighborhoodsByDistrict, colorFor } = buildDistrictColorScale(groups);
+  const { neighborhoodsByDistrict, colorFor } = buildDistrictColorScale(groups);
   // Same shared column layout (numbers + ellipsis breaks) for both charts, so numbers line up on one axis.
   const sharedColumns = buildSharedColumns(bars.map((bar) => bar.num), 1);
   const oddColumns = fillColumns(sharedColumns, new Map(bars.filter((bar) => bar.num % 2 !== 0).map((bar) => [bar.num, bar])));
@@ -536,7 +534,7 @@ export const ApartmentResults = memo(function ApartmentResults({
         {displayGroups.length > 0 && (
           displayGroups.map((group, idx) => {
             return (
-              <ApartmentDetail key={idx} group={group} streetName={streetName} onResetSearch={onResetSearch} />
+              <ApartmentDetail key={idx} group={group} streetName={streetName} />
             );
           })
         )}
